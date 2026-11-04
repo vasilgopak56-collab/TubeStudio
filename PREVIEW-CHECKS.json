@@ -1,0 +1,372 @@
+{
+  "version": "0.12.45-preview.1",
+  "acceptedRelease": false,
+  "checks": {
+    "typecheck": "passed",
+    "productionBuild": [
+      "web",
+      "server",
+      "mcp"
+    ],
+    "unit": {
+      "passed": 666,
+      "failed": 0
+    },
+    "windowsFileCheckOnLinux": "passed",
+    "coreE2E": {
+      "passed": 301,
+      "failed": 0,
+      "skipped": 0,
+      "excludedFiles": [
+        "tests/e2e/extension.test.mjs"
+      ],
+      "data": "isolated synthetic data and mocked providers",
+      "rerunForOptionalWindowsTestKit": false,
+      "scopeNote": "Prior .45 application regression: 301 passed; optional Windows acceptance harness added afterward, no production app/runtime changes"
+    },
+    "backupUI": {
+      "passed": 13,
+      "failed": 0,
+      "includedInCoreE2E": true,
+      "report": "docs/checks/backup-failures-v0.12.45-preview.1.json"
+    },
+    "appVersionE2E": {
+      "passed": 7,
+      "failed": 0,
+      "includedInCoreE2E": true
+    },
+    "backupTransferAPI": {
+      "passed": 7,
+      "failed": 0,
+      "includedInCoreE2E": false,
+      "importedEntries": 42,
+      "allowlistedFoldersWithSentinels": 28,
+      "externalFetchAttempts": 0,
+      "report": "docs/checks/backup-transfer-v0.12.45-preview.1.json"
+    },
+    "allE2EIncludingExtension": "not_run_user_excluded_extension",
+    "userWindowsEvidence": {
+      "appOpenedManually": true,
+      "appOpenedViaShortcut": true,
+      "filesAndShortcutDiagnostic": "passed",
+      "diagnosedSourcePackageVersion": "0.12.41-preview.1",
+      "runningServerVersion": "not_established",
+      "new43Upgrade": "not_confirmed",
+      "backupRestoreOnTargetWindows": "not_confirmed"
+    },
+    "liveGoogleOAuthReporting": {
+      "status": "partial_user_screenshot_evidence_not_full_acceptance",
+      "evidenceVersion": "0.12.43-preview.1",
+      "reportingApiEnabled": true,
+      "jobListRead": true,
+      "oneReachBasicJobCreated": true,
+      "noReadyReportsImmediatelyAfterCreation": true,
+      "realCsvDownload": "not_confirmed",
+      "ctrNumericScale": "not_confirmed",
+      "new44LiveDiagnostics": "not_tested"
+    },
+    "livePaidAiScenarioAcceptance": "not_done",
+    "installedExternalAiClient": "not_tested",
+    "ctrDocumentationReview": {
+      "status": "definition_reviewed_numeric_csv_scale_not_established",
+      "source": "https://developers.google.com/youtube/reporting/v1/reports/metrics?hl=en#reach-metrics",
+      "runtimeChanges": false,
+      "realGoogleRequests": 0,
+      "nextEvidence": "1–3 anonymized original Reach Basic CSV rows with exact headers and matching same-video/day reference CTR; no tokens or download URLs",
+      "fullRegressionRerunForDocumentationOnly": false
+    },
+    "windowsStopHelper": {
+      "applicationVersion": "0.12.43-preview.1",
+      "helperVersion": "1.0.0",
+      "scope": "Separate Windows launcher/stop helper; no server/UI/ZIP/CTR runtime changes",
+      "environment": "Linux; native Windows commands not executed",
+      "checks": {
+        "nodeSyntax": "passed",
+        "typecheck": "passed",
+        "unit": {
+          "passed": 614,
+          "failed": 0,
+          "newStopDecisionTests": 20
+        },
+        "targetedWindowsChecks": {
+          "passed": 35,
+          "failed": 0,
+          "includedInUnit": true
+        },
+        "portableWindowsFileCheck": "passed",
+        "nonWindowsRefusal": "passed; exit 1, no Windows command executed",
+        "nativePowerShellCIMAndTermination": "not_tested",
+        "coreE2E": "not_rerun_for_launcher_only_patch; prior .43 295 passed"
+      },
+      "safety": [
+        "Exact absolute entry operand, not substring matching",
+        "Validate all listeners before any termination",
+        "Recheck PID/start time/command and hold Process handles before Kill",
+        "No blanket taskkill, PID-file trust, tree kill, HTTP call, token output or data writes",
+        "User confirmation; terminate only after jobs finished; not graceful shutdown",
+        "Fail closed for old ambiguous relative npm start; one-time Ctrl+C or normal user-initiated Windows reboot may be needed",
+        "Success means configured port is free; does not inspect all alternate ports/installations"
+      ],
+      "note": "Historical helper 1.0.0 report retained; .44 full unit includes Windows decisions; native CIM/termination remains untested"
+    },
+    "googleDiagnostics": {
+      "version": "0.12.44-preview.1",
+      "environment": "Linux; isolated synthetic data and provider fetch stubs; local Chromium",
+      "unitNewDiagnostics": {
+        "passed": 17,
+        "failed": 0,
+        "includedInUnit": true
+      },
+      "reachE2E": {
+        "passed": 11,
+        "failed": 0,
+        "includedInCoreE2E": true,
+        "newDiagnosticsScenarios": 2
+      },
+      "fullUnit": {
+        "tests": 631,
+        "pass": 631,
+        "fail": 0,
+        "skipped": 0
+      },
+      "fullCoreE2E": {
+        "tests": 297,
+        "pass": 297,
+        "fail": 0,
+        "skipped": 0
+      },
+      "visualQA": {
+        "screensInspected": 4,
+        "widths": [
+          1440,
+          390
+        ],
+        "screens": [
+          "diag-disabled-1440",
+          "diag-disabled-390",
+          "diag-identity-1440",
+          "diag-identity-390"
+        ],
+        "status": "passed; targeted diagnostic states, not full accessibility audit"
+      },
+      "safety": [
+        "16 KiB / 1500 ms error-body bounds",
+        "Allowlisted structured reasons only; unknown/conflicting 403 not guessed",
+        "No raw Google message, metadata, URL, project identifier or secret projection",
+        "Data identity failure blocks Reporting request",
+        "No new background request or automatic write retries",
+        "Snapshot files remain unchanged on diagnostic failures"
+      ],
+      "liveGoogleRequestsByThisWork": 0,
+      "excluded": "Chrome extension; native Windows and live provider acceptance remain separate",
+      "note": "Report retains .44 diagnostic evidence; Reach tests rerun in .45 core, diagnostic screens not re-inspected"
+    },
+    "backupVisualQAPrevious43": {
+      "screensInspected": 10,
+      "widths": [
+        1440,
+        390
+      ],
+      "screens": [
+        "backup-import-warning-1440",
+        "backup-import-warning-390",
+        "backup-restored-profit-1440",
+        "backup-restored-profit-390",
+        "backup-skipped-long-390",
+        "backup-invalid-390",
+        "backup-busy-390",
+        "backup-network-error-390",
+        "backup-legacy-390",
+        "backup-success-390"
+      ],
+      "status": "passed; targeted states, not full accessibility audit",
+      "evidenceVersion": "0.12.43-preview.1",
+      "note": "Prior visual inspection retained; .44 backup browser tests rerun, not re-inspected visually"
+    },
+    "backupVisualQA": {
+      "screensInspected": 4,
+      "widths": [
+        1440,
+        390
+      ],
+      "screens": [
+        "backup-disk-full-1440",
+        "backup-disk-full-390",
+        "backup-partial-1440",
+        "backup-partial-390"
+      ],
+      "status": "passed; targeted fault messages, not full accessibility audit"
+    },
+    "nativeWindowsNew45": "not_done",
+    "backupFailureHandling": {
+      "version": "0.12.45-preview.1",
+      "environment": "Linux; temporary synthetic files; explicit filesystem fault injection; local authenticated Chromium servers",
+      "beforeFixReproduction": {
+        "passed": 5,
+        "failed": 6,
+        "scope": "Initial 11 new regression tests, expected failures reproduced; superseded by passing final tests"
+      },
+      "newUnitScenarios": 18,
+      "fullUnit": {
+        "tests": 649,
+        "pass": 649,
+        "fail": 0,
+        "skipped": 0
+      },
+      "backupUI": {
+        "passed": 13,
+        "failed": 0,
+        "newFaultScenarios": 4,
+        "includedInCoreE2E": true
+      },
+      "fullCoreE2E": {
+        "tests": 301,
+        "pass": 301,
+        "fail": 0,
+        "skipped": 0
+      },
+      "visualQA": {
+        "screensInspected": 4,
+        "widths": [
+          1440,
+          390
+        ],
+        "screens": [
+          "backup-disk-full-1440",
+          "backup-disk-full-390",
+          "backup-partial-1440",
+          "backup-partial-390"
+        ],
+        "status": "passed; targeted fault messages, not full accessibility audit"
+      },
+      "faults": [
+        "ENOSPC including partial tmp bytes",
+        "rename EACCES",
+        "mkdir EROFS",
+        "tmp cleanup refusal before and after commit"
+      ],
+      "limits": "Small fixtures with temporarily lowered limits in unit process; exact/over archive, file, total, count boundaries; not maximum-size memory/performance validation",
+      "network": {
+        "serverProviderFetchAttempts": 0,
+        "environment": "isolated synthetic Linux browser/API test"
+      },
+      "unchanged": [
+        "ZIP format v1/v2",
+        "Production limit values",
+        "No automatic rollback or retry",
+        "Windows stop helper 1.0.0",
+        "Google diagnostics from .44"
+      ],
+      "notAccepted": [
+        "Native Windows ACL/junction handling",
+        "Actual full disk or power loss",
+        "Real 512 MiB/1 GiB or 20,000-file workload",
+        "Concurrent hostile path substitution",
+        "Live Google CSV/CTR scale, paid AI or installed external MCP client"
+      ]
+    },
+    "windowsStopAcceptanceKit": {
+      "applicationVersion": "0.12.45-preview.1",
+      "testKitVersion": "1.0.0",
+      "stopHelperVersion": "1.0.0",
+      "nativeWindowsExecution": "not_run; Linux development environment",
+      "portableUnit": {
+        "passed": 17,
+        "failed": 0,
+        "includedInFullUnit": true
+      },
+      "fullUnit": {
+        "tests": 666,
+        "pass": 666,
+        "fail": 0,
+        "skipped": 0
+      },
+      "typecheck": "passed",
+      "nodeSyntax": "passed",
+      "batByteCheck": "passed; UTF-8 CRLF and confirmation/preload guard checked by unit test",
+      "portableWindowsFileCheck": "passed; existing launcher files",
+      "realSyntheticChildOnLinux": "passed; absolute and relative Node child entries with IPC/ephemeral loopback port; direct cleanup, not Windows helper stop",
+      "nonWindowsCli": "exit 2 before sandbox/report/children/PowerShell",
+      "coreE2E": {
+        "rerunForTestKitOnly": false,
+        "priorApplication45Passed": 301,
+        "priorApplication45Failed": 0,
+        "reason": "No production server/UI/backup/Google/stop-helper runtime changes; optional acceptance harness and tests only"
+      },
+      "filesHashes": {
+        "test-stop-windows.bat": "823c827964b2119a6ef96429cdd965a3172208e96f49d10e3007fdf66ae80d56",
+        "windows/test-stop.mjs": "5c54fe4129181bb1bddf02ea276a0af329cf520159d0a2ccd33d8dc510e051ee",
+        "windows/server-control.mjs": "27bfafd0540a5c5d5e29c142b65e56a68e55d415db9eca3c6b85f91cda5bb0cb",
+        "windows/prepare-update.ps1": "f6ea714c7a91c494260512d2b79f948e04f170edf0f80109d9f8dfc38c12dd27"
+      },
+      "scope": "Temporary synthetic installations; exact helper and prepare-update pre-stop, not full application/start/stop BAT UI/shortcut/update installer/restore/live providers",
+      "safety": [
+        "No real installation .env/DATA_DIR read or real app port selection",
+        "Explicit OS-selected synthetic port overrides inherited PORT",
+        "No inherited Node preloads/provider keys in child environment",
+        "Only helper-verified synthetic listener or self-created ChildProcess cleanup",
+        "No blanket taskkill, elevation, ExecutionPolicy bypass or npm",
+        "Fixed report fields; no raw OS errors, command line, usernames, paths, PID or credentials",
+        "Atomic report replacement; symlink refused, hardlinked content preserved"
+      ],
+      "limitations": [
+        "Native Windows report still required from owner",
+        "No full app launch/update/restore/paid AI/Google/CTR/MCP acceptance",
+        "No guarantee after power loss or hostile concurrent path replacement",
+        "Interrupted or denied cleanup can leave own temporary sandbox"
+      ]
+    },
+    "windowsPreStopFix101": {
+      "applicationVersion": "0.12.45-preview.1",
+      "testKitVersion": "1.0.1",
+      "prepareMethod": "node-server-control-cli",
+      "createdAt": "2026-10-28T04:53:42.849320+00:00",
+      "environment": "Linux / Node 24.22.1",
+      "acceptedRelease": false,
+      "currentSessionChecks": {
+        "baselineWindowsTests": {
+          "passed": 52,
+          "failed": 0
+        },
+        "fixedWindowsTests": {
+          "passed": 62,
+          "failed": 0,
+          "skipped": 0,
+          "newTests": 10
+        },
+        "syntax": "passed",
+        "portableWindowsFileCheck": "passed",
+        "fullTypecheck": "not_run",
+        "fullBuild": "not_run",
+        "fullUnit": "not_run",
+        "fullE2E": "not_run",
+        "nativeWindows": "not_run",
+        "externalRequests": 0
+      },
+      "productionChanges": [
+        "update-windows.bat directly invokes existing Node stop helper before npm; no pre-stop PS1 execution"
+      ],
+      "unchanged": [
+        "windows/server-control.mjs",
+        "application server/UI/MCP",
+        "DATA_DIR resolution",
+        "backup/CTR runtime",
+        "Chrome extension"
+      ],
+      "limitations": [
+        "Still requires Windows PowerShell/CIM for process inspection",
+        "Shortcut installation retains original PowerShell mechanism",
+        "Native fresh kit 1.0.1 report needed; Linux tests are not native acceptance"
+      ],
+      "filesHashes": {
+        "update-windows.bat": "efdd667139927648458a58ec20daa740bb8aab3da766ef285b69d0b7453da8fd",
+        "test-stop-windows.bat": "81c963d6482a3d560eda167126be05da4d9af854132621128f4434d14d31ed3e",
+        "windows/test-stop.mjs": "8f2a156a960d068d33706361a913fc22f3ab1f26e92c01d360ec36e62e3ae462",
+        "windows/server-control.mjs": "27bfafd0540a5c5d5e29c142b65e56a68e55d415db9eca3c6b85f91cda5bb0cb",
+        "apps/server/test/windowsPrepareUpdate.test.ts": "3050163c1c2da27aa28fbe7d3e9c21243352120b429024e9966eaa7fbefdbe6e"
+      }
+    }
+  },
+  "instructions": "LOCAL-CHECK-v0.12.45-preview.1.md",
+  "note": "Current copy adds Windows pre-stop/test kit 1.0.1. See windowsPreStopFix101 for this session: 62 targeted Linux tests passed, NOT a full suite/build/typecheck/native rerun. All other check entries above are historical evidence from supplied .45 archives, not newly reproduced. Application remains preview."
+}

@@ -1,0 +1,20 @@
+node_modules
+dist
+data
+.env
+
+launcher-logs
+
+# Local native stop acceptance report (not application data)
+windows-stop-test-report.json
+windows-stop-test-report.json.*.tmp
+
+# Runtime stop credentials; never commit or package
+.tubestudio-control
+
+# Тяжёлые артефакты старых проверок (хранятся отдельно, не в git)
+docs/checks/
+QA-v0.12.50/
+*.log
+.env.*
+!.env.example

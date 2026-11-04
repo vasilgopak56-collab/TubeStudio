@@ -1,0 +1,31 @@
+{
+  "name": "tubestudio",
+  "private": true,
+  "version": "0.12.148-preview.1",
+  "type": "module",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web -c yellow,cyan \"npm:dev -w apps/server\" \"npm:dev -w apps/web\"",
+    "build": "npm run build:assistant-knowledge && npm run build -w apps/web && npm run build -w apps/server && npm run build -w apps/mcp",
+    "start": "npm start -w apps/server",
+    "typecheck": "npm run typecheck -w apps/server && npm run typecheck -w apps/web && npm run typecheck -w apps/mcp",
+    "test": "npm run test:unit && npm run test:e2e",
+    "check:windows": "node scripts/windows-check.mjs",
+    "test:unit": "node scripts/test-unit.mjs",
+    "test:e2e": "node scripts/test-desktop.mjs",
+    "smoke": "node scripts/smoke.mjs",
+    "mcp": "node apps/mcp/dist/index.js",
+    "test:backup-transfer": "npm run build -w apps/server && node scripts/test-backup-transfer.mjs",
+    "test:desktop": "node scripts/test-desktop.mjs",
+    "build:assistant-knowledge": "node --import tsx scripts/build-assistant-knowledge.ts"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "playwright-core": "^1.64.0"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  }
+}

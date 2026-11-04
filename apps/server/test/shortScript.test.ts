@@ -1,0 +1,10 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {ScriptInput,expectedActs} from '../src/services/script.js';
+import {PipelineInput} from '../src/services/pipeline.js';
+import {checkScript} from '../src/services/scriptCheck.js';
+test('short script accepts a 120-word one-minute Russian input without paid calls',()=>{const x=ScriptInput.parse({topic:'Древний Рим',value:120,research:false,cta:false});assert.equal(x.value,120);assert.equal(expectedActs(x.value),1);});
+test('short script accepts character equivalent and rejects too-short words or chars',()=>{assert.equal(ScriptInput.parse({topic:'Древний Рим',unit:'chars',value:864}).value,864);for(const unit of ['words','chars'])assert.equal(ScriptInput.safeParse({topic:'Древний Рим',unit,value:59}).success,false);assert.equal(ScriptInput.safeParse({topic:'Древний Рим',unit:'chars',value:100}).success,false);});
+test('short script act boundaries preserve long-form structure',()=>{assert.deepEqual([60,120,180,181,300,360,361,1200,2000,3200,4500,6000].map(expectedActs),[1,1,1,2,2,2,3,3,4,5,6,7]);});
+test('pipeline accepts 120 words and still validates the lower bound',()=>{assert.equal(PipelineInput.parse({topic:'Древний Рим',words:120}).words,120);assert.equal(PipelineInput.safeParse({topic:'Древний Рим',words:59}).success,false);});
+test('120 Russian words are a one-minute estimate, not actual measured audio',()=>{const s=Array.from({length:120},(_,i)=>'слово'+i).join(' ')+'.';const c=checkScript(s,{language:'ru',unit:'words',target:120,cta:false});assert.equal(c.metrics.words,120);assert.equal(c.metrics.minutes,1);});

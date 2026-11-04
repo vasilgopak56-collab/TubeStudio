@@ -1,0 +1,53 @@
+{
+ "id": "e2epipe",
+ "createdAt": "2026-01-01T10:00:00Z",
+ "updatedAt": "2026-01-01T10:02:00Z",
+ "status": "paused",
+ "projectId": "e2eproj",
+ "title": "Римляне без мыла",
+ "stages": [
+  {
+   "id": "script",
+   "label": "Сценарий",
+   "status": "done",
+   "startedAt": "2026-01-01T10:00:00Z",
+   "endedAt": "2026-01-01T10:02:00Z",
+   "summary": "«Римляне без мыла» · 812 слов · ≈ 5.8 мин"
+  },
+  {
+   "id": "rater",
+   "label": "Оценка сценария",
+   "status": "pending"
+  },
+  {
+   "id": "seo",
+   "label": "SEO",
+   "status": "pending"
+  },
+  {
+   "id": "thumbnail",
+   "label": "Обложки",
+   "status": "pending"
+  },
+  {
+   "id": "video",
+   "label": "Видео-черновик",
+   "status": "pending"
+  }
+ ],
+ "input": {
+  "topic": "Почему в Риме не было мыла",
+  "stages": [
+   "script",
+   "rater",
+   "seo",
+   "thumbnail",
+   "video"
+  ],
+  "pauseAfter": [
+   "script"
+  ]
+ },
+ "data": {},
+ "pausedAfter": "script"
+}

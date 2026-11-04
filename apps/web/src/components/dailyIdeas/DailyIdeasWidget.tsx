@@ -1,0 +1,10 @@
+import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { Lightbulb, ArrowRight } from "lucide-react";
+import { api } from "@/lib/api";
+import { Card, ErrorAlert, SectionTitle } from "@/components/ui";
+import type { DailyRun } from "@/features/dailyIdeas/types";
+export function DailyIdeasWidget(){
+ const q=useQuery({queryKey:["daily-ideas-latest"],queryFn:()=>api<DailyRun|null>("/daily-ideas/latest"),refetchOnWindowFocus:false});
+ return <Card className="space-y-4" data-testid="daily-ideas-widget"><SectionTitle icon={<Lightbulb className="h-4 w-4" />}>Идеи для следующего выпуска</SectionTitle><p className="text-sm text-muted-foreground">Daily Ideas · только сохранённая подборка. Открытие панели не запускает генерацию.</p>{q.error && <ErrorAlert error={q.error} />}{q.isLoading?<p className="text-sm">Читаю локальную подборку…</p>:q.data?<><p className="break-words text-sm text-muted-foreground">Сохранено {new Date(q.data.createdAt).toLocaleString("ru-RU")} · источник: {q.data.preview.context.source.title}. Это не свежие тренды и не прогноз успеха.</p><div className="grid gap-3 md:grid-cols-3">{q.data.ideas.slice(0,3).map((i,n)=><Link key={n} to={`/daily-ideas?run=${q.data!.id}`} className="min-w-0 space-y-2 rounded-lg border border-border p-4 transition-colors hover:border-primary"><span className="font-mono text-sm text-primary">0{n+1} · AI-гипотеза</span><h3 className="break-words font-semibold [overflow-wrap:anywhere]" dir="auto">{i.title}</h3><p className="break-words text-sm text-muted-foreground [overflow-wrap:anywhere]" dir="auto">{i.angle}</p></Link>)}</div></>:<p className="text-sm text-muted-foreground">Выберите сохранённое исследование, анализ, ключевые слова или канал трекера. Сначала покажем контекст; затем по вашей кнопке AI предложит пять идей.</p>}<Link to={q.data?`/daily-ideas?run=${q.data.id}`:"/daily-ideas"} className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-primary hover:underline">{q.data?"Вся подборка и новая генерация":"Выбрать источник для идей"}<ArrowRight className="h-4 w-4" /></Link></Card>;
+}

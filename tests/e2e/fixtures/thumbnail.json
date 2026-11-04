@@ -1,0 +1,40 @@
+{
+ "variants": [
+  {
+   "variant": "A",
+   "idea": "Испуганный крестьянин",
+   "text": "СМЕРТЕЛЬНАЯ ВОДА",
+   "prompt": "Close-up of a dirty, terrified medieval peasant looking at a wooden basin of water with wide eyes and trembling hands. Cinematic lighting, dramatic shadows on the face, dark earthy tones, deep browns and grays. Shallow depth of field, sharp focus on the face. Empty space on the left side for the text \"СМЕРТЕЛЬНАЯ ВОДА\" written in bold, distressed white sans-serif font with a thick black outline. Highly detailed, photorealistic style, 8k.",
+   "why": "Эмоциональное лицо вызывает мгновенное любопытство к причине страха.",
+   "status": "error",
+   "versions": [],
+   "error": "Gemini: генерация картинок (gemini-3.1-flash-image) недоступна на бесплатном тарифе — подключите billing в Google AI Studio или выберите OpenAI в Настройках"
+  },
+  {
+   "variant": "B",
+   "idea": "Таинственное зараженное зеркало",
+   "text": "ЭТО УБИВАЕТ",
+   "prompt": "An ancient, ornate medieval stone washbasin filled with murky, swirling green-tinted water in a dimly lit, damp stone chamber. A faint, eerie skeletal reflection appears in the water. High contrast, volumetric fog, sickly yellow and deep charcoal palette. The composition follows the rule of thirds. Text \"ЭТО УБИВАЕТ\" placed in the top right corner in bold, heavy, blood-red sans-serif font with a white stroke. Mystical and ominous atmosphere, hyper-realistic, volumetric lighting.",
+   "why": "Загадочный объект в воде создает мощный визуальный разрыв любопытства.",
+   "status": "error",
+   "versions": [],
+   "error": "Gemini: генерация картинок (gemini-3.1-flash-image) недоступна на бесплатном тарифе — подключите billing в Google AI Studio или выберите OpenAI в Настройках"
+  },
+  {
+   "variant": "C",
+   "idea": "Чистота против болезни",
+   "text": "ГРЯЗЬ - ЭТО ЖИЗНЬ",
+   "prompt": "Split screen composition. Left side: a bright, scrubbed, sickly-looking pale person in a bath. Right side: a robust, dirty, healthy-looking peasant covered in mud in a field. Vibrant, contrasting colors: cool clinical blues on the left, warm natural earthy ochres on the right. High definition, cinematic style. Text \"ГРЯЗЬ - ЭТО ЖИЗНЬ\" centered in the middle overlay in bold, clean yellow sans-serif font with a thick black shadow. Clear visual contrast between two states of health.",
+   "why": "Контраст разрушает стереотип о гигиене, заставляя зрителя нажать для подтверждения.",
+   "status": "error",
+   "versions": [],
+   "error": "Gemini: генерация картинок (gemini-3.1-flash-image) недоступна на бесплатном тарифе — подключите billing в Google AI Studio или выберите OpenAI в Настройках"
+  }
+ ],
+ "input": {
+  "title": "Почему средневековые люди боялись купаться",
+  "language": "ru",
+  "steps": {},
+  "hasCharacter": false
+ }
+}

@@ -1,0 +1,81 @@
+import crypto from "node:crypto";
+import { z } from "zod";
+import { ApiError } from "../lib/errors.js";
+import { readJson, writeJson } from "../lib/storage.js";
+import { listReports, loadReport } from "./analysis.js";
+import { getSettings } from "./settings.js";
+
+export const CAL_STATUS = ["plan", "script", "ready", "published"] as const;
+export const CalInput = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  time: z.string().regex(/^\d{2}:\d{2}$/).optional().or(z.literal("")),
+  title: z.string().trim().min(1).max(300),
+  status: z.enum(CAL_STATUS).default("plan"),
+  format: z.enum(["long", "short"]).default("long"),
+  projectId: z.string().max(80).optional().or(z.literal("")),
+  notes: z.string().max(4000).optional(),
+  remindDays: z.number().int().min(0).max(14).default(1),
+});
+// Zod 4 applies defaults inside partial(); PATCH must not reset omitted fields.
+export const CalPatchInput = CalInput.partial().extend({
+  status: CalInput.shape.status.unwrap().optional(),
+  format: CalInput.shape.format.unwrap().optional(),
+  remindDays: CalInput.shape.remindDays.unwrap().optional(),
+});
+export type CalItem = z.infer<typeof CalInput> & { id: string; createdAt: string; updatedAt: string };
+const FILE = "calendar.json";
+
+export const listCalendar = async () => (await readJson<CalItem[]>(FILE, [])).sort((a, b) => (a.date + (a.time ?? "")).localeCompare(b.date + (b.time ?? "")));
+export async function addCalendar(input: unknown) {
+  const d = CalInput.parse(input); const all = await listCalendar(); const now = new Date().toISOString();
+  const it: CalItem = { ...d, id: crypto.randomUUID(), createdAt: now, updatedAt: now };
+  all.push(it); await writeJson(FILE, all); return it;
+}
+export async function patchCalendar(id: string, patch: unknown) {
+  const all = await listCalendar(); const i = all.findIndex((x) => x.id === id);
+  if (i < 0) throw new ApiError("NOT_FOUND", "Запись не найдена", 404);
+  all[i] = { ...all[i], ...CalPatchInput.parse(patch), updatedAt: new Date().toISOString() };
+  await writeJson(FILE, all); return all[i];
+}
+export async function deleteCalendar(id: string) {
+  const all = await listCalendar(); await writeJson(FILE, all.filter((x) => x.id !== id)); return { id };
+}
+
+/** Лучший день/час по последнему отчёту анализа канала (индексы: 0 = Пн) */
+export async function bestTime() {
+  for (const row of (await listReports()).slice(0, 5)) {
+    const r = await loadReport(row.id);
+    if (!r?.schedule) continue;
+    const s = r.schedule;
+    const topDays = s.byDay.map((d, i) => ({ i, avg: d.avg, label: d.label })).filter((d) => d.avg > 0).sort((a, b) => b.avg - a.avg).slice(0, 3);
+    return { day: s.bestDay, hour: s.bestHour, label: `${s.byDay[s.bestDay].label}, ${String(s.bestHour).padStart(2, "0")}:00`, topDays: topDays.map((d) => d.i), channel: row.title, reportId: row.id, createdAt: row.createdAt };
+  }
+  return null;
+}
+
+// ── iCalendar (.ics): импорт в Google Календарь / телефон — там и напоминания ──
+const esc = (s: string) => s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+const fold = (line: string) => { const out: string[] = []; let s = line; while (Buffer.byteLength(s) > 74) { let n = 74; while (Buffer.byteLength(s.slice(0, n)) > 74) n--; out.push(s.slice(0, n)); s = " " + s.slice(n); } out.push(s); return out.join("\r\n"); };
+const STATUS_RU: Record<string, string> = { plan: "План", script: "Сценарий", ready: "Готово к публикации", published: "Опубликовано" };
+
+export async function calendarIcs(items?: CalItem[]) {
+  const all = items ?? await listCalendar();
+  const tz = (await getSettings()).timezone;
+  const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
+  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//TubeStudio//Calendar//RU", "CALSCALE:GREGORIAN", "X-WR-CALNAME:TubeStudio — публикации", `X-WR-TIMEZONE:${tz}`];
+  for (const it of all) {
+    const d = it.date.replace(/-/g, "");
+    const timed = !!it.time;
+    const start = timed ? `DTSTART;TZID=${tz}:${d}T${it.time!.replace(":", "")}00` : `DTSTART;VALUE=DATE:${d}`;
+    const endDate = new Date(`${it.date}T00:00:00Z`); endDate.setUTCDate(endDate.getUTCDate() + 1);
+    const end = timed ? `DURATION:PT30M` : `DTEND;VALUE=DATE:${endDate.toISOString().slice(0, 10).replace(/-/g, "")}`;
+    lines.push("BEGIN:VEVENT", `UID:${it.id}@tubestudio`, `DTSTAMP:${stamp}`, start, end,
+      `SUMMARY:${esc(`${it.format === "short" ? "[Shorts] " : "▶ "}${it.title}`)}`,
+      `DESCRIPTION:${esc(`Статус: ${STATUS_RU[it.status]}${it.notes ? `\n${it.notes}` : ""}\nTubeStudio`)}`,
+      `CATEGORIES:YouTube,${STATUS_RU[it.status]}`);
+    if (it.remindDays > 0 && it.status !== "published") lines.push("BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${esc(`Публикация: ${it.title}`)}`, `TRIGGER:-P${it.remindDays}D`, "END:VALARM");
+    lines.push("END:VEVENT");
+  }
+  lines.push("END:VCALENDAR");
+  return lines.map(fold).join("\r\n") + "\r\n";
+}

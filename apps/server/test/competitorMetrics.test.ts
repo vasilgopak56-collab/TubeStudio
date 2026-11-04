@@ -1,0 +1,35 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { compBase, videoStats, recentRate, spikeEvidence } from "../src/services/competitorMetrics.js";
+import type { TVideo } from "../src/services/competitors.js";
+const H=3600_000, now=Date.parse("2026-01-20T12:00:00Z");
+function video(id="v",rate=100,short=false):TVideo {return {id,title:id,publishedAt:new Date(now-10*24*H).toISOString(),durationSec:short?60:600,isShort:short,alerted:[],points:[{t:now-2*H,v:1000,l:0,c:0,viewsKnown:true},{t:now,v:1000+rate*2,l:0,c:0,viewsKnown:true}]};}
+const peers=()=>[video("a",10),video("b",20),video("c",30)];
+test("tracker interval: explicit endpoints delta and raw average, not instantaneous",()=>{const r=recentRate(video(),now);assert.equal(r.rate,100);assert.equal(r.interval?.hours,2);assert.equal(r.interval?.deltaViews,200);assert.equal(r.interval?.from,new Date(now-2*H).toISOString());assert.equal(r.interval?.verified,true);});
+test("tracker lifetime stops at observation, does not drift with wall clock",()=>{const v=video();assert.equal(videoStats(v,1000,now).vph,videoStats(v,1000,now+H).vph);});
+test("tracker one observation never substitutes lifetime for recent",()=>{const v=video();v.points.shift();assert.equal(recentRate(v,now).rate,null);assert.equal(spikeEvidence(v,peers(),2,now),null);});
+test("tracker subhour observations do not form recent interval",()=>{const v=video();v.points[0].t=now-59*60_000;assert.equal(recentRate(v,now).rate,null);});
+test("tracker interval accepts exact one hour and 48 hours",()=>{for(const n of [1,48]){const v=video();v.points[0].t=now-n*H;assert.equal(recentRate(v,now).interval?.hours,n);}});
+test("tracker interval rejects gaps over 48 hours",()=>{const v=video();v.points[0].t=now-49*H;assert.equal(recentRate(v,now).rate,null);});
+test("tracker stale and future latest observation unavailable",()=>{for(const n of [49,-1])assert.equal(recentRate(video(),now+n*H).rate,null);});
+test("tracker negative correction is unknown, not zero",()=>{const v=video();v.points[1].v=900;assert.equal(recentRate(v,now).rate,null);});
+test("tracker intervening reset cannot be bridged",()=>{const v=video();v.points.splice(1,0,{...v.points[0],t:now-H/2,v:800});assert.equal(recentRate(v,now).rate,null);});
+test("tracker unknown intervening observation blocks rate",()=>{const v=video();v.points.splice(1,0,{...v.points[0],t:now-H/2,viewsKnown:false});assert.equal(recentRate(v,now).rate,null);});
+test("tracker unknown latest counts never become real zeros",()=>{const v=video();v.points[1].viewsKnown=false;const s=videoStats(v,1000,now);assert.equal(s.viewsKnown,false);assert.equal(s.vph,null);assert.equal(s.vphRecent,null);assert.equal(s.outlier,null);});
+test("tracker duplicate or reversed timestamp rejected without sorting away evidence",()=>{for(const t of [now,now+1]){const v=video();v.points[0].t=t;assert.equal(recentRate(v,now).rate,null);}});
+test("tracker invalid and unsafe counters/date rejected",()=>{for(const value of [NaN,Infinity,-1,Number.MAX_SAFE_INTEGER+1,1.5]){const v=video();v.points[1].v=value;assert.equal(recentRate(v,now).rate,null);}const v=video();v.points[1].t=1e20;assert.equal(recentRate(v,now).rate,null);});
+test("tracker known zero delta is a real zero",()=>{const v=video("zero",0);assert.equal(recentRate(v,now).rate,0);assert.equal(recentRate(v,now).interval?.verified,true);});
+test("tracker legacy observations readable but no new spike",()=>{const v=video();v.points.forEach(p=>delete p.viewsKnown);assert.equal(recentRate(v,now).rate,100);assert.equal(recentRate(v,now).interval?.verified,false);assert.equal(spikeEvidence(v,peers(),2,now),null);});
+test("tracker baseline requires three same-format known mature videos",()=>{const vs=[...peers(),video("short",100,true)];assert.equal(compBase({videos:vs},now).short,0);assert.equal(compBase({videos:vs},now).long,1040);vs[0].points[1].viewsKnown=false;assert.equal(compBase({videos:vs},now).long,0);});
+test("tracker young or stale videos excluded from baseline",()=>{for(const change of [(v:TVideo)=>v.publishedAt=new Date(now-H).toISOString(),(v:TVideo)=>v.points[1].t=now-49*H]){const vs=peers();change(vs[0]);assert.equal(compBase({videos:vs},now).long,0);}});
+test("tracker spike excludes self and records all peer evidence",()=>{const v=video(),e=spikeEvidence(v,[v,...peers()],2,now);assert.ok(e);assert.equal(e.median,20);assert.equal(e.ratio,5);assert.equal(e.peers.length,3);assert.ok(e.peers.every(p=>p.id!==v.id));assert.equal(e.threshold,2);assert.equal(e.format,"long");});
+test("tracker fewer than three peers never falls back to lifetime",()=>assert.equal(spikeEvidence(video(),peers().slice(0,2),2,now),null));
+test("tracker Shorts cannot supply long video baseline for spike",()=>{const p=peers();p[0].isShort=true;assert.equal(spikeEvidence(video(),p,2,now),null);});
+test("tracker asynchronous windows are not comparable",()=>{const p=peers();p[0].points[0].t-=11*60_000;assert.equal(spikeEvidence(video(),p,2,now),null);});
+test("tracker duplicate peer IDs cannot inflate sample",()=>{const p=peers();p[2].id=p[0].id;assert.equal(spikeEvidence(video(),p,2,now),null);});
+test("tracker zero median, disabled threshold or small rate does not signal",()=>{assert.equal(spikeEvidence(video(),[video("a",0),video("b",0),video("c",0)],2,now),null);assert.equal(spikeEvidence(video(),peers(),0,now),null);assert.equal(spikeEvidence(video("v",9),peers(),0.1,now),null);});
+test("tracker young target, invalid publication or legacy peer blocks evidence",()=>{const v=video();v.publishedAt=new Date(now-H).toISOString();assert.equal(spikeEvidence(v,peers(),2,now),null);v.publishedAt="bad";assert.equal(videoStats(v,1000,now).vph,null);assert.equal(spikeEvidence(v,peers(),2,now),null);const p=peers();delete p[0].points[0].viewsKnown;assert.equal(spikeEvidence(video(),p,2,now),null);});
+
+test("tracker baseline never falls back to mean of one or two same-format videos",()=>{assert.equal(compBase({videos:peers().slice(0,2)},now).long,0);});
+test("tracker no future or invalid publication can enter interval evidence",()=>{const p=peers();p[0].publishedAt=new Date(now+H).toISOString();assert.equal(spikeEvidence(video(),p,2,now),null);});
+test("tracker baseline excludes legacy numeric fallback with unknown provenance",()=>{const p=peers();delete p[0].points[1].viewsKnown;assert.equal(compBase({videos:p},now).long,0);});

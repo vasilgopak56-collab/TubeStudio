@@ -1,0 +1,11 @@
+import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
+import { ApiError, fail, ok } from "../lib/errors.js";
+import { AdInput, AdSelection, listAdSources, listAdPlans, loadAdPlan, saveAdPlan, saveAdSelection } from "../services/adBreaks.js";
+export const adBreaksRoute=new Hono();
+adBreaksRoute.use("/ad-breaks/*",bodyLimit({maxSize:20000,onError:c=>c.json({ok:false,error:{code:"VALIDATION",message:"Слишком большой запрос"}},413)}));
+adBreaksRoute.get("/ad-breaks/sources",async c=>{try{return ok(c,await listAdSources());}catch(e){return fail(c,e);}});
+adBreaksRoute.post("/ad-breaks/plan",async c=>{try{return ok(c,await saveAdPlan(AdInput.parse(await c.req.json())));}catch(e){return fail(c,e);}});
+adBreaksRoute.post("/ad-breaks/selection",async c=>{try{return ok(c,await saveAdSelection(AdSelection.parse(await c.req.json())));}catch(e){return fail(c,e);}});
+adBreaksRoute.get("/ad-breaks/runs",async c=>{try{return ok(c,await listAdPlans());}catch(e){return fail(c,e);}});
+adBreaksRoute.get("/ad-breaks/runs/:id",async c=>{try{const r=await loadAdPlan(c.req.param("id"));if(!r)throw new ApiError("NOT_FOUND","План не найден",404);return ok(c,r);}catch(e){return fail(c,e);}});

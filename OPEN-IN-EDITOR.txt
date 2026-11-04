@@ -1,0 +1,53 @@
+﻿TUBESTUDIO — ИСХОДНИКИ ДЛЯ РЕДАКТИРОВАНИЯ
+Приложение: v0.12.45-preview.1. Windows-помощник остановки: 1.0.0.
+
+1. Распакуйте архив в ОТДЕЛЬНУЮ папку, например C:\Projects\TubeStudio-source.
+2. В VS Code, Cursor, WebStorm или другом редакторе выберите Open Folder / Открыть папку.
+3. Откройте внутреннюю папку tubestudio, в которой лежит package.json.
+   Это обычный TypeScript/React-проект. Файл .sln или установщик не требуется.
+4. Установите актуальный Node.js 22 LTS либо 24 LTS. Для аудио/видео нужен FFmpeg в PATH.
+5. В терминале редактора (на Windows — cmd / Command Prompt) выполните:
+
+   if not exist .env copy .env.example .env
+   npm ci
+   npm run dev
+
+6. Откройте http://localhost:5173. Изменения интерфейса подхватываются автоматически.
+   API по умолчанию работает на http://127.0.0.1:8787: другая установка на этом порту
+   должна быть остановлена. Если меняете PORT, исправьте proxy в apps/web/vite.config.ts.
+7. Для завершения режима разработки нажмите Ctrl+C в его терминале.
+   stop-windows.bat не предназначен для dev-серверов tsx/Vite.
+
+ГДЕ КОД
+- apps/web/src/pages и apps/web/src/features — страницы и функции интерфейса;
+- apps/web/src/components — общие компоненты;
+- apps/server/src/routes — API;
+- apps/server/src/services — логика инструментов и интеграции;
+- apps/server/prompts — редактируемые промпты;
+- apps/mcp/src — MCP;
+- windows, start-windows.bat, stop-windows.bat — запуск и остановка Windows;
+- apps/server/test и tests/e2e — тесты.
+
+ПОСЛЕ ПРАВОК
+Остановите dev-сервер (Ctrl+C), затем в корне проекта:
+
+   npm run typecheck
+   npm run test:unit
+   npm run build
+   npm start
+
+Production-адрес по умолчанию: http://127.0.0.1:8787.
+Один npm start НЕ пересобирает изменённые исходники. При ручном npm start
+останавливайте сервер через Ctrl+C в его терминале. Для отдельного stop-windows.bat
+запускайте production-версию через обновлённый start-windows.bat/ярлык.
+
+БЕЗОПАСНОСТЬ
+Не правьте единственную рабочую установку без резервной копии.
+В архиве нет ваших ключей, .env, проектов, загруженных файлов, OAuth-подключений,
+node_modules и dist. API настраивайте локально только при необходимости.
+Не подключайте dev-версию к единственной рабочей папке данных.
+Платные генерации/реальные API-тесты могут расходовать деньги и квоту.
+Не запускайте npm run smoke без отдельного понимания провайдеров/расходов.
+Наличие исходников не означает завершённую приёмку Windows/Google/CTR.
+
+Подробности: DEVELOPMENT-RU.md. Инструкция по пункту 12: POINT-12-STEP-BY-STEP.md.

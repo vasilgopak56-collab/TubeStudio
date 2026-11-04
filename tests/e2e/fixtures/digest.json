@@ -1,0 +1,263 @@
+{
+ "summary": "Infographics Show доминирует с хайповыми темами про здоровье, кризисы и науку, используя формулы 'hour by hour' и конкретные биологические/экономические механизмы. Psych2Go показывает стабильность на ADHD и психологии поколений. Главный паттерн: страх + любопытство к процессу ('что именно происходит внутри'). Зрители хотят понять механику угроз и трендов, а не просто факты.",
+ "hits": [
+  {
+   "videoId": "aIme4aIswaU",
+   "why": "Заголовок 'Wall Street is freaking out now' эксплуатирует тревогу + актуальность (финансовый кризис или коррекция). Слово 'freaking out' создаёт эмоцию паники у элиты, что цепляет массового зрителя ('если они боятся, мне тоже надо знать'). Outlier 2.0 говорит о попадании в текущую повестку (возможно, обвал рынка или политика Трампа).",
+   "lesson": "Эмоция элиты (Wall Street, ФРС, Кремль) + 'сейчас' работает сильнее абстрактных прогнозов. Зритель хочет инсайдерский угол."
+  },
+  {
+   "videoId": "dt5ocYfjths",
+   "why": "'Ozempic Overdose Hour by Hour' + '7-Day Gastric Freeze' — двойной крючок: популярный препарат (Ozempic = хайп 2024) + детализация ужаса ('час за часом', 'желудок замораживается на неделю'). VPH 8947 показывает взрывной старт. Формула 'hour by hour' обещает пошаговый разбор катастрофы, а 'biology' даёт научность.",
+   "lesson": "Тренд (Ozempic) + формула процесса (hour by hour) + конкретное последствие (gastric freeze) = вирусная смесь страха и любопытства."
+  },
+  {
+   "videoId": "O4yWBv2Nj68",
+   "why": "'Lethal Radiation' + 'Hour by Hour' повторяет успешную формулу канала. Радиация = универсальный страх, а 'hour by hour' превращает абстрактную угрозу в детективный разбор ('что именно убивает меня по часам'). 18 минут дают глубину.",
+   "lesson": "Формула 'hour by hour' работает как сериал: обещает структуру и кульминацию. Зритель остаётся до конца, чтобы узнать финал."
+  },
+  {
+   "videoId": "rOnSVOXISOQ",
+   "why": "'Why Adults Today Are Okay With Just Being Okay' попадает в психологию миллениалов/Gen Z: отказ от hustle-культуры. 'Just being okay' звучит как разрешение ('ты не сломлен, это нормально'). Outlier 1.3 для Psych2Go = стабильный хит. 5 минут — быстрое утешение.",
+   "lesson": "Темы про 'новую норму' поколения (anti-ambition, burnout acceptance) заходят, если дают валидацию, а не осуждение."
+  },
+  {
+   "videoId": "groZE2q7daM",
+   "why": "'Billion Dollar Aging Problem Solved?' + 'GHK-Cu Peptide Explained' — обещание прорыва (solved?) + конкретика (название пептида). 'Billion Dollar' добавляет масштаб и доверие (большие деньги = серьёзная наука). 23 минуты = глубокий разбор для аудитории 35+.",
+   "lesson": "Longevity и anti-aging с конкретными веществами (пептиды, NMN) + намёк на коммерческий интерес ('billion dollar') работают на аудиторию, готовую платить."
+  },
+  {
+   "videoId": "qA8lSgNH6f8",
+   "why": "'ADHD BURNOUT' (капс) выделяет специфичность. ADHD-тематика = лояльная ниша Psych2Go. 'How to Deal' обещает решение, не просто описание. 6 минут = практичный формат.",
+   "lesson": "ADHD-контент стабилен, если даёт actionable advice. Капс в ключевом слове повышает CTR."
+  },
+  {
+   "videoId": "lq5jC9R_bsY",
+   "why": "'Colorado River Crisis' + 'American West' — региональная катастрофа с национальными последствиями. 'What it means for' переводит новость в личную угрозу. Outlier 1.1 = норма, но тема актуальна (засуха, климат).",
+   "lesson": "Локальный кризис работает, если показать глобальный эффект ('что это значит для всех нас')."
+  },
+  {
+   "videoId": "bD8ta7nsA8A",
+   "why": "'Meta's AI Layoff Gamble Backfired' — schadenfreude (радость от чужой неудачи) + актуальность (AI layoffs = тренд 2024). 'Engineering Problems Mounted' добавляет конкретику краха. VPH 9085 = быстрый старт на хайпе.",
+   "lesson": "Крах tech-гигантов (особенно AI-решений) = высокий интерес. Слово 'backfired' обещает драму."
+  }
+ ],
+ "patterns": [
+  "Формула 'Hour by Hour' / пошаговый разбор катастрофы — работает на страхе + любопытстве к механике (радиация, передоз, голод). Зритель хочет знать 'что именно происходит внутри'.",
+  "Хайповые вещества/технологии (Ozempic, GHK-Cu, AI) + конкретное обещание (solved, overdose, backfired) — попадание в текущий информационный шум с детализацией.",
+  "Эмоция элиты или корпораций ('Wall Street freaking out', 'Meta's gamble backfired') — зритель получает инсайдерский угол на кризисы больших игроков.",
+  "Психология поколений (миллениалы 'okay with okay', ADHD burnout) — валидация новых норм, отказ от toxic positivity.",
+  "Длинные форматы (14-23 мин) для сложных тем (пептиды, экономика), короткие (5-6 мин) для психологии — глубина vs. быстрое решение.",
+  "Конкретика в угрозах: не 'радиация опасна', а 'lethal radiation hour by hour'; не 'Ozempic риски', а '7-day gastric freeze'."
+ ],
+ "topics": [
+  {
+   "title": "Передоз кофеином час за часом: когда сердце сдаётся",
+   "angle": "Миллионы пьют 3-5 чашек в день, но никто не знает, где граница. Покажем биологию передоза: тремор, аритмия, отказ почек — с таймингом и механикой, как в видео про Ozempic.",
+   "hook": "В 8 утра ты выпил третью чашку. Через 4 часа руки начнут дрожать. Вот что происходит с твоим телом, когда кофеин становится ядом.",
+   "why": "Отвечает на успех 'Ozempic Overdose Hour by Hour' (dt5ocYfjths) и 'Lethal Radiation' (O4yWBv2Nj68) — та же формула процесса + массовое вещество (кофе доступнее Ozempic). Кофеин = ежедневная тема, передоз = реальный страх.",
+   "format": "long",
+   "basedOn": [
+    "dt5ocYfjths",
+    "O4yWBv2Nj68"
+   ]
+  },
+  {
+   "title": "Почему у олигархов началась паника (и что это значит для нас)",
+   "angle": "Развиваем успех 'Wall Street is freaking out' (aIme4aIswaU), но берём российский/глобальный угол: распродажи активов, бегство капитала, санкции. Инсайдерский тон ('что они знают, чего не знаем мы').",
+   "hook": "В декабре три российских миллиардера тихо продали всё. Банкиры шепчутся о 'чёрном лебеде'. Вот что элита видит, а СМИ замалчивают.",
+   "why": "aIme4aIswaU показал: эмоция элиты ('freaking out') + 'сейчас' = outlier 2.0. Наш угол: не Wall Street, а ближе к дому (олигархи, Кремль, ЦБ). Тот же страх, но локализованный.",
+   "format": "long",
+   "basedOn": [
+    "aIme4aIswaU"
+   ]
+  },
+  {
+   "title": "NMN — молекула молодости или пустышка за $100? Разбор науки",
+   "angle": "Отвечаем на интерес к 'GHK-Cu Peptide' (groZE2q7daM), но берём более хайповую молекулу (NMN = тренд биохакинга, Синклер, Хабарман). Обещаем честный разбор: что доказано, что маркетинг.",
+   "hook": "Дэвид Синклер пьёт это каждый день. Кремниевая долина тратит миллиарды. Но работает ли NMN — или это просто дорогая вера?",
+   "why": "groZE2q7daM (outlier 1.2) показал спрос на anti-aging с конкретными веществами. NMN популярнее GHK-Cu (больше поисков, хайп подкастов). 'Или пустышка?' — честный угол вместо продажи.",
+   "format": "long",
+   "basedOn": [
+    "groZE2q7daM"
+   ]
+  },
+  {
+   "title": "Почему поколение Z бросило карьеру ради 'достаточно'",
+   "angle": "Расширяем 'Adults Today Are Okay With Just Being Okay' (rOnSVOXISOQ): добавляем экономику (аренда, кредиты), выгорание, quiet quitting. Не осуждаем, а объясняем культурный сдвиг.",
+   "hook": "Им 25. Они умные, образованные. Но вместо карьеры выбирают 'просто норм'. Это не лень — это новая философия выживания.",
+   "why": "rOnSVOXISOQ (outlier 1.3) попал в нерв поколения. Наш угол: глубже в причины (экономика + психология), шире аудитория (не только 'adults', но именно Gen Z). Валидация + анализ.",
+   "format": "long",
+   "basedOn": [
+    "rOnSVOXISOQ"
+   ]
+  },
+  {
+   "title": "ADHD и прокрастинация: почему мозг саботирует дедлайны",
+   "angle": "Развиваем успех 'ADHD BURNOUT' (qA8lSgNH6f8): фокус на конкретной боли (прокрастинация перед дедлайном). Объясняем нейробиологию (дофамин, executive function), даём 3 стратегии.",
+   "hook": "Дедлайн через 2 часа. Ты знал месяц. Но мозг включается только сейчас. Вот почему ADHD превращает каждую задачу в кризис.",
+   "why": "qA8lSgNH6f8 (outlier 1.3) показал: ADHD = лояльная ниша. Прокрастинация — топ-1 запрос в этой теме. Капс в заголовке + конкретная боль ('дедлайны') повысят CTR.",
+   "format": "long",
+   "basedOn": [
+    "qA8lSgNH6f8"
+   ]
+  },
+  {
+   "title": "Крах ChatGPT: как OpenAI потеряла доверие за 6 месяцев",
+   "angle": "Повторяем успех 'Meta's AI Layoff Gamble Backfired' (bD8ta7nsA8A): schadenfreude от падения tech-гиганта. OpenAI = больше хайпа, чем Meta. Фокус: ошибки (hallucinations, цензура), уход Сатчи, конкуренция.",
+   "hook": "В 2023-м это был бог. В 2024-м — все ищут альтернативы. Что OpenAI сделала не так, и кто выигрывает?",
+   "why": "bD8ta7nsA8A (outlier 1.0, но VPH 9085) показал: AI-провалы = высокий интерес. OpenAI актуальнее Meta, больше драмы (Альтман, борд). 'Backfired' работает — повторяем формулу краха.",
+   "format": "long",
+   "basedOn": [
+    "bD8ta7nsA8A"
+   ]
+  },
+  {
+   "title": "Что алкоголь делает с мозгом (первые 24 часа после бокала)",
+   "angle": "Формула 'hour by hour' (как O4yWBv2Nj68, dt5ocYfjths), но на массовую тему. Не мораль, а биология: ГАМК, дофамин, воспаление. Один бокал vs. запой — разница в механике.",
+   "hook": "Первый глоток. Через 10 минут мозг расслабляется. Через 6 часов начинается откат. Вот что происходит внутри, пока ты думаешь 'это просто вино'.",
+   "why": "O4yWBv2Nj68 и dt5ocYfjths доказали: 'hour by hour' + массовое вещество = вирус. Алкоголь — тема без censorship, но с огромным любопытством ('что именно происходит').",
+   "format": "long",
+   "basedOn": [
+    "O4yWBv2Nj68",
+    "dt5ocYfjths"
+   ]
+  }
+ ],
+ "avoid": [
+  "Общие темы про 'интересные факты' или 'insane laws' (outlier 0.4, 0.3) — зритель устал от лисликов без фокуса.",
+  "Выживание в экзотических сценариях ('Lunar Lava Tube' — outlier 0.2) — слишком абстрактно, нет личной релевантности.",
+  "Прямые копии 'hour by hour' без актуального триггера — формула работает только с хайповым веществом/событием (Ozempic, радиация). Не делать 'hour by hour' про старые темы.",
+  "Темы про богатство атлетов ('Why Athletes Go Broke' — outlier 0.3) — аудитория не связывает себя с этой проблемой.",
+  "Слишком широкая экономика без персонализации ('Death of American Capitalism' — outlier 0.4) — нужен конкретный крючок ('что это значит для тебя'), иначе не цепляет."
+ ],
+ "id": "0e88bfdb",
+ "createdAt": "2026-10-12T19:23:22.403Z",
+ "days": 30,
+ "auto": false,
+ "model": "cc/claude-sonnet-5",
+ "channels": 2,
+ "considered": 21,
+ "videos": [
+  {
+   "id": "aIme4aIswaU",
+   "title": "Wall Street is freaking out now...",
+   "channelId": "UCfdNM3NAhaBOXCafH7krzrA",
+   "channelTitle": "The Infographics Show",
+   "thumbnail": "https://i.ytimg.com/vi/aIme4aIswaU/mqdefault.jpg",
+   "publishedAt": "2026-10-03T14:11:09Z",
+   "isShort": false,
+   "durationSec": 840,
+   "views": 989704,
+   "outlier": 2,
+   "vph": 4474.7,
+   "vphRecent": null,
+   "ageDays": 9.2
+  },
+  {
+   "id": "dt5ocYfjths",
+   "title": "An Ozempic Overdose Hour by Hour: The Biology of a 7-Day Gastric Freeze",
+   "channelId": "UCfdNM3NAhaBOXCafH7krzrA",
+   "channelTitle": "The Infographics Show",
+   "thumbnail": "https://i.ytimg.com/vi/dt5ocYfjths/mqdefault.jpg",
+   "publishedAt": "2026-10-08T20:11:36Z",
+   "isShort": false,
+   "durationSec": 1187,
+   "views": 851503,
+   "outlier": 1.8,
+   "vph": 8947,
+   "vphRecent": null,
+   "ageDays": 4
+  },
+  {
+   "id": "O4yWBv2Nj68",
+   "title": "What Lethal Radiation Does to Your Body (Hour by Hour)",
+   "channelId": "UCfdNM3NAhaBOXCafH7krzrA",
+   "channelTitle": "The Infographics Show",
+   "thumbnail": "https://i.ytimg.com/vi/O4yWBv2Nj68/mqdefault.jpg",
+   "publishedAt": "2026-10-04T20:11:07Z",
+   "isShort": false,
+   "durationSec": 1088,
+   "views": 838027,
+   "outlier": 1.7,
+   "vph": 4383.4,
+   "vphRecent": null,
+   "ageDays": 8
+  },
+  {
+   "id": "rOnSVOXISOQ",
+   "title": "Why Adults Today Are Okay With Just Being Okay",
+   "channelId": "UCkJEpR7JmS36tajD34Gp4VA",
+   "channelTitle": "Psych2Go",
+   "thumbnail": "https://i.ytimg.com/vi/rOnSVOXISOQ/mqdefault.jpg",
+   "publishedAt": "2026-09-27T03:02:58Z",
+   "isShort": false,
+   "durationSec": 292,
+   "views": 112758,
+   "outlier": 1.3,
+   "vph": 299.6,
+   "vphRecent": null,
+   "ageDays": 15.7
+  },
+  {
+   "id": "groZE2q7daM",
+   "title": "The Billion Dollar Aging Problem Solved? (GHK-Cu Peptide Explained)",
+   "channelId": "UCfdNM3NAhaBOXCafH7krzrA",
+   "channelTitle": "The Infographics Show",
+   "thumbnail": "https://i.ytimg.com/vi/groZE2q7daM/mqdefault.jpg",
+   "publishedAt": "2026-10-03T20:11:26Z",
+   "isShort": false,
+   "durationSec": 1392,
+   "views": 564729,
+   "outlier": 1.2,
+   "vph": 2624.5,
+   "vphRecent": null,
+   "ageDays": 9
+  },
+  {
+   "id": "qA8lSgNH6f8",
+   "title": "How to Deal With ADHD BURNOUT",
+   "channelId": "UCkJEpR7JmS36tajD34Gp4VA",
+   "channelTitle": "Psych2Go",
+   "thumbnail": "https://i.ytimg.com/vi/qA8lSgNH6f8/mqdefault.jpg",
+   "publishedAt": "2026-09-17T07:27:03Z",
+   "isShort": false,
+   "durationSec": 342,
+   "views": 113305,
+   "outlier": 1.3,
+   "vph": 185.2,
+   "vphRecent": null,
+   "ageDays": 25.5
+  },
+  {
+   "id": "lq5jC9R_bsY",
+   "title": "What the Colorado River Crisis Means for the American West",
+   "channelId": "UCfdNM3NAhaBOXCafH7krzrA",
+   "channelTitle": "The Infographics Show",
+   "thumbnail": "https://i.ytimg.com/vi/lq5jC9R_bsY/mqdefault.jpg",
+   "publishedAt": "2026-10-04T14:11:13Z",
+   "isShort": false,
+   "durationSec": 938,
+   "views": 509775,
+   "outlier": 1.1,
+   "vph": 2585.3,
+   "vphRecent": null,
+   "ageDays": 8.2
+  },
+  {
+   "id": "bD8ta7nsA8A",
+   "title": "Meta's AI Layoff Gamble Backfired as Engineering Problems Mounted",
+   "channelId": "UCfdNM3NAhaBOXCafH7krzrA",
+   "channelTitle": "The Infographics Show",
+   "thumbnail": "https://i.ytimg.com/vi/bD8ta7nsA8A/mqdefault.jpg",
+   "publishedAt": "2026-10-10T14:11:05Z",
+   "isShort": false,
+   "durationSec": 953,
+   "views": 483168,
+   "outlier": 1,
+   "vph": 9085.4,
+   "vphRecent": null,
+   "ageDays": 2.2
+  }
+ ]
+}

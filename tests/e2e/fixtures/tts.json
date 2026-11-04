@@ -1,0 +1,1 @@
+{"url":"/files/_audio/mock.mp3","bytes":2782944,"seconds":695.7,"model":"edge-tts/ru-RU-DmitryNeural","chars":10647,"chunks":2,"balanceTokens":532350,"title":"Мок озвучки","segments":[{"n":1,"start":0,"end":97.5,"text":"Первая часть озвучки про древний Египет."},{"n":2,"start":97.5,"end":695.7,"text":"Вторая часть озвучки."}]}

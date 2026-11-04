@@ -1,0 +1,222 @@
+{
+ "days": 28,
+ "range": {
+  "startDate": "2026-01-01",
+  "endDate": "2026-01-28"
+ },
+ "totals": {
+  "views": 15400,
+  "estimatedMinutesWatched": 52000,
+  "averageViewDuration": 212,
+  "averageViewPercentage": 41.5,
+  "subscribersGained": 180,
+  "subscribersLost": 12
+ },
+ "daily": [
+  {
+   "day": "2026-01-01",
+   "views": 410,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  },
+  {
+   "day": "2026-01-02",
+   "views": 420,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  },
+  {
+   "day": "2026-01-03",
+   "views": 430,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  },
+  {
+   "day": "2026-01-04",
+   "views": 440,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  },
+  {
+   "day": "2026-01-05",
+   "views": 450,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  },
+  {
+   "day": "2026-01-06",
+   "views": 460,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  },
+  {
+   "day": "2026-01-07",
+   "views": 470,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  },
+  {
+   "day": "2026-01-08",
+   "views": 480,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  },
+  {
+   "day": "2026-01-09",
+   "views": 490,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  },
+  {
+   "day": "2026-01-10",
+   "views": 500,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  },
+  {
+   "day": "2026-01-11",
+   "views": 510,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  },
+  {
+   "day": "2026-01-12",
+   "views": 520,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  },
+  {
+   "day": "2026-01-13",
+   "views": 530,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  },
+  {
+   "day": "2026-01-14",
+   "views": 540,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  },
+  {
+   "day": "2026-01-15",
+   "views": 550,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  },
+  {
+   "day": "2026-01-16",
+   "views": 560,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  },
+  {
+   "day": "2026-01-17",
+   "views": 570,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  },
+  {
+   "day": "2026-01-18",
+   "views": 580,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  },
+  {
+   "day": "2026-01-19",
+   "views": 590,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  },
+  {
+   "day": "2026-01-20",
+   "views": 600,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  },
+  {
+   "day": "2026-01-21",
+   "views": 610,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  },
+  {
+   "day": "2026-01-22",
+   "views": 620,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  },
+  {
+   "day": "2026-01-23",
+   "views": 630,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  },
+  {
+   "day": "2026-01-24",
+   "views": 640,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  },
+  {
+   "day": "2026-01-25",
+   "views": 650,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  },
+  {
+   "day": "2026-01-26",
+   "views": 660,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  },
+  {
+   "day": "2026-01-27",
+   "views": 670,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  },
+  {
+   "day": "2026-01-28",
+   "views": 680,
+   "estimatedMinutesWatched": 1500,
+   "subscribersGained": 6
+  }
+ ],
+ "traffic": [
+  {
+   "source": "SUGGESTED",
+   "label": "Рекомендуемые",
+   "views": 9000,
+   "minutes": 30000
+  },
+  {
+   "source": "YT_SEARCH",
+   "label": "Поиск YouTube",
+   "views": 4000,
+   "minutes": 15000
+  }
+ ],
+ "videos": [
+  {
+   "id": "abcdefghijk",
+   "title": "Почему римляне не знали мыла",
+   "durationSec": 600,
+   "views": 9000,
+   "minutes": 30000,
+   "avgDuration": 250,
+   "avgPct": 52,
+   "subs": 120
+  },
+  {
+   "id": "bcdefghijkl",
+   "title": "Средневековые бани",
+   "durationSec": 540,
+   "views": 3000,
+   "minutes": 9000,
+   "avgDuration": 150,
+   "avgPct": 28,
+   "subs": 20
+  }
+ ],
+ "note": "Показы и CTR обложки YouTube Analytics API не отдаёт"
+}

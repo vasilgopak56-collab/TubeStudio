@@ -1,0 +1,18 @@
+// Synthetic fixture. No actual Google or model request leaves this process.
+import fs from 'node:fs';
+const file=process.env.TS_TEST_COMMENT_CONTROL;if(!file)throw Error('Synthetic control required');
+const comments=[{id:'Ugx-water',text:'Откуда бралась вода в доме римлянина? <img src=x onerror=alert(1)> עברית 日本語',likeCount:0},{id:'Ugx-source',text:'Не согласен с датой — нужен источник.'},{id:'Ugx-long',text:'Инженерия и быт. '.repeat(65),likeCount:5}];
+const answer=()=>({summary:'В трёх сохранённых комментариях есть вопрос о воде и просьба сверить источник. Это ограниченная выборка, а не опрос аудитории.',classifications:[{ref:'C1',tone:'neutral'},{ref:'C2',tone:'negative'},{ref:'C3',tone:'unclear'}],themes:[{kind:'question',text:'Как вода попадала в жилые дома?',refs:['C1']},{kind:'complaint',text:'Нужно проверить источник даты.',refs:['C2']}],ideas:[{title:'От акведука до римского дома',angle:'Инженерия водоснабжения: проверить историю по независимым источникам.',why:'Один комментарий задаёт вопрос о домашнем водоснабжении. Это гипотеза, не измеренный спрос.',refs:['C1']},{title:'Что мы знаем о датах римских водоводов',angle:'Сопоставить источники и пределы знания.',why:'В выборке есть возражение о дате, не доказательство исторической ошибки.',refs:['C2']}]});
+globalThis.fetch=async(input,init={})=>{
+ const u=new URL(String(input)),{mode}=JSON.parse(fs.readFileSync(file,'utf8'));let kind,body;
+ if(u.origin==='https://api.anthropic.com'&&u.pathname==='/v1/models'){fs.appendFileSync(file+'.calls',JSON.stringify({kind:'models'})+'\n');return Response.json({data:[{id:'claude-haiku-4-5'}]});}
+ if(u.origin==='https://api.anthropic.com'&&u.pathname==='/v1/messages'){body=JSON.parse(String(init.body));kind=body.max_tokens===1?'diagnostic':'generation';}
+ else if(u.origin==='https://www.googleapis.com'){kind=u.pathname.split('/').at(-1);if(kind==='channels'&&u.searchParams.get('id')==='UCBR8-60-B28hp2BmDPdntcQ'){fs.appendFileSync(file+'.calls',JSON.stringify({kind:'yt-diagnostic'})+'\n');return Response.json({items:[{id:'UC'+'s'.repeat(22),snippet:{title:'Synthetic'},statistics:{},contentDetails:{}}]});}if(kind!=='commentThreads')throw Error('Unexpected Google request');}
+ else throw Error('Outbound request blocked');
+ fs.appendFileSync(file+'.calls',JSON.stringify({kind,...(body?{body}:{videoId:u.searchParams.get('videoId'),max:u.searchParams.get('maxResults'),order:u.searchParams.get('order'),format:u.searchParams.get('textFormat'),page:u.searchParams.get('pageToken')})})+'\n');
+ if(kind==='diagnostic')return Response.json({content:[{type:'text',text:'1'}]});
+ if(mode==='slow-fetch'&&kind==='commentThreads'||mode==='slow-ai'&&kind==='generation')await new Promise((resolve,reject)=>{const t=setTimeout(resolve,15000),abort=()=>{clearTimeout(t);reject(new DOMException('Cancelled','AbortError'));};init.signal?.addEventListener('abort',abort,{once:true});if(init.signal?.aborted)abort();});
+ if(mode==='fail-fetch'&&kind==='commentThreads'||mode==='fail-ai'&&kind==='generation')return Response.json({error:{message:'SECRET_PROVIDER_LEAK',errors:[{reason:'forbidden'}]}},{status:400});
+ if(kind==='commentThreads')return Response.json({items:mode==='empty'?[]:comments.map(c=>({snippet:{topLevelComment:{id:c.id,snippet:{textDisplay:c.text,...(c.likeCount===undefined?{}:{likeCount:c.likeCount}),publishedAt:'2020-01-01T00:00:00Z',authorDisplayName:'NEVER_SEND_AUTHOR'}}}})),nextPageToken:'not-loaded'});
+ const out=answer();if(mode==='bad-refs')out.ideas[0].refs=['C50'];return Response.json({content:[{type:'text',text:mode==='invalid'?'{}':JSON.stringify(out)}],usage:{input_tokens:100,output_tokens:300}});
+};

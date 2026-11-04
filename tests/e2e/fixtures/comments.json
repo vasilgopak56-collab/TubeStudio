@@ -1,0 +1,230 @@
+{
+  "summary": "Видео-листинг «19 психологических трюков» набрало огромный отклик в основном за счёт юмора и личных историй зрителей, которые тестировали советы на себе. Больше всего обсуждаются два трюка — утренний крик «YEAH» при пробуждении и разглядывание лба/обуви собеседника при неловком взгляде: их пересказывают, обыгрывают в мемах и часто жалуются, что они либо не работают, либо приводят к комичным/неловким последствиям. Параллельно много комментариев с собственными рабочими лайфхаками (например, замена «извините» на «спасибо», «мягкий ответ» вместо спора, трюк с порядком собеседований), которые зрители подтверждают личным опытом и которые получают много лайков. Серьёзной критики или жалоб на качество видео почти нет — тон комментариев развлекательный, ироничный, с элементами самоиронии и мемов. Встречаются отдельные подозрительные спам-комментарии, рекламирующие сторонние книги/курсы по «тёмной психологии» — это похоже на попытку продвижения постороннего контента, а не реальная реакция на видео, и такие сообщения не отражают мнение основной аудитории.",
+  "audience": "Широкая молодёжная и подростковая аудитория, интересующаяся лайфхаками, психологией общения и поп-психологией; много школьников/студентов, любителей мемов и коротких забавных историй; часть зрителей релевантна теме социальных навыков и неловкости в общении.",
+  "sentiment": {
+    "positive": 70,
+    "neutral": 25,
+    "negative": 5
+  },
+  "requests": [
+    {
+      "text": "Больше реальных кейсов применения трюков в работе, продажах, переговорах",
+      "share": 10,
+      "quotes": [
+        "This especially works well for sales jobs and makes the person you say it to feel more respected.",
+        "This works wonders at the customer service counter.",
+        "When interviewing for a job, try to be the last candidate interviewed."
+      ]
+    },
+    {
+      "text": "Разбор/проверка, какие трюки реально работают, а какие нет",
+      "share": 8,
+      "quotes": [
+        "The wake up trick is doesn't seems work The bed pulled me again, the gravitational power is so strong",
+        "A lot times when you think someone is staring at you, they’re really not."
+      ]
+    },
+    {
+      "text": "Продолжение видео с новыми трюками / более запоминающийся формат",
+      "share": 5,
+      "quotes": [
+        "Lets be real we can’t even remember 5 of these points",
+        "I wish I remembered these when useful. 🙁"
+      ]
+    }
+  ],
+  "praise": [
+    {
+      "text": "Видео воспринимается как смешное и релевантное, вызывает массу личных шутливых историй",
+      "share": 35,
+      "quotes": [
+        "How many ppl clicked on this because they have really bad social skills",
+        "Imagine trying these tricks on someone and that person watched the video too.",
+        "I was busy reading the comments i didnt know the video ended already 😂😂😂"
+      ]
+    },
+    {
+      "text": "Отдельные советы реально работают в жизни (замена «извините» на «спасибо», мягкий ответ)",
+      "share": 15,
+      "quotes": [
+        "Instead of saying \"sorry\", say \"thank you\"... The other person feels less angry and more flattered.",
+        "This principle is also found in the writings of King Solomon; Proverbs 15:1 - \"A soft answer turns away wrath.\"",
+        "I tried this at an airline counter and got $50 in drink coupons."
+      ]
+    },
+    {
+      "text": "Полезно для конкретных групп (например, разбиение задач при СДВГ)",
+      "share": 3,
+      "quotes": [
+        "The breaking down a task thing is amazing when you're dealing with ADHD, since being overwhelmed easily and freezing is a common problem for people who have it!"
+      ]
+    }
+  ],
+  "complaints": [
+    {
+      "text": "Трюк с криком «YEAH» при пробуждении не работает и создаёт проблемы (будит семью, наказания)",
+      "share": 20,
+      "quotes": [
+        "I screamed yah and my mom came in and slapped me 🤦‍♂️",
+        "i screamed yeah, and now i'm grounded. Thanks...",
+        "My wife wasn't happy when I jumped out of bed and yelled \"yeah\" at 6am 😂"
+      ]
+    },
+    {
+      "text": "Трюк с разглядыванием лба/обуви вызывает неловкость или не срабатывает как задумано",
+      "share": 15,
+      "quotes": [
+        "If someone looked at my forehead I will feel uncomfortable cuz of my acne 😂😂",
+        "I wanted to avoid a person's conversation so I looked at their forehead and they thought I was cross eyed.",
+        "Not wearing shoes Me: *Breathing Intensifies*"
+      ]
+    },
+    {
+      "text": "Видео заставляет чувствовать себя манипулятором/социопатом",
+      "share": 5,
+      "quotes": [
+        "I'm feeling more manipulative, hypocrite and passive aggressive already, thanks!",
+        "**sociopath has joined the server**",
+        "Welcome to Manipulation and Passive Aggression 101!"
+      ]
+    },
+    {
+      "text": "Советы легко забываются сразу после просмотра",
+      "share": 3,
+      "quotes": [
+        "Lets be real we can’t even remember 5 of these points",
+        "who else watches these videos then forgets about them and ends up in an awkward situation"
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "question": "Действительно ли работает трюк с разглядыванием лба/обуви в реальной жизни?",
+      "answerIdea": "Показать живые эксперименты на камеру с реакцией людей, объяснить психологию (боковое зрение, дискомфорт от прямого контакта глаз) и честно признать ограничения трюка."
+    },
+    {
+      "question": "Почему замена «извините» на «спасибо» реально смягчает реакцию собеседника?",
+      "answerIdea": "Разобрать психологический механизм (смена фрейма с вины на благодарность), привести примеры из клиентского сервиса и продаж, которые упоминают зрители."
+    },
+    {
+      "question": "Почему большинство советов из подобных видео забываются и не применяются в нужный момент?",
+      "answerIdea": "Дать практический чек-лист/карточку с трюками, предложить формат с повторением и примерами «как вспомнить в моменте»."
+    }
+  ],
+  "objections": [
+    {
+      "claim": "Эти трюки — манипуляция, а не честное общение",
+      "howToHandle": "Чётко разграничить в сценарии манипулятивные и этичные коммуникативные техники, дать примеры позитивного использования (разрядка конфликта, эмпатия), а не только «обман» собеседника."
+    },
+    {
+      "claim": "Трюк с пробуждением («YEAH») не работает и просто вызывает проблемы",
+      "howToHandle": "Признать ограничения трюка с юмором, добавить альтернативный рабочий совет из комментариев (будильник в другом конце комнаты) как более практичную замену."
+    },
+    {
+      "claim": "Советы бесполезны, потому что их невозможно запомнить и применить вовремя",
+      "howToHandle": "Предложить сценарий с повторением/мнемоникой или интерактивным тестом в видео, чтобы зритель реально усвоил 2-3 трюка, а не 19 сразу."
+    }
+  ],
+  "ideas": [
+    {
+      "title": "Трюки из видео, которые реально провалились: истории зрителей",
+      "angle": "Юмористическая подборка фейлов (крик «YEAH», разглядывание лба) на основе реальных комментариев",
+      "why": "Десятки комментариев с высоким числом лайков описывают именно провалы этих двух трюков (1000+ лайков каждый)"
+    },
+    {
+      "title": "Порядок собеседования решает: психология найма на работе",
+      "angle": "Углублённый разбор эффекта «последний кандидат чаще получает работу» со статистикой",
+      "why": "Комментарий с 26👍 и 10👍 про интервью с конкретными процентами (33%/66%, 20%/60%) вызвал отклик и запрос на углубление темы"
+    },
+    {
+      "title": "Как остановить скандал одной фразой: сила мягкого ответа",
+      "angle": "История из комментария (779👍) про соседа и цитату из Притч 15:1, плюс научное объяснение деэскалации конфликта",
+      "why": "Один из самых популярных и подробных комментариев с реальным применением трюка"
+    },
+    {
+      "title": "Извините или спасибо? Психологический трюк для работы и жизни",
+      "angle": "Разбор, почему замена «sorry» на «thank you» меняет восприятие ситуации собеседником",
+      "why": "Комментарий с 1500👍 и несколько похожих подтверждают высокий интерес к этому конкретному совету"
+    },
+    {
+      "title": "Трюки для звонков в поддержку и переговоров, которые реально работают",
+      "angle": "Подборка практических фраз из клиентского сервиса (вежливые просьбы, обращение по имени)",
+      "why": "Несколько комментариев (55👍, 20👍) делятся личным успешным опытом использования таких фраз"
+    },
+    {
+      "title": "Разоблачение психологических трюков: что из 19 работает, а что нет",
+      "angle": "Честный фактчекинг-формат с тестами на реальных людях",
+      "why": "Множество скептических комментариев («bed pulled me again», «they're really not staring») указывают на запрос на проверку эффективности"
+    },
+    {
+      "title": "Как не чувствовать себя манипулятором, используя психологию общения",
+      "angle": "Этичный взгляд на техники влияния, баланс между манипуляцией и честной коммуникацией",
+      "why": "Комментарии вроде «manipulative, hypocrite and passive aggressive» показывают беспокойство части аудитории по этому поводу"
+    }
+  ],
+  "scriptTips": [
+    "Добавлять юмористические примеры/реконструкции провалов трюков — аудитория явно любит такой формат",
+    "Честно признавать, что не все трюки работают всегда, чтобы не терять доверие",
+    "Делать акцент на практических бытовых и рабочих ситуациях (продажи, сервис, собеседования) — именно эти советы получают больше всего реального подтверждения в комментариях",
+    "Избегать подачи советов как чистой «манипуляции» — подчёркивать этичный контекст применения",
+    "Дать зрителю простой способ запомнить 2-3 ключевых трюка (карточка/чек-лист), а не перегружать 19 пунктами сразу",
+    "Не злоупотреблять слишком абстрактными/спорными трюками (разглядывание лба) без объяснения механизма и ограничений"
+  ],
+  "bestQuotes": [
+    "How many ppl clicked on this because they have really bad social skills",
+    "I screamed yah and my mom came in and slapped me 🤦‍♂️",
+    "This principle is also found in the writings of King Solomon; Proverbs 15:1 - \"A soft answer turns away wrath.\"",
+    "I'm feeling more manipulative, hypocrite and passive aggressive already, thanks!",
+    "Lets be real we can’t even remember 5 of these points"
+  ],
+  "id": "1a27d7ef",
+  "createdAt": "2026-10-12T19:21:14.649Z",
+  "input": {
+    "input": "https://www.youtube.com/watch?v=l4tWdTmYZoM",
+    "perVideo": 150
+  },
+  "model": "cc/claude-sonnet-5",
+  "videos": [
+    {
+      "id": "l4tWdTmYZoM",
+      "title": "19 Simple Psychological Tricks That Actually Work",
+      "channelTitle": "BRIGHT SIDE",
+      "thumbnail": "https://i.ytimg.com/vi/l4tWdTmYZoM/mqdefault.jpg",
+      "views": 35190882,
+      "comments": 20056,
+      "fetched": 150
+    }
+  ],
+  "units": 3,
+  "stats": {
+    "total": 150,
+    "questionsPct": 23,
+    "avgLikes": 1617.9,
+    "topLiked": [
+      {
+        "id": "UgwHUbwzmOjL5SJGvh94AaABAg",
+        "text": "If I scream \"yeah\", I'll wake up the neighbors as well.",
+        "likes": 25547,
+        "replies": 220,
+        "author": "@Versalty",
+        "publishedAt": "2018-11-01T20:45:45Z"
+      },
+      {
+        "id": "UgwvVrQV6dVOGDDTWY14AaABAg",
+        "text": "I have a tip for getting through a crowd at the end of a concert fast !  Just say, in a somewhat loud voice to your friend, \"oh god, i think i gotta throw up!' The people within earshot will part in a nanosecond. Get a few steps ahead, aaannndd say it again! 😄  keep doing this til you reach your destination. Works every time 😉",
+        "likes": 16451,
+        "replies": 218,
+        "author": "@jaywellington6504",
+        "publishedAt": "2018-11-03T06:17:57Z"
+      },
+      {
+        "id": "UgwlP6y1xQAnAbVcnLh4AaABAg",
+        "text": "How many ppl clicked on this because they have really bad social skills",
+        "likes": 16399,
+        "replies": 338,
+        "author": "@malyndahsexotics1543",
+        "publishedAt": "2018-11-07T19:33:14Z"
+      }
+    ]
+  }
+}

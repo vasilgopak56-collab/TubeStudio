@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0",
+  "audio": {
+    "filename": "demo.wav",
+    "duration_seconds": 2
+  },
+  "scenes": [
+    {
+      "scene": 1,
+      "filename": "scene_001",
+      "speech": {
+        "start": "00:00:00.120",
+        "end": "00:00:01.520",
+        "duration_seconds": 1.4
+      },
+      "timeline": {
+        "start": "00:00:00.000",
+        "end": "00:00:02.000"
+      },
+      "text": "Король вышел к воротам.",
+      "concept": "Царь у городских ворот",
+      "image_prompt": "Ancient city gate, a king, warm light, cinematic realism, 16:9.",
+      "animation_prompt": "Slow camera push-in; the king's robes sway gently."
+    }
+  ]
+}

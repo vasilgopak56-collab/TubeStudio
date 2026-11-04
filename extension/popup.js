@@ -1,0 +1,7 @@
+const X=TubeStudioExtension,$=id=>document.getElementById(id);
+const send=msg=>new Promise(resolve=>chrome.runtime.sendMessage(msg,r=>resolve(r??{ok:false,error:{message:'Нет связи с расширением'}})));
+const status=(text,ok=false)=>{$('st').textContent=text;$('st').className=ok?'ok':'bad';};
+async function ping(){const r=await send({type:'api',path:'/ext/ping'});status(r.ok?'● Подключено к TubeStudio. Метрики загружаются только кнопкой':r.error?.message??'Нет связи',r.ok);}
+(async()=>{const r=await send({type:'popup-config'});if(!r.ok)return status(r.error?.message??'Ошибка настроек');const c=r.data;for(const k of ['server','token','badges'])$(k).value=c[k];$('panel').checked=c.panel;await ping();})();
+$('save').onclick=async()=>{try{const server=X.serverOrigin($('server').value||X.defaults.server);const origin=server+'/*';const permitted=['127.0.0.1','localhost'].includes(new URL(server).hostname)&&server.startsWith('http:')||await chrome.permissions.request({origins:[origin]});if(!permitted)return status('Нет разрешения на этот адрес');const r=await send({type:'configure',config:{server,token:$('token').value,badges:$('badges').value,panel:$('panel').checked}});if(!r.ok)return status(r.error.message);status('Сохранено локально. Обновите вкладку YouTube',true);await ping();}catch(e){status(e.message??'Проверьте адрес');}};
+$('openApp').onclick=()=>send({type:'open',path:'/'});

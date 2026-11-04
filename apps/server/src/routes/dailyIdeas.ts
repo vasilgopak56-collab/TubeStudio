@@ -1,0 +1,13 @@
+import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
+import { ApiError,fail,ok } from "../lib/errors.js";
+import { startJob } from "../lib/jobs.js";
+import { DailyGenerate,DailySelection,dailySources,previewDaily,generateDaily,listDaily,loadDaily,latestDaily } from "../services/dailyIdeas.js";
+export const dailyIdeasRoute=new Hono();
+dailyIdeasRoute.use("/daily-ideas/*",bodyLimit({maxSize:8192,onError:c=>c.json({ok:false,error:{code:"VALIDATION",message:"Слишком большой запрос"}},413)}));
+dailyIdeasRoute.get("/daily-ideas/sources",async c=>{try{return ok(c,await dailySources());}catch(e){return fail(c,e);}});
+dailyIdeasRoute.post("/daily-ideas/preview",async c=>{try{return ok(c,await previewDaily(DailySelection.parse(await c.req.json())));}catch(e){return fail(c,e instanceof SyntaxError?new ApiError("VALIDATION","Некорректный JSON запроса"):e);}});
+dailyIdeasRoute.post("/daily-ideas/generate",async c=>{try{const d=DailyGenerate.parse(await c.req.json());return ok(c,{jobId:startJob(ctx=>generateDaily(d,ctx))});}catch(e){return fail(c,e instanceof SyntaxError?new ApiError("VALIDATION","Некорректный JSON запроса"):e);}});
+dailyIdeasRoute.get("/daily-ideas/runs",async c=>{try{return ok(c,await listDaily());}catch(e){return fail(c,e);}});
+dailyIdeasRoute.get("/daily-ideas/latest",async c=>{try{return ok(c,await latestDaily());}catch(e){return fail(c,e);}});
+dailyIdeasRoute.get("/daily-ideas/runs/:id",async c=>{try{const d=await loadDaily(c.req.param("id"));if(!d)throw new ApiError("NOT_FOUND","Подборка не найдена или повреждена",404);return ok(c,d);}catch(e){return fail(c,e);}});

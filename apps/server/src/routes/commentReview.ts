@@ -1,0 +1,12 @@
+import {Hono} from 'hono';import {bodyLimit} from 'hono/body-limit';
+import {ApiError,ok,fail} from '../lib/errors.js';import {startJob} from '../lib/jobs.js';
+import {CommentFetch,CommentSelection,CommentGenerate,fetchCommentSample,previewCommentReview,generateCommentReview,loadCommentSample,loadCommentReview,listCommentSamples,listCommentReviews} from '../services/commentReview.js';
+export const commentReviewRoute=new Hono();
+commentReviewRoute.use('/comment-review/*',bodyLimit({maxSize:8192,onError:c=>c.json({ok:false,error:{code:'VALIDATION',message:'Слишком большой запрос'}},413)}));
+const error=(e:unknown)=>e instanceof SyntaxError?new ApiError('VALIDATION','Некорректный JSON'):e;
+commentReviewRoute.post('/comment-review/fetch',async c=>{try{const d=CommentFetch.parse(await c.req.json());return ok(c,{jobId:startJob(ctx=>fetchCommentSample(d,ctx))});}catch(e){return fail(c,error(e));}});
+commentReviewRoute.post('/comment-review/preview',async c=>{try{return ok(c,await previewCommentReview(CommentSelection.parse(await c.req.json())));}catch(e){return fail(c,error(e));}});
+commentReviewRoute.post('/comment-review/generate',async c=>{try{const d=CommentGenerate.parse(await c.req.json());return ok(c,{jobId:startJob(ctx=>generateCommentReview(d,ctx))});}catch(e){return fail(c,error(e));}});
+commentReviewRoute.get('/comment-review/samples',async c=>{try{return ok(c,await listCommentSamples());}catch(e){return fail(c,e);}});
+commentReviewRoute.get('/comment-review/runs',async c=>{try{return ok(c,await listCommentReviews());}catch(e){return fail(c,e);}});
+for(const [kind,loader] of [['samples',loadCommentSample],['runs',loadCommentReview]] as const)commentReviewRoute.get('/comment-review/'+kind+'/:id',async c=>{try{const r=await loader(c.req.param('id')!);if(!r)throw new ApiError('NOT_FOUND','Снимок не найден или повреждён',404);return ok(c,r);}catch(e){return fail(c,e);}});

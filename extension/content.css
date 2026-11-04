@@ -1,0 +1,22 @@
+.ts-badge{position:absolute;top:4px;left:4px;z-index:5;display:flex;gap:4px;align-items:center;padding:2px 6px;border-radius:6px;font:600 11px/1.4 Roboto,Arial,sans-serif;color:#fff;background:rgba(0,0,0,.78);pointer-events:none;letter-spacing:.2px}
+.ts-badge b{font-weight:700}
+.ts-badge.ts-o2{background:rgba(232,113,26,.92)}
+.ts-badge.ts-o5{background:rgba(22,163,74,.92)}
+.ts-badge.ts-o20{background:linear-gradient(90deg,#f59e0b,#e8711a)}
+.ts-badge .ts-fire{font-size:11px}
+.ts-panel{margin:12px 0;padding:10px 12px;border:1px solid rgba(232,113,26,.45);border-radius:12px;background:rgba(232,113,26,.06);font:13px/1.45 Roboto,Arial,sans-serif;color:var(--yt-spec-text-primary,#0f0f0f)}
+.ts-panel .ts-row{display:flex;flex-wrap:wrap;gap:14px;align-items:baseline}
+.ts-panel .ts-k{font-size:11px;text-transform:uppercase;letter-spacing:.6px;opacity:.65;margin-right:4px}
+.ts-panel .ts-v{font-weight:700;font-size:14px}
+.ts-panel .ts-hot{color:#e8711a}
+.ts-panel .ts-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.ts-panel button{cursor:pointer;border:1px solid rgba(128,128,128,.35);background:transparent;color:inherit;border-radius:16px;padding:4px 10px;font:500 12px Roboto,Arial,sans-serif}
+.ts-panel button:hover{border-color:#e8711a;color:#e8711a}
+.ts-panel .ts-logo{font-weight:800;color:#e8711a;margin-right:6px}
+.ts-panel .ts-msg{margin-left:6px;font-size:12px;opacity:.8}
+.ts-panel .ts-why{font-size:11px;opacity:.65;margin-top:4px}
+.ts-toolbar{position:fixed;bottom:16px;left:16px;z-index:2147483000;max-width:min(360px,calc(100vw - 56px));padding:12px;background:#191511;color:#faf7f2;border:1px solid #e8711a;border-radius:10px;font:12px/1.45 Arial,sans-serif;box-shadow:0 4px 16px #0006}
+.ts-toolbar button{display:block;margin-bottom:7px;background:#e8711a;border:0;border-radius:6px;padding:8px;color:#17100a;font-weight:700;cursor:pointer}
+.ts-toolbar small,.ts-toolbar .ts-msg{display:block;margin:4px 0;overflow-wrap:anywhere}
+.ts-panel button:disabled,.ts-toolbar button:disabled{opacity:.55;cursor:wait}
+.ts-panel p,.ts-panel small{overflow-wrap:anywhere}

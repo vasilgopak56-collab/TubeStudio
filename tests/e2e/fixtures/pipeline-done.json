@@ -1,0 +1,64 @@
+{
+ "id": "e2epipe",
+ "createdAt": "2026-01-01T10:00:00Z",
+ "updatedAt": "2026-01-01T10:02:00Z",
+ "status": "done",
+ "projectId": "e2eproj",
+ "title": "Римляне без мыла",
+ "stages": [
+  {
+   "id": "script",
+   "label": "Сценарий",
+   "status": "done",
+   "startedAt": "2026-01-01T10:00:00Z",
+   "endedAt": "2026-01-01T10:02:00Z",
+   "summary": "«Римляне без мыла» · 812 слов · ≈ 5.8 мин"
+  },
+  {
+   "id": "rater",
+   "label": "Оценка сценария",
+   "status": "done",
+   "startedAt": "2026-01-01T10:00:00Z",
+   "endedAt": "2026-01-01T10:02:00Z",
+   "summary": "78/100 — Хороший. Хук 8/10"
+  },
+  {
+   "id": "seo",
+   "label": "SEO",
+   "status": "done",
+   "startedAt": "2026-01-01T10:00:00Z",
+   "endedAt": "2026-01-01T10:02:00Z",
+   "summary": "Ключ «римские бани» · 5 заголовков · 18 тегов. Лучший: «Как римляне мылись без мыла»"
+  },
+  {
+   "id": "thumbnail",
+   "label": "Обложки",
+   "status": "done",
+   "startedAt": "2026-01-01T10:00:00Z",
+   "endedAt": "2026-01-01T10:02:00Z",
+   "summary": "3 из 3 обложек готовы"
+  },
+  {
+   "id": "video",
+   "label": "Видео-черновик",
+   "status": "done",
+   "startedAt": "2026-01-01T10:00:00Z",
+   "endedAt": "2026-01-01T10:02:00Z",
+   "summary": "MP4 1280×720 · 348 с · 10 сцен"
+  }
+ ],
+ "input": {
+  "topic": "Почему в Риме не было мыла",
+  "stages": [
+   "script",
+   "rater",
+   "seo",
+   "thumbnail",
+   "video"
+  ],
+  "pauseAfter": [
+   "script"
+  ]
+ },
+ "data": {}
+}

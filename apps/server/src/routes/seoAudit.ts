@@ -1,0 +1,11 @@
+import {Hono} from 'hono';import {bodyLimit} from 'hono/body-limit';
+import {ApiError,ok,fail} from '../lib/errors.js';import {startJob} from '../lib/jobs.js';
+import {SeoAuditInput,SeoSearchInput,SeoSearchGenerate,previewSeoAudit,createSeoAudit,searchSeoAudit,listSeoAudits,loadSeoAudit} from '../services/seoAudit.js';
+export const seoAuditRoute=new Hono();
+seoAuditRoute.use('/seo-audit/*',bodyLimit({maxSize:65536,onError:c=>c.json({ok:false,error:{code:'VALIDATION',message:'Слишком большой запрос'}},413)}));
+const error=(e:unknown)=>e instanceof SyntaxError?new ApiError('VALIDATION','Некорректный JSON'):e;
+seoAuditRoute.post('/seo-audit/local',async c=>{try{return ok(c,await createSeoAudit(SeoAuditInput.parse(await c.req.json())));}catch(e){return fail(c,error(e));}});
+seoAuditRoute.post('/seo-audit/preview',async c=>{try{return ok(c,await previewSeoAudit(SeoSearchInput.parse(await c.req.json())));}catch(e){return fail(c,error(e));}});
+seoAuditRoute.post('/seo-audit/search',async c=>{try{const d=SeoSearchGenerate.parse(await c.req.json());return ok(c,{jobId:startJob(ctx=>searchSeoAudit(d,ctx))});}catch(e){return fail(c,error(e));}});
+seoAuditRoute.get('/seo-audit/runs',async c=>{try{return ok(c,await listSeoAudits());}catch(e){return fail(c,e);}});
+seoAuditRoute.get('/seo-audit/runs/:id',async c=>{try{const r=await loadSeoAudit(c.req.param('id'));if(!r)throw new ApiError('NOT_FOUND','Проверка не найдена или повреждена',404);return ok(c,r);}catch(e){return fail(c,e);}});

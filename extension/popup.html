@@ -1,0 +1,18 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><style>
+body{width:300px;margin:0;padding:14px;font:13px/1.45 system-ui,Segoe UI,Roboto,sans-serif;background:#141110;color:#eee}
+h1{font-size:15px;margin:0 0 10px;color:#e8711a}label{display:block;margin:10px 0 3px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;opacity:.7}
+input,select{width:100%;box-sizing:border-box;padding:6px 8px;border-radius:6px;border:1px solid #3a3230;background:#1e1a18;color:#eee}
+.row{display:flex;gap:6px;margin-top:12px}button{flex:1;padding:7px;border-radius:6px;border:0;background:#e8711a;color:#fff;font-weight:600;cursor:pointer}button.o{background:transparent;border:1px solid #e8711a;color:#e8711a}
+#st{margin-top:10px;font-size:12px}.ok{color:#4ade80}.bad{color:#f87171}.hint{font-size:11px;opacity:.6;margin-top:4px}
+</style></head><body>
+<h1>TubeStudio</h1>
+<label>Адрес TubeStudio</label><input id="server" placeholder="http://127.0.0.1:8787">
+<label>Токен (если задан пароль)</label><input type="password" autocomplete="off" id="token" placeholder="Система → Расширение Chrome">
+<label>Бейджи на превью</label>
+<select id="badges"><option value="search">Поиск и каналы (экономно)</option><option value="all">Везде, включая главную</option><option value="off">Выключены</option></select>
+<label><input type="checkbox" id="panel" style="width:auto"> Панель на странице видео</label>
+<div class="row"><button id="save">Сохранить</button><button class="o" id="openApp">Открыть TubeStudio</button></div>
+<div id="st"></div>
+<div class="hint">TubeStudio .148 работает только с локальным адресом loopback; удалённый сервер не поддерживается.</div>
+<div class="hint">Квота: метрики только по кнопке на YouTube, до 50 видео и 20 баз каналов за запрос. Оценка без кэша — до 42 ед.; повторы/ошибки могут изменить расход. Токен хранится локально, не в Chrome Sync.</div>
+<script src="shared.js"></script><script src="popup.js"></script></body></html>

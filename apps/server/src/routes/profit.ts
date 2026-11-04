@@ -1,0 +1,10 @@
+import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
+import { ApiError, fail, ok } from "../lib/errors.js";
+import { getWorkspaceCosts, listProfit, loadProfit, ProfitSaveInput, saveProfit } from "../services/profit.js";
+export const profitRoute = new Hono();
+profitRoute.use("/profit/*", bodyLimit({ maxSize: 20000, onError: c => c.json({ ok: false, error: { code: "VALIDATION", message: "Слишком большой запрос калькулятора" } }, 413) }));
+profitRoute.get("/profit/workspace-costs", async c => { try { return ok(c, await getWorkspaceCosts()); } catch(e) { return fail(c,e); } });
+profitRoute.post("/profit/calculate", async c => { try { return ok(c, await saveProfit(ProfitSaveInput.parse(await c.req.json()))); } catch(e) { return fail(c,e); } });
+profitRoute.get("/profit/runs", async c => { try { return ok(c, await listProfit()); } catch(e) { return fail(c,e); } });
+profitRoute.get("/profit/runs/:id", async c => { try { const r = await loadProfit(c.req.param("id")); if (!r) throw new ApiError("NOT_FOUND", "Расчёт не найден", 404); return ok(c,r); } catch(e) { return fail(c,e); } });

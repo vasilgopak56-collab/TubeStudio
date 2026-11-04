@@ -1,0 +1,17 @@
+import type { Context } from "hono";
+import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
+import { z } from "zod";
+import { ApiError, ok, fail } from "../lib/errors.js";
+import { listVisualStyles, createVisualStyle, updateVisualStyle, deleteVisualStyle, importVisualStyles } from "../services/visualStyles.js";
+export const visualStylesRoute = new Hono();
+const json = async (c:Context):Promise<unknown> => { try { return await c.req.json(); } catch { throw new ApiError("VALIDATION", "Некорректный JSON", 400); } };
+const limit = bodyLimit({ maxSize: 5 * 1024 * 1024, onError: c => fail(c, new ApiError("STYLE_LIMIT", "Файл/запрос больше 5 МБ", 413)) });
+visualStylesRoute.use("/visual-styles", limit);
+visualStylesRoute.use("/visual-styles/*", limit);
+visualStylesRoute.get("/visual-styles", async c => { try { c.header("Cache-Control", "no-store"); return ok(c, await listVisualStyles()); } catch (e) { return fail(c, e); } });
+visualStylesRoute.get("/visual-styles/export", async c => { try { c.header("Cache-Control", "no-store"); const styles = await listVisualStyles(); return ok(c, { format: "tubestudio-visual-styles", version: 1, styles: c.req.query("scope") === "all" ? styles : styles.filter(s => !s.builtin) }); } catch (e) { return fail(c, e); } });
+visualStylesRoute.post("/visual-styles", async c => { try { return ok(c, await createVisualStyle(await json(c))); } catch (e) { return fail(c, e); } });
+visualStylesRoute.post("/visual-styles/import", async c => { try { return ok(c, await importVisualStyles(await json(c))); } catch (e) { return fail(c, e); } });
+visualStylesRoute.put("/visual-styles/:id", async c => { try { return ok(c, await updateVisualStyle(c.req.param("id"), await json(c))); } catch (e) { return fail(c, e); } });
+visualStylesRoute.delete("/visual-styles/:id", async c => { try { const { revision } = z.object({ revision: z.number().int().min(1) }).parse(await json(c)); return ok(c, await deleteVisualStyle(c.req.param("id"), revision)); } catch (e) { return fail(c, e); } });

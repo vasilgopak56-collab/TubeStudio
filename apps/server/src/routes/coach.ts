@@ -1,0 +1,13 @@
+import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
+import { ApiError, fail, ok } from "../lib/errors.js";
+import { startJob } from "../lib/jobs.js";
+import { askCoach, coachSources, previewCoach, CoachSend, CoachAsk, CoachCreate, createCoach, listCoach, loadCoach } from "../services/coach.js";
+export const coachRoute = new Hono();
+coachRoute.use("/coach/*", bodyLimit({ maxSize: 50000, onError: c => c.json({ ok: false, error: { code: "VALIDATION", message: "Слишком большой запрос AI Coach" } }, 413) }));
+coachRoute.get("/coach/sources", async c => { try { return ok(c, await coachSources()); } catch(e) { return fail(c,e); } });
+coachRoute.post("/coach/conversations", async c => { try { return ok(c, await createCoach(CoachCreate.parse(await c.req.json()))); } catch(e) { return fail(c,e); } });
+coachRoute.post("/coach/preview", async c => { try { return ok(c, await previewCoach(CoachAsk.parse(await c.req.json()))); } catch(e) { return fail(c,e); } });
+coachRoute.post("/coach/ask", async c => { try { const input = CoachSend.parse(await c.req.json()); return ok(c, { jobId: startJob(ctx => askCoach(input, ctx)) }); } catch(e) { return fail(c,e); } });
+coachRoute.get("/coach/runs", async c => { try { return ok(c, await listCoach()); } catch(e) { return fail(c,e); } });
+coachRoute.get("/coach/runs/:id", async c => { try { const r = await loadCoach(c.req.param("id")); if (!r) throw new ApiError("NOT_FOUND", "Диалог не найден", 404); return ok(c,r); } catch(e) { return fail(c,e); } });

@@ -1,0 +1,25 @@
+export type OutlierBasis = {version:1;channelId:string;targetId:string;asOf:string;format:"long"|"short"|null;targetViews:number|null;median:number|null;ratio:number|null;reason:string;rows:{id:string;title:string;publishedAt:string;durationSec:number|null;observedAt:string|null;views:number|null;included:boolean;reason:string}[]};
+import type { Filters, Level } from "@/lib/api";
+export type ResearchRow = {
+  id: string; title: string; thumbnail?: string; publishedAt: string; ageDays: number; durationSec: number; isShort: boolean;
+  views: number; likes: number; comments: number; engagement: number; tags: string[];
+  channelId: string; channelTitle: string; channelAvatar?: string; subs: number; hiddenSubs: boolean; channelVideos: number;
+  vph: number; vphRecent: number | null; outlier: number | null; baseViews: number | null; ratio: number | null; viral: boolean; viralWhy: string;
+};
+export type Sort = "outlier" | "vph" | "views" | "date" | "ratio";
+export type ResearchInput = { mode?: "outliers" | "anomalies"; q: string; filters: Filters; sort: Sort; pages?: number; order?: "relevance" | "viewCount" | "date"; force?: boolean };
+export type ResearchRun = { id: string; createdAt: string; input: ResearchInput; rows: ResearchRow[]; stats: { fetched: number; shown: number; channels: number; baselines: number; units: number }; base: "median" | "average" };
+export type KwMetrics = { volume: number; volumeScore: number; competition: number; level: Level; overall: number; medianSubs: number; medianViews: number; titleMatch: number; smallChannels: number; top: { id: string; title: string; channelTitle: string; views: number; subs: number; thumbnail?: string; ageDays: number }[]; tags: string[] };
+export type Keyword = { keyword: string; auto: number; sources: number; metrics?: KwMetrics };
+export type KeywordRun = { id: string; createdAt: string; input: { seed: string; language: string; region?: string; depth?: string }; keywords: Keyword[]; related: { tag: string; count: number }[]; units: number };
+export type RateInterval = { from: string; to: string; hours: number; deltaViews: number; verified: boolean };
+export type SpikeEvidence = RateInterval & { rate: number; median: number; ratio: number; threshold: number; format: "long" | "short"; peers: { id: string; rate: number; from: string; to: string }[] };
+export type CompVideo = { id: string; title: string; publishedAt: string; thumbnail?: string; durationSec: number; isShort: boolean; views: number; viewsKnown?: boolean; interval?: RateInterval | null; rateReason?: string; likes: number; comments: number; vph: number | null; vphRecent: number | null; outlierBasis?: OutlierBasis; outlier: number | null; ageDays: number };
+export type CounterChange = { before: number | null; after: number | null; delta: number | null; reason: string };
+export type CounterComparison = { from: string | null; to: string | null; hours: number | null; subs: CounterChange; views: CounterChange };
+export type ChannelSnapshot = { d: string; t?: number; subs: number | null; views: number | null; videos: number | null; subsKnown?: boolean; viewsKnown?: boolean; videosKnown?: boolean; hiddenSubscribers?: boolean };
+export type SubscriberEvidence = { from: string; to: string; hours: number; before: number; after: number; delta: number; percent: number; threshold: number; source: "public-channel-counter" };
+export type Comp = { id: string; title: string; handle?: string; avatar?: string; addedAt: string; lastRefresh?: string; lastError?: string; channelError?: string; subs: number | null; totalViews: number | null; videoCount: number | null; countersAsOf: string | null; counterReasons: {subs:string;views:string;videos:string}; week: CounterComparison; subsDelta7: number | null; viewsDelta7: number | null; uploads30: number; medianViews: number | null; history: ChannelSnapshot[]; videos: CompVideo[] };
+export type Alert = { id: string; t: string; channelId: string; channelTitle: string; kind: "new" | "outlier" | "spike" | "subs"; videoId?: string; title: string; text: string; read: boolean; evidence?: SpikeEvidence; subsEvidence?: SubscriberEvidence; outlierEvidence?: OutlierBasis & {threshold:number} };
+export const LEVEL_RU: Record<Level, string> = { low: "низкая", medium: "средняя", high: "высокая" };
+export const ytUrl = (id: string) => `https://www.youtube.com/watch?v=${id}`;

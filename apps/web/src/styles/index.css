@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 44 60% 94%;
+    --foreground: 25 25% 12%;
+    --card: 43 55% 97%;
+    --popover: 43 55% 98%;
+    --border: 35 25% 82%;
+    --input: 35 25% 82%;
+    --muted: 40 35% 90%;
+    --muted-foreground: 30 12% 40%;
+    --primary: 25 92% 50%;
+    --primary-foreground: 0 0% 100%;
+    --primary-shadow: 22 85% 36%;
+    --secondary: 40 45% 88%;
+    --secondary-foreground: 25 30% 20%;
+    --ring: 25 92% 50%;
+    --accent: 355 65% 48%;
+    --success: 142 65% 36%;
+    --crown: 42 95% 48%;
+    --radius: 0.625rem;
+    --grid: 30 20% 70% / .35;
+  }
+  .dark {
+    --background: 25 20% 7%;
+    --foreground: 42 15% 95%;
+    --card: 25 18% 11%;
+    --popover: 25 18% 13%;
+    --border: 30 12% 18%;
+    --input: 30 12% 18%;
+    --muted: 25 15% 15%;
+    --muted-foreground: 35 12% 55%;
+    --primary: 28 92% 55%;
+    --primary-foreground: 25 30% 8%;
+    --primary-shadow: 24 80% 32%;
+    --secondary: 40 30% 18%;
+    --secondary-foreground: 40 40% 85%;
+    --ring: 28 92% 55%;
+    --accent: 355 65% 50%;
+    --success: 142 70% 45%;
+    --crown: 45 98% 64%;
+    --grid: 30 30% 40% / .14;
+  }
+  * { @apply border-border; }
+  html { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  body { @apply bg-background text-foreground font-sans antialiased; font-size: 14.5px; }
+  ::selection { background: hsl(var(--primary) / .35); }
+  /* Анимации запрещены ТЗ §4: глушим всё, кроме спиннера и прогресса */
+  *, *::before, *::after { animation: none !important; }
+  .allow-anim, .allow-anim * { animation: revert !important; }
+}
+
+@layer components {
+  .mono-label { @apply font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground; }
+  .bracket-card { @apply relative rounded-lg border bg-card; }
+  .bracket-card::before, .bracket-card::after {
+    content: ""; position: absolute; width: 12px; height: 12px; pointer-events: none;
+    border-color: hsl(var(--primary) / .55);
+  }
+  .bracket-card::before { top: 8px; left: 8px; border-top-width: 1.5px; border-left-width: 1.5px; }
+  .bracket-card::after { bottom: 8px; right: 8px; border-bottom-width: 1.5px; border-right-width: 1.5px; }
+  .grid-bg {
+    background-image:
+      linear-gradient(hsl(var(--grid)) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--grid)) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+  .field {
+    @apply w-full rounded-md border bg-background/60 px-3 py-2 text-sm placeholder:text-muted-foreground/70
+      outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30;
+  }
+}
+
+/* Native library / regrouped sidebar: retain the orange identity, accessible light text. */
+:root:not(.dark) .native-visual-ui {
+  --primary: 24 100% 33%;
+  --primary-shadow: 22 85% 27%;
+  --ring: 24 100% 33%;
+}
+.dark .native-visual-ui { --accent: 355 80% 72%; }
+.native-visual-ui .field { min-height: 44px; border-color: hsl(var(--muted-foreground)); }
+.native-visual-ui .text-red-500 { color: hsl(var(--accent)); }
+
+/* Donor workflow follows the existing theme, with accessible form targets. */
+.donor-ui .field { min-height: 44px; border-color: hsl(var(--muted-foreground)); font-size: 16px; }
+.donor-ui button { min-height: 44px; }
+.donor-ui textarea + p, .donor-ui label span { font-size: 14px; }
+.donor-ui fieldset:disabled { opacity: .75; }
+.donor-ui pre { overflow-wrap: anywhere; }
+.donor-ui { --accent: 350 75% 38%; --primary: 22 85% 34%; --primary-foreground: 0 0% 100%; --muted-foreground: 30 12% 35%; }
+.dark .donor-ui { --accent: 350 85% 72%; --primary: 28 92% 55%; --primary-foreground: 25 30% 8%; --muted-foreground: 35 12% 65%; }
+
+.donor-ui label .font-mono { flex-shrink: 0; white-space: nowrap; }

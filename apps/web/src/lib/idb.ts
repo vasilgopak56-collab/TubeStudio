@@ -1,0 +1,5 @@
+/** Мини-обёртка IndexedDB для локальных бинарных данных («Мой персонаж», картинки) */
+const open = () => new Promise<IDBDatabase>((res, rej) => { const r = indexedDB.open("tubestudio", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+export async function idbGet<T>(key: string): Promise<T | undefined> { const db = await open(); return new Promise((res, rej) => { const q = db.transaction("kv").objectStore("kv").get(key); q.onsuccess = () => res(q.result as T); q.onerror = () => rej(q.error); }); }
+export async function idbSet(key: string, v: unknown) { const db = await open(); return new Promise<void>((res, rej) => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").put(v, key); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }); }
+export async function idbDel(key: string) { const db = await open(); return new Promise<void>((res, rej) => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").delete(key); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }); }
