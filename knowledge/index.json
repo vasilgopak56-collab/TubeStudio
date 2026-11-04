@@ -1,0 +1,563 @@
+{
+ "updated": "2026-11-04",
+ "notion_page": "https://app.notion.com/p/15f596aaee4d462a8f839aee097cd923",
+ "cards": [
+  {
+   "order": 10,
+   "file": "cards/010.md",
+   "title": "Путь ролика в TubeStudio: 10 шагов",
+   "stage": "Весь конвейер",
+   "kind": "Справочник",
+   "release": "1 · Темы и сценарий",
+   "status": "Предложено",
+   "in_tubestudio": "Порядок шагов проекта ролика; на каждом шаге 1–2 ваших решения",
+   "sources": [
+    "yt-director — главный конвейер"
+   ],
+   "notion_url": "https://app.notion.com/p/4a6456c01b564b838e949f94bc1cfc2a"
+  },
+  {
+   "order": 20,
+   "file": "cards/020.md",
+   "title": "Профиль канала и бренд-кит",
+   "stage": "Канал и стратегия",
+   "kind": "Шаблон",
+   "release": "1 · Темы и сценарий",
+   "status": "Нужны данные от вас",
+   "in_tubestudio": "Профиль заполняется один раз на канал и подставляется во все промпты",
+   "sources": [
+    "yt-channel-strategy — стратегия канала"
+   ],
+   "notion_url": "https://app.notion.com/p/b4f233416e194fc0a6fc9e693f06c563"
+  },
+  {
+   "order": 30,
+   "file": "cards/030.md",
+   "title": "Защита от «неаутентичного контента»",
+   "stage": "Весь конвейер",
+   "kind": "Правило",
+   "release": "1 · Темы и сценарий",
+   "status": "Предложено",
+   "in_tubestudio": "Журнал ваших решений, контроль разнообразия хуков, структур и визуала",
+   "sources": [
+    "yt-channel-strategy — стратегия канала",
+    "yt-analytics-growth — аналитика",
+    "yt-director — главный конвейер"
+   ],
+   "notion_url": "https://app.notion.com/p/59da4514f09746d98cbe825697ee20a6"
+  },
+  {
+   "order": 40,
+   "file": "cards/040.md",
+   "title": "Где искать темы со спросом",
+   "stage": "Темы и идеи",
+   "kind": "Правило",
+   "release": "1 · Темы и сценарий",
+   "status": "Предложено",
+   "in_tubestudio": "Шаг «Поиск тем»: выбросы ≥3× медианы, комментарии, пробелы",
+   "sources": [
+    "yt-idea-engine — поиск и отбор идей",
+    "yt-analytics-growth — аналитика"
+   ],
+   "notion_url": "https://app.notion.com/p/6feaaaafc4154722a243a62a565c3c2e"
+  },
+  {
+   "order": 45,
+   "file": "cards/045.md",
+   "title": "Идеи для канала: новые форматы, которые обгоняют свой канал",
+   "stage": "Темы и идеи",
+   "kind": "Правило",
+   "release": "1 · Темы и сценарий",
+   "status": "Предложено",
+   "in_tubestudio": "Экран «Идеи для канала»: маленькие каналы того же типа, видео-выбросы, «ваша версия», кнопка «Взять идею →»",
+   "sources": [],
+   "notion_url": "https://app.notion.com/p/81a362191a2041ebb278d536f73349af"
+  },
+  {
+   "order": 50,
+   "file": "cards/050.md",
+   "title": "Генерация углов: 7 шагов и 22 линзы",
+   "stage": "Темы и идеи",
+   "kind": "Справочник",
+   "release": "1 · Темы и сценарий",
+   "status": "Предложено",
+   "in_tubestudio": "Промпт шага «Идеи»: модель-автор применяет 6–8 линз и фильтры",
+   "sources": [
+    "yt-idea-engine — поиск и отбор идей"
+   ],
+   "notion_url": "https://app.notion.com/p/d3e37ffefc694ad9b86c5c47b7d5e448"
+  },
+  {
+   "order": 60,
+   "file": "cards/060.md",
+   "title": "Оценка идеи (100 баллов) и досье",
+   "stage": "Темы и идеи",
+   "kind": "Чек-лист",
+   "release": "1 · Темы и сценарий",
+   "status": "Предложено",
+   "in_tubestudio": "Каждая идея получает баллы по 9 критериям; досье для лучших",
+   "sources": [
+    "yt-idea-engine — поиск и отбор идей",
+    "yt-quality-gates — «красная команда»"
+   ],
+   "notion_url": "https://app.notion.com/p/dceccfe423464ce2956c8ea24cc46f5b"
+  },
+  {
+   "order": 70,
+   "file": "cards/070.md",
+   "title": "Упаковка до сценария: название и обещание",
+   "stage": "Упаковка",
+   "kind": "Правило",
+   "release": "1 · Темы и сценарий",
+   "status": "Предложено",
+   "in_tubestudio": "Шаг «Упаковка» идёт до сценария; сценарий выполняет обещание",
+   "sources": [
+    "yt-packaging — названия и превью",
+    "yt-idea-engine — поиск и отбор идей"
+   ],
+   "notion_url": "https://app.notion.com/p/3cb7bea3e73f45a48a76d78ad90051ac"
+  },
+  {
+   "order": 80,
+   "file": "cards/080.md",
+   "title": "Превью: концепция и промпт",
+   "stage": "Упаковка",
+   "kind": "Шаблон",
+   "release": "1 · Темы и сценарий",
+   "status": "Предложено",
+   "in_tubestudio": "3 концепции превью + готовые промпты для Nano Banana / GPT Image в G-Labs",
+   "sources": [
+    "yt-packaging — названия и превью",
+    "madmae: Nano Banana Pro — система промптов"
+   ],
+   "notion_url": "https://app.notion.com/p/96b8bb31a1a846e7ae5400bf45ac3537"
+  },
+  {
+   "order": 90,
+   "file": "cards/090.md",
+   "title": "Исследование и проверка фактов",
+   "stage": "Исследование и факты",
+   "kind": "Правило",
+   "release": "1 · Темы и сценарий",
+   "status": "Предложено",
+   "in_tubestudio": "Отчёт фактов рядом со сценарием; текст озвучки остаётся чистым",
+   "sources": [
+    "yt-research-factcheck — исследование и факты"
+   ],
+   "notion_url": "https://app.notion.com/p/a09daa4bed5944fab4ca93eff2951291"
+  },
+  {
+   "order": 100,
+   "file": "cards/100.md",
+   "title": "Бюджет оговорок в тексте",
+   "stage": "Исследование и факты",
+   "kind": "Решение",
+   "release": "1 · Темы и сценарий",
+   "status": "Утверждено",
+   "in_tubestudio": "Автоподсчёт оговорок и предупреждение при превышении",
+   "sources": [
+    "yt-research-factcheck — исследование и факты",
+    "yt-script-architect — сценарий"
+   ],
+   "notion_url": "https://app.notion.com/p/d80e6e0211bf4b09bf78920818b94aed"
+  },
+  {
+   "order": 110,
+   "file": "cards/110.md",
+   "title": "Матрица форматов и структуры S1–S20",
+   "stage": "Сценарий",
+   "kind": "Справочник",
+   "release": "1 · Темы и сценарий",
+   "status": "Предложено",
+   "in_tubestudio": "Автовыбор структуры, стиля и длины по типу темы",
+   "sources": [
+    "yt-director — главный конвейер",
+    "yt-script-architect — сценарий"
+   ],
+   "notion_url": "https://app.notion.com/p/a90fe7deb8994ce29327578a0b7871e8"
+  },
+  {
+   "order": 120,
+   "file": "cards/120.md",
+   "title": "10 законов сценария и расчёт длины",
+   "stage": "Сценарий",
+   "kind": "Правило",
+   "release": "1 · Темы и сценарий",
+   "status": "Предложено",
+   "in_tubestudio": "Промпт автора сценария + автопроверка длины и длины предложений",
+   "sources": [
+    "yt-script-architect — сценарий",
+    "Stick Film — кодовые ролики со стикменом"
+   ],
+   "notion_url": "https://app.notion.com/p/c2f24d904f24413eb83947bfae076ce8"
+  },
+  {
+   "order": 130,
+   "file": "cards/130.md",
+   "title": "Хук, ре-хуки и учёт петель",
+   "stage": "Сценарий",
+   "kind": "Справочник",
+   "release": "1 · Темы и сценарий",
+   "status": "Предложено",
+   "in_tubestudio": "Банк хуков и ре-хуков в промпте автора; карта петель после текста",
+   "sources": [
+    "yt-script-architect — сценарий"
+   ],
+   "notion_url": "https://app.notion.com/p/d4cd298b506b4c03bc5097b084430159"
+  },
+  {
+   "order": 140,
+   "file": "cards/140.md",
+   "title": "Голос и тон канала",
+   "stage": "Сценарий",
+   "kind": "Справочник",
+   "release": "1 · Темы и сценарий",
+   "status": "Предложено",
+   "in_tubestudio": "Тональность выбирается в профиле канала и держится во всех роликах",
+   "sources": [
+    "yt-script-architect — сценарий"
+   ],
+   "notion_url": "https://app.notion.com/p/b81e8648e5ac4dd686aede8075d1c1e9"
+  },
+  {
+   "order": 150,
+   "file": "cards/150.md",
+   "title": "«Красная команда»: тест гениальности и автопроверки",
+   "stage": "Проверка качества",
+   "kind": "Чек-лист",
+   "release": "1 · Темы и сценарий",
+   "status": "Предложено",
+   "in_tubestudio": "Код проверяет измеримое, модель-критик — 10 вопросов; ниже порога — переписать",
+   "sources": [
+    "yt-quality-gates — «красная команда»",
+    "yt-script-architect — сценарий"
+   ],
+   "notion_url": "https://app.notion.com/p/fe0119bb36af460f9560db2e0c94cf75"
+  },
+  {
+   "order": 160,
+   "file": "cards/160.md",
+   "title": "Разбор референса без копирования",
+   "stage": "Сценарий",
+   "kind": "Шаблон",
+   "release": "1 · Темы и сценарий",
+   "status": "Предложено",
+   "in_tubestudio": "Режим «Как у канала X»: разбор стиля и темпа донора → свой ролик по скелету",
+   "sources": [
+    "yt-script-architect — сценарий",
+    "Video Analyzer — разбор видео-донора",
+    "yt-visual-director — раскадровка и промпты"
+   ],
+   "notion_url": "https://app.notion.com/p/c235bf442b25477d94424d93121a813f"
+  },
+  {
+   "order": 170,
+   "file": "cards/170.md",
+   "title": "Модели для текста в AnyModel",
+   "stage": "Модели ИИ",
+   "kind": "Решение",
+   "release": "1 · Темы и сценарий",
+   "status": "Предложено",
+   "in_tubestudio": "Роли моделей: автор, критик, рутина; счётчик расходов и жёсткий лимит $20",
+   "sources": [],
+   "notion_url": "https://app.notion.com/p/1cd225cec522447bbdc333f3b2304ad5"
+  },
+  {
+   "order": 180,
+   "file": "cards/180.md",
+   "title": "Подготовка текста к озвучке",
+   "stage": "Озвучка",
+   "kind": "Правило",
+   "release": "1 · Темы и сценарий",
+   "status": "Предложено",
+   "in_tubestudio": "Отдельный «текст для озвучки» с разметкой; слова сценария не меняются",
+   "sources": [
+    "yt-voiceover — озвучка",
+    "Stick Film — кодовые ролики со стикменом"
+   ],
+   "notion_url": "https://app.notion.com/p/4ced583e4fed4d3c8c4cb4617136a2f3"
+  },
+  {
+   "order": 190,
+   "file": "cards/190.md",
+   "title": "Озвучка через Lumean: автоматически, с субтитрами и таймингами",
+   "stage": "Озвучка",
+   "kind": "Правило",
+   "release": "1 · Темы и сценарий",
+   "status": "Нужны данные от вас",
+   "in_tubestudio": "Отправка текста в Lumean, скачивание аудио, субтитров и таймингов слов; запасной путь — выгрузка TXT по абзацам",
+   "sources": [
+    "yt-voiceover — озвучка"
+   ],
+   "notion_url": "https://app.notion.com/p/d508222e82244822b512b50cef251d2d"
+  },
+  {
+   "order": 200,
+   "file": "cards/200.md",
+   "title": "Нарезка сценария на сцены",
+   "stage": "Раскадровка",
+   "kind": "Правило",
+   "release": "2 · Визуал (G-Labs)",
+   "status": "Утверждено",
+   "in_tubestudio": "Автонарезка текста на сцены с учётом длины клипов Flow/Veo",
+   "sources": [
+    "yt-visual-director — раскадровка и промпты",
+    "Gemini Omni Cinematic Guide (Flow + Omni)",
+    "Omni Storybook Director",
+    "yt-edit-assembly — монтаж"
+   ],
+   "notion_url": "https://app.notion.com/p/cbeef4c659064389bb32272335dc221b"
+  },
+  {
+   "order": 210,
+   "file": "cards/210.md",
+   "title": "Визуальная библия и стилевой ключ",
+   "stage": "Картинки",
+   "kind": "Правило",
+   "release": "2 · Визуал (G-Labs)",
+   "status": "Предложено",
+   "in_tubestudio": "Стилевой ключ из выбранного стиля TubeStudio вставляется в каждый промпт дословно",
+   "sources": [
+    "yt-visual-director — раскадровка и промпты",
+    "Madame AI — фильмы «живая масляная живопись»",
+    "Библиотека стилей (40 стилей)",
+    "yt-channel-strategy — стратегия канала"
+   ],
+   "notion_url": "https://app.notion.com/p/02f848551f72466eaece79236bfa8121"
+  },
+  {
+   "order": 220,
+   "file": "cards/220.md",
+   "title": "Промпт картинки для Nano Banana и Flow",
+   "stage": "Картинки",
+   "kind": "Шаблон",
+   "release": "2 · Визуал (G-Labs)",
+   "status": "Предложено",
+   "in_tubestudio": "Генерация промптов кадров по формуле; для эталонов и превью — по структуре из 10 частей",
+   "sources": [
+    "yt-visual-director — раскадровка и промпты",
+    "madmae: Nano Banana Pro — система промптов",
+    "yt-visual-commands — 50 визуальных приёмов"
+   ],
+   "notion_url": "https://app.notion.com/p/fa4672c88aac42638ef9f09787b58dc5"
+  },
+  {
+   "order": 230,
+   "file": "cards/230.md",
+   "title": "Персонажи, локации и реестр ассетов",
+   "stage": "Персонажи",
+   "kind": "Шаблон",
+   "release": "2 · Визуал (G-Labs)",
+   "status": "Предложено",
+   "in_tubestudio": "Паспорта персонажей и локаций в профиле канала; эталоны в папке компонентов G-Labs, вызов через @имя",
+   "sources": [
+    "yt-visual-director — раскадровка и промпты",
+    "madmae: листы персонажей (character sheets)",
+    "madmae: Nano Banana Pro — система промптов",
+    "Gem Trio — кинолук и персонажи",
+    "Omni Storybook Director",
+    "Cinema Studio 4 Director",
+    "Image to JSON — паспорт кадра"
+   ],
+   "notion_url": "https://app.notion.com/p/e781f33569ba4de9bb408dc3f3247477"
+  },
+  {
+   "order": 240,
+   "file": "cards/240.md",
+   "title": "Промпт анимации для Flow Видео, Veo и Omni",
+   "stage": "Анимация",
+   "kind": "Шаблон",
+   "release": "2 · Визуал (G-Labs)",
+   "status": "Предложено",
+   "in_tubestudio": "Промпты движения к каждому кадру; звук генератора выключен, если озвучка своя",
+   "sources": [
+    "Gemini Omni Cinematic Guide (Flow + Omni)",
+    "madmae: Veo 3 / 3.1 — формула промпта",
+    "Omni Storybook Director",
+    "yt-visual-director — раскадровка и промпты",
+    "madmae: физика и правдоподобное движение"
+   ],
+   "notion_url": "https://app.notion.com/p/7aa2b29023fc48fc880b950e3da4b294"
+  },
+  {
+   "order": 250,
+   "file": "cards/250.md",
+   "title": "Камера, движение и типовые ошибки",
+   "stage": "Анимация",
+   "kind": "Справочник",
+   "release": "2 · Визуал (G-Labs)",
+   "status": "Предложено",
+   "in_tubestudio": "Словарь камеры: движение подбирается под эмоцию фразы",
+   "sources": [
+    "Руководство по движению камеры (RU/EN)",
+    "madmae: Camera Bible и движения камеры",
+    "yt-visual-director — раскадровка и промпты"
+   ],
+   "notion_url": "https://app.notion.com/p/0f966aebae574b4fb5b76879e2cf011b"
+  },
+  {
+   "order": 260,
+   "file": "cards/260.md",
+   "title": "Эмоции персонажа (AI Actor)",
+   "stage": "Анимация",
+   "kind": "Справочник",
+   "release": "2 · Визуал (G-Labs)",
+   "status": "Предложено",
+   "in_tubestudio": "Для крупных планов героев: эмоция строится из мышц, а не называется",
+   "sources": [
+    "AI Actor — система эмоций",
+    "Can AI Act? — пакет промптов (9 моделей, 7 сцен)"
+   ],
+   "notion_url": "https://app.notion.com/p/91f0f004ac7449729416a54406bf72a6"
+  },
+  {
+   "order": 270,
+   "file": "cards/270.md",
+   "title": "Выгрузка промптов в G-Labs и импорт результатов",
+   "stage": "Картинки",
+   "kind": "Правило",
+   "release": "2 · Визуал (G-Labs)",
+   "status": "Нужны данные от вас",
+   "in_tubestudio": "TXT «1 строка = 1 промпт» и эталоны для G-Labs, автоприём файлов из папки вывода; на плане MAX — полностью автоматически через Webhook",
+   "sources": [
+    "yt-visual-director — раскадровка и промпты",
+    "Omni Storybook Director"
+   ],
+   "notion_url": "https://app.notion.com/p/572f726cca594a3fba532adc08cfdd89"
+  },
+  {
+   "order": 280,
+   "file": "cards/280.md",
+   "title": "Проверка картинок и клипов (QA)",
+   "stage": "Проверка качества",
+   "kind": "Чек-лист",
+   "release": "2 · Визуал (G-Labs)",
+   "status": "Предложено",
+   "in_tubestudio": "Сетка кадров по каждому клипу, проверка 3/3, правка по одной причине",
+   "sources": [
+    "yt-visual-director — раскадровка и промпты",
+    "Madame AI — фильмы «живая масляная живопись»",
+    "Omni Storybook Director"
+   ],
+   "notion_url": "https://app.notion.com/p/b1f7175715934d4082e3f95409896ab1"
+  },
+  {
+   "order": 290,
+   "file": "cards/290.md",
+   "title": "Паспорт кадра: картинка → JSON",
+   "stage": "Картинки",
+   "kind": "Шаблон",
+   "release": "2 · Визуал (G-Labs)",
+   "status": "Предложено",
+   "in_tubestudio": "Кнопка «Паспорт кадра»: разбор удачного кадра для повтора и консистентности",
+   "sources": [
+    "Image to JSON — паспорт кадра"
+   ],
+   "notion_url": "https://app.notion.com/p/fda864dd49f44d139b78e6a52f9fe178"
+  },
+  {
+   "order": 300,
+   "file": "cards/300.md",
+   "title": "Автомонтаж: сборка и экспорт",
+   "stage": "Монтаж и звук",
+   "kind": "Правило",
+   "release": "3 · Автомонтаж",
+   "status": "Предложено",
+   "in_tubestudio": "Сборка на Remotion + FFmpeg; по желанию — проект для CapCut или DaVinci",
+   "sources": [
+    "yt-edit-assembly — монтаж",
+    "Omni Storybook Director"
+   ],
+   "notion_url": "https://app.notion.com/p/86a227823f3749f4959eb362ba346913"
+  },
+  {
+   "order": 310,
+   "file": "cards/310.md",
+   "title": "Звук и громкость",
+   "stage": "Монтаж и звук",
+   "kind": "Решение",
+   "release": "3 · Автомонтаж",
+   "status": "Утверждено",
+   "in_tubestudio": "Автоматическое приглушение музыки под голосом и итоговая нормализация −14 LUFS",
+   "sources": [
+    "yt-edit-assembly — монтаж",
+    "Explainer Card Director — объяснялки кодом"
+   ],
+   "notion_url": "https://app.notion.com/p/0222cb240e184d31b3be66c0f30c7d2a"
+  },
+  {
+   "order": 320,
+   "file": "cards/320.md",
+   "title": "Субтитры и текст на экране",
+   "stage": "Монтаж и звук",
+   "kind": "Правило",
+   "release": "3 · Автомонтаж",
+   "status": "Предложено",
+   "in_tubestudio": "Весь текст накладывает TubeStudio; субтитры — из текста сценария",
+   "sources": [
+    "Vox Documentary — Omni и Seedance",
+    "yt-edit-assembly — монтаж",
+    "yt-shorts — короткие ролики"
+   ],
+   "notion_url": "https://app.notion.com/p/223756f0c1294b50986782af0e965a20"
+  },
+  {
+   "order": 330,
+   "file": "cards/330.md",
+   "title": "Инфографика и объяснялки кодом",
+   "stage": "Монтаж и звук",
+   "kind": "Справочник",
+   "release": "3 · Автомонтаж",
+   "status": "Предложено",
+   "in_tubestudio": "Карты, графики, счётчики и схемы TubeStudio рисует сама, без генератора",
+   "sources": [
+    "Explainer Card Director — объяснялки кодом",
+    "Vox Documentary — Omni и Seedance",
+    "yt-visual-director — раскадровка и промпты"
+   ],
+   "notion_url": "https://app.notion.com/p/4328d341849942f4a8abb746c762e88c"
+  },
+  {
+   "order": 350,
+   "file": "cards/350.md",
+   "title": "Публикация и SEO",
+   "stage": "Публикация и SEO",
+   "kind": "Шаблон",
+   "release": "4 · Помощник и аналитика",
+   "status": "Предложено",
+   "in_tubestudio": "Описание, главы с реальными таймкодами, теги и закреп — автоматически после монтажа",
+   "sources": [
+    "yt-publish-seo — публикация"
+   ],
+   "notion_url": "https://app.notion.com/p/8df7a556d898410b97c4601aae7d2e47"
+  },
+  {
+   "order": 360,
+   "file": "cards/360.md",
+   "title": "Аналитика и рост",
+   "stage": "Аналитика",
+   "kind": "Правило",
+   "release": "4 · Помощник и аналитика",
+   "status": "Предложено",
+   "in_tubestudio": "Помощник разбирает метрики через 48 часов и 7 дней и предлагает одну гипотезу",
+   "sources": [
+    "yt-analytics-growth — аналитика"
+   ],
+   "notion_url": "https://app.notion.com/p/3fc5ea54643b44519fbd266e1c87e4d0"
+  },
+  {
+   "order": 370,
+   "file": "cards/370.md",
+   "title": "Shorts",
+   "stage": "Shorts",
+   "kind": "Шаблон",
+   "release": "4 · Помощник и аналитика",
+   "status": "Предложено",
+   "in_tubestudio": "Нарезка 3–5 Shorts из каждого длинного ролика и отдельные Shorts по формулам",
+   "sources": [
+    "yt-shorts — короткие ролики"
+   ],
+   "notion_url": "https://app.notion.com/p/77b6168a75ce42d583bb21aec450fd83"
+  }
+ ]
+}
