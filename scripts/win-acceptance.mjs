@@ -365,32 +365,36 @@ await phase("L. Студия: канал, проверка сценария Shie
   const r = await launch("запуск для Студии");
   if (!check("Программа запущена", r.code === 0 && r.link, r.out + r.err)) return;
   const pid = status()?.running?.pid;
-  const s = await session(r.link.port, r.link.token);
   const shields = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "apps", "server", "test", "fixtures", "scripts", "shields-v1.txt"), "utf8");
-  const made = await api(r.link.port, "POST", "/api/studio/channels", { cookie: s.cookie, body: { name: "Проверка Студии — Shields", language: "en", niche: "medieval weapons and armour history", lengthMin: 10 } });
-  const channelId = made.json?.data?.id;
-  check("Канал создан", made.status === 200 && !!channelId, made.text.slice(0, 300));
-  const list = await api(r.link.port, "GET", "/api/studio/channels", { cookie: s.cookie });
-  check("Канал в списке и активный", (list.json?.data?.channels ?? []).some((c) => c.id === channelId) && list.json?.data?.activeId === channelId, list.text.slice(0, 300));
-  const lint = await api(r.link.port, "POST", "/api/studio/script/lint", { cookie: s.cookie, body: { text: shields, channelId } });
-  const rules = new Set((lint.json?.data?.issues ?? []).filter((i) => i.severity === "error" || i.rule === "double-ending").map((i) => i.rule));
-  check("Shields: описательное вступление, оговорки и повтор вывода найдены", lint.status === 200 && ["opening-descriptive", "hedges", "double-ending"].every((x) => rules.has(x)), `${lint.status} ${[...rules].join(", ")} ${lint.text.slice(0, 200)}`);
-  const ideas = await api(r.link.port, "GET", `/api/studio/channels/${channelId}/ideas?limit=5`, { cookie: s.cookie });
-  check("Идеи канала читаются", ideas.status === 200 && Array.isArray(ideas.json?.data?.ideas), ideas.text.slice(0, 300));
-  const acc = await api(r.link.port, "GET", "/api/studio/voice/account", { cookie: s.cookie });
-  check("Без ключа Lumean — понятная подсказка", acc.json?.error?.code === "KEY_MISSING", acc.text.slice(0, 300));
   const require = createRequire(import.meta.url);
   const { chromium } = require("playwright-core");
   const chrome = ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe", "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"].find(exists);
   const browser = await chromium.launch({ executablePath: chrome, headless: true });
   try {
-    const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await ctx.newPage();
     const errors = []; page.on("pageerror", (e) => errors.push(e.message));
     const shot = (n) => page.screenshot({ path: path.join(out, `studio-${n}.png`) }).catch(() => {});
     const seen = (loc, ms = 20_000) => loc.first().waitFor({ timeout: ms }).then(() => true, () => false);
     const go = (route) => page.goto(`http://127.0.0.1:${r.link.port}${route}`);
+    // The launch key is one-time: sign in once in the browser and reuse its session for API calls.
     await page.goto(r.link.url);
-    check("Вход по ссылке", await seen(page.getByTestId("exit-button"), 30_000));
+    if (!check("Вход по ссылке", await seen(page.getByTestId("exit-button"), 30_000))) return;
+    const sid = (await ctx.cookies()).find((c) => c.name === "ts_session");
+    const cookie = sid ? `ts_session=${sid.value}` : "";
+    const made = await api(r.link.port, "POST", "/api/studio/channels", { cookie, body: { name: "Проверка Студии — Shields", language: "en", niche: "medieval weapons and armour history", lengthMin: 10 } });
+    const channelId = made.json?.data?.id;
+    check("Канал создан", made.status === 200 && !!channelId, made.text.slice(0, 300));
+    const list = await api(r.link.port, "GET", "/api/studio/channels", { cookie });
+    check("Канал в списке и активный", (list.json?.data?.channels ?? []).some((c) => c.id === channelId) && list.json?.data?.activeId === channelId, list.text.slice(0, 300));
+    const lint = await api(r.link.port, "POST", "/api/studio/script/lint", { cookie, body: { text: shields, channelId } });
+    const rules = new Set((lint.json?.data?.issues ?? []).filter((i) => i.severity === "error" || i.rule === "double-ending").map((i) => i.rule));
+    check("Shields: описательное вступление, оговорки и повтор вывода найдены", lint.status === 200 && ["opening-descriptive", "hedges", "double-ending"].every((x) => rules.has(x)), `${lint.status} ${[...rules].join(", ")} ${lint.text.slice(0, 200)}`);
+    const ideas = await api(r.link.port, "GET", `/api/studio/channels/${channelId}/ideas?limit=5`, { cookie });
+    check("Идеи канала читаются", ideas.status === 200 && Array.isArray(ideas.json?.data?.ideas), ideas.text.slice(0, 300));
+    const acc = await api(r.link.port, "GET", "/api/studio/voice/account", { cookie });
+    check("Без ключа Lumean — понятная подсказка", acc.json?.error?.code === "KEY_MISSING", acc.text.slice(0, 300));
+    await go("/");
     check("Панель: блок «Студия»", await seen(page.getByTestId("studio-widget")));
     await shot("dashboard");
     await go("/channels");
@@ -417,9 +421,11 @@ await phase("L. Студия: канал, проверка сценария Shie
     await go("/help");
     check("Справка: раздел «Студия»", await seen(page.getByText("Идеи для канала (Радар)")));
     check("Нет ошибок JavaScript в разделах Студии", errors.length === 0, errors.join("\n"));
-  } finally { await browser.close(); }
-  await stopViaCmd("остановка после Студии");
-  check("Остановлена", await waitFor(() => !pidAlive(pid), 30_000));
+  } finally {
+    await browser.close();
+    await stopViaCmd("остановка после Студии");
+    check("Остановлена", await waitFor(() => !pidAlive(pid), 30_000));
+  }
 });
 
 // ---------- cleanup and report ----------
