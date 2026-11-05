@@ -1,10 +1,11 @@
 import {
   Palette, Plug, Calculator, LayoutDashboard, BarChart3, Lightbulb, Bookmark, PenLine, Mic, Search, Image, Clapperboard,
-  ScanText, AudioLines, Gauge, Sparkles, FolderKanban, Settings as SettingsIcon, LifeBuoy, CalendarDays, Fingerprint, FileCode2, Wallet, Telescope, KeySquare, Users, MessageSquareText, ClipboardCheck, Puzzle, Workflow, Film, Activity, Flame, type LucideIcon,
+  ScanText, AudioLines, Gauge, Sparkles, FolderKanban, Settings as SettingsIcon, LifeBuoy, CalendarDays, Fingerprint, FileCode2, Wallet, Telescope, KeySquare, Users, MessageSquareText, ClipboardCheck, Puzzle, Workflow, Film, Activity, Flame, Radar, type LucideIcon,
 } from "lucide-react";
 
 export type NavItem = { to: string; label: string; icon: LucideIcon; description: string; stage: number };
-export type NavGroup = { title: string; items: NavItem[]; collapsible?: string };
+/** more — группа из прежних разделов: показывается под кнопкой «Ещё». */
+export type NavGroup = { title: string; items: NavItem[]; collapsible?: string; more?: boolean };
 
 const ORIGINAL_NAV: NavGroup[] = [
   {
@@ -39,7 +40,7 @@ const ORIGINAL_NAV: NavGroup[] = [
       { to: "/pipeline", label: "Одна кнопка", icon: Workflow, description: "Тема → сценарий → оценка → SEO → обложки → раскадровка → озвучка → видео → Shorts", stage: 3 },
       { to: "/topics", label: "Поиск тем", icon: Lightbulb, description: "Темы с оценкой и доказательствами из реального YouTube", stage: 3 },
       { to: "/script", label: "Сценарист", icon: PenLine, description: "Сценарий под озвучку: нужный объём, хук, CTA, ресёрч", stage: 4 },
-      { to: "/voice", label: "Озвучка", icon: Mic, description: "Сценарий → MP3 голосом AnyModel (Edge, Fish) или загрузка готовой озвучки в проект", stage: 5 },
+      { to: "/voice", label: "Озвучка AnyModel", icon: Mic, description: "Сценарий → MP3 голосом AnyModel (Edge, Fish) или загрузка готовой озвучки в проект", stage: 5 },
       { to: "/seo-audit", label: "SEO-аудит", icon: ClipboardCheck, description: "Локальный контрольный список и отдельный снимок поиска, не SEO-рейтинг", stage: 6 },
       { to: "/seo", label: "SEO", icon: Search, description: "Заголовки, описание, теги и комментарии для закрепа", stage: 6 },
       { to: "/thumbnail", label: "Обложки", icon: Image, description: "3 варианта, Polish Studio, сравнение с конкурентами в ленте", stage: 7 },
@@ -84,15 +85,23 @@ const ORIGINAL_NAV: NavGroup[] = [
 
 const existing = ORIGINAL_NAV.flatMap(g=>g.items);
 const item = (route:string) => existing.find(i=>i.to===route)!;
+// Выпуск 1: новые разделы сверху, прежние — под «Ещё».
+const STUDIO: NavItem[] = [
+ { to: "/channels", label: "Каналы", icon: Users, description: "Профили каналов: ниша, язык, длина, стиль, образцы, голос и бюджет", stage: 1 },
+ { to: "/ideas", label: "Идеи для канала", icon: Radar, description: "Радар: маленькие каналы, у которых ролик обогнал канал в разы", stage: 3 },
+ { to: "/studio/script", label: "Сценарий", icon: PenLine, description: "Сценарий под профиль канала: проверка кодом и второе мнение", stage: 4 },
+ { to: "/studio/voice", label: "Озвучка", icon: Mic, description: "Голос канала через Lumean: оценка, один заказ, файлы в проект", stage: 5 },
+];
 export const NAV: NavGroup[] = [
- {title:"Рабочее пространство",collapsible:"workspace",items:["/","/projects","/saved","/calendar","/coach"].map(item)},
- {title:"Исследование",collapsible:"research",items:ORIGINAL_NAV[1].items},
- {title:"Сценарий и идеи",collapsible:"writing",items:[{to:"/donor-workflow",label:"ДНК канала → сценарий",icon:Lightbulb,description:"ДНК подачи донора, пять новых тем или своя идея, исследование и живая драматургия",stage:3},...["/daily-ideas","/topics","/script","/voice-profile"].map(item)]},
- {title:"Производство",collapsible:"production",items:[{to:"/director",label:"Режиссёрский пакет",icon:Clapperboard,description:"Бриф, персонажи и реквизит, кадры, референсы и экспорт без генерации видео",stage:9},{to:"/styles",label:"Библиотека стилей",icon:Palette,description:"Выбор отрисовки и анимации, свои стили, импорт и экспорт",stage:9},...["/storyboard","/audio-storyboard","/thumbnail","/voice","/video","/pipeline"].map(item)]},
- {title:"Публикация",collapsible:"publishing",items:["/seo","/seo-audit","/ad-breaks"].map(item)},
- {title:"Проверка",collapsible:"check",items:ORIGINAL_NAV[3].items},
- {title:"Аналитика и доход",collapsible:"analytics",items:["/analysis","/my-analytics","/profit"].map(item)},
- {title:"Система",collapsible:"system",items:ORIGINAL_NAV[5].items},
+ {title:"Студия",collapsible:"studio",items:[item("/"),...STUDIO,item("/projects"),item("/settings")]},
+ {title:"Рабочее пространство",collapsible:"workspace",more:true,items:["/saved","/calendar","/coach"].map(item)},
+ {title:"Исследование",collapsible:"research",more:true,items:ORIGINAL_NAV[1].items},
+ {title:"Сценарий и идеи",collapsible:"writing",more:true,items:[{to:"/donor-workflow",label:"ДНК канала → сценарий",icon:Lightbulb,description:"ДНК подачи донора, пять новых тем или своя идея, исследование и живая драматургия",stage:3},...["/daily-ideas","/topics","/script","/voice-profile"].map(item)]},
+ {title:"Производство",collapsible:"production",more:true,items:[{to:"/director",label:"Режиссёрский пакет",icon:Clapperboard,description:"Бриф, персонажи и реквизит, кадры, референсы и экспорт без генерации видео",stage:9},{to:"/styles",label:"Библиотека стилей",icon:Palette,description:"Выбор отрисовки и анимации, свои стили, импорт и экспорт",stage:9},...["/storyboard","/audio-storyboard","/thumbnail","/voice","/video","/pipeline"].map(item)]},
+ {title:"Публикация",collapsible:"publishing",more:true,items:["/seo","/seo-audit","/ad-breaks"].map(item)},
+ {title:"Проверка",collapsible:"check",more:true,items:ORIGINAL_NAV[3].items},
+ {title:"Аналитика и доход",collapsible:"analytics",more:true,items:["/analysis","/my-analytics","/profit"].map(item)},
+ {title:"Система",collapsible:"system",more:true,items:ORIGINAL_NAV[5].items.filter(i=>i.to!=="/settings")},
 ];
 export const ALL_ITEMS = NAV.flatMap((g) => g.items);
 export const findItem = (to: string) => ALL_ITEMS.find((i) => i.to === to);

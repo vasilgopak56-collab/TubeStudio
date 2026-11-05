@@ -18,7 +18,8 @@ export function AppLayout({ authRequired }: { authRequired: boolean }) {
   useEffect(() => { try { localStorage.setItem("ts:sidebar", collapsed ? "1" : "0"); } catch { /* storage unavailable */ } }, [collapsed]);
   useEffect(() => { setMobileOpen(false); window.scrollTo(0, 0); }, [loc.pathname]);
   const logout = async () => { await api("/auth/logout", { method: "POST" }); location.reload(); };
-  const wide = loc.pathname === "/styles" || loc.pathname.startsWith("/analysis") || loc.pathname.startsWith("/topics") || loc.pathname.startsWith("/script") || loc.pathname.startsWith("/seo") || loc.pathname.startsWith("/check") || loc.pathname.startsWith("/storyboard") || loc.pathname.startsWith("/thumbnail") || loc.pathname === "/" || loc.pathname.startsWith("/projects");
+  const wide = loc.pathname === "/styles" || loc.pathname.startsWith("/analysis") || loc.pathname.startsWith("/topics") || loc.pathname.startsWith("/script") || loc.pathname.startsWith("/seo") || loc.pathname.startsWith("/check") || loc.pathname.startsWith("/storyboard") || loc.pathname.startsWith("/thumbnail") || loc.pathname === "/" || loc.pathname.startsWith("/projects") || loc.pathname.startsWith("/studio/") || loc.pathname === "/channels";
+  const full = loc.pathname === "/ideas";
 
   return (
     <div className="flex min-h-screen">
@@ -42,7 +43,7 @@ export function AppLayout({ authRequired }: { authRequired: boolean }) {
           <span className="font-extrabold">Tube<span className="text-primary">Studio</span></span>
           <AppVersion />
         </header>
-        <main className={`mx-auto w-full flex-1 px-4 py-6 md:px-8 md:py-8 ${wide ? "max-w-[1200px]" : "max-w-[960px]"}`}>
+        <main className={`mx-auto w-full flex-1 px-4 py-6 md:px-8 md:py-8 ${full ? "max-w-[1480px]" : wide ? "max-w-[1200px]" : "max-w-[960px]"}`}>
           <VersionNotice />
           {projectList.error && loc.pathname !== "/projects" && loc.pathname !== "/" && <div role="alert" className="mb-4 rounded border border-red-500 bg-red-500/10 p-3 text-sm"><strong>Список проектов недоступен.</strong> Данные в выборе проекта могут отсутствовать или устареть. <Link className="underline" to="/projects">Откройте «Проекты» для проверки и повтора.</Link></div>}
           <Outlet />

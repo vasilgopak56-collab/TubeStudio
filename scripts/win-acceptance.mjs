@@ -11,6 +11,7 @@ import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 
 const argv = process.argv.slice(2);
 const arg = (n) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
@@ -358,6 +359,67 @@ await phase("K. Старая версия осталась нетронутой"
   check("Старый .env на месте и не изменён", fs.readFileSync(path.join(base, ".env"), "utf8") === legacyEnvBefore);
   check("Старые данные на месте", exists(legacyProjectFile));
   check("Старая версия не запущена", !pidAlive(legacyPid));
+});
+
+await phase("L. Студия: канал, проверка сценария Shields и новые разделы", async () => {
+  const r = await launch("запуск для Студии");
+  if (!check("Программа запущена", r.code === 0 && r.link, r.out + r.err)) return;
+  const pid = status()?.running?.pid;
+  const s = await session(r.link.port, r.link.token);
+  const shields = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "apps", "server", "test", "fixtures", "scripts", "shields-v1.txt"), "utf8");
+  const made = await api(r.link.port, "POST", "/api/studio/channels", { cookie: s.cookie, body: { name: "Проверка Студии — Shields", language: "en", niche: "medieval weapons and armour history", lengthMin: 10 } });
+  const channelId = made.json?.data?.id;
+  check("Канал создан", made.status === 200 && !!channelId, made.text.slice(0, 300));
+  const list = await api(r.link.port, "GET", "/api/studio/channels", { cookie: s.cookie });
+  check("Канал в списке и активный", (list.json?.data?.channels ?? []).some((c) => c.id === channelId) && list.json?.data?.activeId === channelId, list.text.slice(0, 300));
+  const lint = await api(r.link.port, "POST", "/api/studio/script/lint", { cookie: s.cookie, body: { text: shields, channelId } });
+  const rules = new Set((lint.json?.data?.issues ?? []).filter((i) => i.severity === "error" || i.rule === "double-ending").map((i) => i.rule));
+  check("Shields: описательное вступление, оговорки и повтор вывода найдены", lint.status === 200 && ["opening-descriptive", "hedges", "double-ending"].every((x) => rules.has(x)), `${lint.status} ${[...rules].join(", ")} ${lint.text.slice(0, 200)}`);
+  const ideas = await api(r.link.port, "GET", `/api/studio/channels/${channelId}/ideas?limit=5`, { cookie: s.cookie });
+  check("Идеи канала читаются", ideas.status === 200 && Array.isArray(ideas.json?.data?.ideas), ideas.text.slice(0, 300));
+  const acc = await api(r.link.port, "GET", "/api/studio/voice/account", { cookie: s.cookie });
+  check("Без ключа Lumean — понятная подсказка", acc.json?.error?.code === "KEY_MISSING", acc.text.slice(0, 300));
+  const require = createRequire(import.meta.url);
+  const { chromium } = require("playwright-core");
+  const chrome = ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe", "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"].find(exists);
+  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  try {
+    const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
+    const errors = []; page.on("pageerror", (e) => errors.push(e.message));
+    const shot = (n) => page.screenshot({ path: path.join(out, `studio-${n}.png`) }).catch(() => {});
+    const seen = (loc, ms = 20_000) => loc.first().waitFor({ timeout: ms }).then(() => true, () => false);
+    const go = (route) => page.goto(`http://127.0.0.1:${r.link.port}${route}`);
+    await page.goto(r.link.url);
+    check("Вход по ссылке", await seen(page.getByTestId("exit-button"), 30_000));
+    check("Панель: блок «Студия»", await seen(page.getByTestId("studio-widget")));
+    await shot("dashboard");
+    await go("/channels");
+    check("Каналы: карточка канала", await seen(page.getByTestId("channel-card")));
+    await shot("channels");
+    await go("/ideas");
+    check("Идеи для канала: кнопка «Найти идеи»", await seen(page.getByRole("button", { name: "Найти идеи" })));
+    await shot("ideas");
+    await go("/studio/script");
+    const own = page.getByLabel("Свой текст для проверки");
+    if (check("Сценарий: поле «Свой текст для проверки»", await seen(own))) {
+      await own.fill(shields);
+      await page.getByRole("button", { name: "Проверить", exact: true }).click();
+      const report = page.getByTestId("lint-report");
+      const shown = await seen(report);
+      const text = shown ? await report.innerText() : "";
+      check("Сценарий: отчёт проверки на странице", shown && /Описательное вступление/.test(text) && /Оговорок/.test(text), text.slice(0, 400));
+      await report.scrollIntoViewIfNeeded().catch(() => {});
+      await shot("script-lint");
+    }
+    await go("/studio/voice");
+    check("Озвучка: подсказка «Нужен ключ Lumean»", await seen(page.getByText("Нужен ключ Lumean")));
+    await shot("voice");
+    await go("/help");
+    check("Справка: раздел «Студия»", await seen(page.getByText("Идеи для канала (Радар)")));
+    check("Нет ошибок JavaScript в разделах Студии", errors.length === 0, errors.join("\n"));
+  } finally { await browser.close(); }
+  await stopViaCmd("остановка после Студии");
+  check("Остановлена", await waitFor(() => !pidAlive(pid), 30_000));
 });
 
 // ---------- cleanup and report ----------

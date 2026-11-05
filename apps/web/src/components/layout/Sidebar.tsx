@@ -1,6 +1,6 @@
 import { AppVersion, UI_VERSION } from "./AppVersion";
 import { NavLink, useLocation } from "react-router-dom";
-import { ChevronDown, PanelLeftClose, PanelLeftOpen, LogOut, Wallet } from "lucide-react";
+import { ChevronDown, MoreHorizontal, PanelLeftClose, PanelLeftOpen, LogOut, Wallet } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api, type UsageT } from "@/lib/api";
 import { useState, useEffect } from "react";
@@ -13,15 +13,18 @@ import { ExitButton } from "./ExitButton";
 export function Sidebar({ collapsed, onToggle, onNavigate, showLogout, onLogout }:
   { collapsed: boolean; onToggle?: () => void; onNavigate?: () => void; showLogout?: boolean; onLogout?: () => void }) {
   const { pathname } = useLocation();
-  const activeGroup = NAV.find(g=>g.items.some(i=>i.to === "/" ? pathname === "/" : pathname === i.to || pathname.startsWith(i.to+"/")))?.collapsible ?? "workspace";
+  const active = NAV.find(g=>g.items.some(i=>i.to === "/" ? pathname === "/" : pathname === i.to || pathname.startsWith(i.to+"/")));
+  const activeGroup = active?.collapsible ?? "studio";
+  // «Ещё» раскрывается сам, когда открыт один из прежних разделов.
+  const withActive = (o: Record<string, boolean>) => ({...o,[activeGroup]:true,...(active?.more?{more:true}:{})});
   const [open, setOpen] = useState<Record<string, boolean>>(() => {
-    try { const value = JSON.parse(localStorage.getItem("ts:nav-groups:v2") || "null");
-      if (value && typeof value === "object" && !Array.isArray(value)) return {...Object.fromEntries(Object.entries(value).filter((entry): entry is [string,boolean]=>typeof entry[1] === "boolean")),[activeGroup]:true};
+    try { const value = JSON.parse(localStorage.getItem("ts:nav-groups:v3") || "null");
+      if (value && typeof value === "object" && !Array.isArray(value)) return withActive(Object.fromEntries(Object.entries(value).filter((entry): entry is [string,boolean]=>typeof entry[1] === "boolean")));
     } catch { /* invalid/unavailable storage */ }
-    return {[activeGroup]:true};
+    return withActive({studio:true});
   });
-  useEffect(()=>{setOpen(o=>({...o,[activeGroup]:true}));},[pathname]);
-  useEffect(()=>{try { localStorage.setItem("ts:nav-groups:v2",JSON.stringify(open)); } catch { /* storage unavailable */ }},[open]);
+  useEffect(()=>{setOpen(withActive);},[pathname]);
+  useEffect(()=>{try { localStorage.setItem("ts:nav-groups:v3",JSON.stringify(open)); } catch { /* storage unavailable */ }},[open]);
   const toggleGroup = (k:string) => setOpen(o=>({...o,[k]:!o[k]}));
   const { data } = useHealth();
   const required = data?.keys.filter((k) => k.required) ?? [];
@@ -45,13 +48,18 @@ export function Sidebar({ collapsed, onToggle, onNavigate, showLogout, onLogout 
 
       <nav aria-label="Разделы TubeStudio" className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
         {!collapsed && <div className="mb-3 flex gap-1 border-b pb-2 text-sm text-muted-foreground">
-          <button type="button" className="min-h-11 flex-1 rounded px-1 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring" onClick={()=>setOpen(Object.fromEntries(NAV.map(g=>[g.collapsible!,true])))}>Раскрыть всё</button>
-          <button type="button" className="min-h-11 flex-1 rounded px-1 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring" onClick={()=>setOpen({})}>Свернуть всё</button>
+          <button type="button" className="min-h-11 flex-1 rounded px-1 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring" onClick={()=>setOpen({...Object.fromEntries(NAV.map(g=>[g.collapsible!,true])),more:true})}>Раскрыть всё</button>
+          <button type="button" className="min-h-11 flex-1 rounded px-1 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring" onClick={()=>setOpen({studio:true})}>Свернуть всё</button>
         </div>}
-        {NAV.map((g) => {
+        {NAV.map((g, gi) => {
+          const moreToggle = g.more && !NAV[gi-1]?.more ? <button key="more" type="button" title={collapsed?"Ещё — прежние разделы":undefined} aria-label="Ещё — прежние разделы" aria-expanded={!!open.more} onClick={()=>toggleGroup("more")}
+              className={cn("mb-1 mt-2 flex min-h-11 w-full items-center rounded-md border-t pt-2 text-left text-sm font-semibold text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",collapsed?"justify-center":"justify-between px-2")}>
+              {collapsed?<MoreHorizontal className="h-4 w-4"/>:<><span>Ещё — прежние разделы</span><ChevronDown className={cn("h-3.5 w-3.5 shrink-0",!open.more&&"-rotate-90")}/></>}
+            </button> : null;
+          if (g.more && !open.more) return moreToggle;
           const isOpen = !!open[g.collapsible!], active=g.collapsible===activeGroup, Icon=g.items[0].icon;
           const sectionId="nav-group-"+g.collapsible;
-          return <div key={g.title} className="mb-1">
+          return <div key={g.title} className="mb-1">{moreToggle}
             <button type="button" title={collapsed?g.title:undefined} aria-label={g.title} aria-expanded={isOpen} aria-controls={sectionId} onClick={()=>toggleGroup(g.collapsible!)}
               className={cn("flex min-h-11 w-full items-center rounded-md text-left text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring hover:bg-muted",collapsed?"justify-center border-b border-border":"justify-between px-2",active?"text-primary":"text-muted-foreground")}>
               {collapsed?<Icon className="h-4 w-4"/>:<><span>{g.title}</span><ChevronDown className={cn("h-3.5 w-3.5 shrink-0",!isOpen&&"-rotate-90")}/></>}

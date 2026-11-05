@@ -24,6 +24,7 @@ import { anymodelRoute } from "./routes/anymodel.js";
 import { transcriptsRoute } from "./routes/transcripts.js";
 import { nichesRoute } from "./routes/niches.js";
 import { exploreRoute } from "./routes/explore.js";
+import { studioRoute } from "./routes/studio.js";
 import { startCompetitorScheduler, stopCompetitorScheduler, activeCompetitorRefreshes } from "./services/competitors.js";
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
@@ -124,6 +125,7 @@ app.route("/api", assistantRoute);
 app.route("/api", mcpRoute);
 app.route("/api", adBreaksRoute);
 app.route("/api", profitRoute);
+app.route("/api", studioRoute);
 // Файлы проектов: /files/<projectId>/<name> → data/files/…
 app.use("/files/*", serveStatic({ root: path.relative(process.cwd(), config.dataDir) }));
 app.notFound((c) => c.req.path.startsWith("/api/")

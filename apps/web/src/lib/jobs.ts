@@ -37,7 +37,7 @@ export function useJob<T, I = unknown>(path: string) {
         const raw = (e as MessageEvent).data;
         if (!raw && owner) { const closed=src.readyState===EventSource.CLOSED; setState(s=>({...s,consentError:closed?"Поток закрыт. Задача может продолжаться; попробуйте остановить её и проверьте результат, прежде чем запускать снова.":"Связь прервана, повторно подключаемся. Задача может продолжаться; не запускайте её повторно. При необходимости нажмите «Остановить»."})); return; }
         jobId.current = null;
-        if (raw) { const d = JSON.parse(raw); setState((s) => ({ ...s, status: "error", error: new ApiError(d.error.code, d.error.message) })); }
+        if (raw) { const d = JSON.parse(raw); setState((s) => ({ ...s, status: "error", error: new ApiError(d.error.code, d.error.message, 0, false, d.error.details) })); }
         else setState((s) => (s.status === "running" ? { ...s, status: "error", error: new ApiError("NETWORK", "Соединение с сервером прервано") } : s));
         src.close();
       });

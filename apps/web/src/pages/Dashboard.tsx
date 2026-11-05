@@ -1,4 +1,5 @@
 import { DailyIdeasWidget } from "@/components/dailyIdeas/DailyIdeasWidget";
+import { StudioWidget } from "@/features/studio/StudioWidget";
 import { Link } from "react-router-dom";
 import { ArrowRight, BarChart3, Clapperboard, FolderKanban, Lightbulb, RefreshCw, ShieldCheck, Gauge } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -30,6 +31,8 @@ export default function Dashboard() {
         <h1 className="text-[32px] font-extrabold tracking-tight md:text-[40px]">{greet}<span className="text-primary">.</span></h1>
         <p className="mt-1 text-muted-foreground">Следующее видео начинается здесь. Выберите раздел.</p>
       </div>
+
+      <StudioWidget />
 
       <DailyIdeasWidget />
 

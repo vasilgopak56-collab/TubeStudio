@@ -1,7 +1,7 @@
 export type ApiErrorShape = { code: string; message: string; retryable?: boolean; details?: unknown };
 
 export class ApiError extends Error {
-  constructor(public code: string, message: string, public status = 0, public retryable = false) { super(message); }
+  constructor(public code: string, message: string, public status = 0, public retryable = false, public details?: unknown) { super(message); }
 }
 
 export async function api<T>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
@@ -22,7 +22,7 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
   if (!body.ok) {
     const e = body.error as ApiErrorShape;
     if (res.status === 401 && e.code === "UNAUTHORIZED") window.dispatchEvent(new Event("ts:unauthorized"));
-    throw new ApiError(e.code, e.message, res.status, !!e.retryable);
+    throw new ApiError(e.code, e.message, res.status, !!e.retryable, e.details);
   }
   return body.data as T;
 }

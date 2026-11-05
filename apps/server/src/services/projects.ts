@@ -16,7 +16,7 @@ export const ArtifactInput = z.object({
   files: z.array(z.string()).optional(), // пути относительно data/files/<projectId>/
 });
 export type Artifact = z.infer<typeof ArtifactInput> & { id: string; createdAt: string; version?: number };
-export type Project = { id: string; title: string; niche?: string; createdAt: string; updatedAt: string; artifacts: Artifact[] };
+export type Project = { id: string; title: string; niche?: string; /** Канал из раздела «Каналы» (Выпуск 1). */ channelId?: string; createdAt: string; updatedAt: string; artifacts: Artifact[] };
 export type ProjectSummary = Omit<Project, "artifacts"> & { counts: Partial<Record<(typeof KINDS)[number], number>>; last?: { kind: string; title: string; createdAt: string } };
 
 export const safe = (id: string) => id.replace(/[^\w-]/g, "");
@@ -79,16 +79,17 @@ export async function listProjects(): Promise<ProjectSummary[]> {
   }).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
-async function createProjectUnlocked(input: { title: string; niche?: string; artifact?: z.infer<typeof ArtifactInput> }) {
+async function createProjectUnlocked(input: { title: string; niche?: string; channelId?: string; artifact?: z.infer<typeof ArtifactInput> }) {
   const now = new Date().toISOString();
-  const p: Project = { id: crypto.randomUUID(), title: input.title.slice(0, 300), niche: input.niche, createdAt: now, updatedAt: now, artifacts: [] };
+  const p: Project = { id: crypto.randomUUID(), title: input.title.slice(0, 300), niche: input.niche, ...(input.channelId ? { channelId: input.channelId } : {}), createdAt: now, updatedAt: now, artifacts: [] };
   if (input.artifact) p.artifacts.push({ ...input.artifact, id: crypto.randomUUID(), createdAt: now });
   return save(p);
 }
-async function updateProjectUnlocked(id: string, patch: { title?: string; niche?: string }) {
+async function updateProjectUnlocked(id: string, patch: { title?: string; niche?: string; channelId?: string | null }) {
   const p = await getProject(id);
   if (patch.title) p.title = patch.title.slice(0, 300);
   if (patch.niche !== undefined) p.niche = patch.niche;
+  if (patch.channelId === null) delete p.channelId; else if (patch.channelId) p.channelId = patch.channelId;
   return save(p);
 }
 async function deleteProjectUnlocked(id: string) {
