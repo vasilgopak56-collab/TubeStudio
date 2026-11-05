@@ -147,3 +147,16 @@ test("control channel: PING reports the version, LINK gives a fresh login link, 
     assert.equal(await ask("STOP"), "BUSY");
   } finally { await control.close(); }
 });
+
+test("windows package: the shortcut keeps Cyrillic paths; folders are copied without fs.cpSync", async () => {
+  const root = path.resolve(import.meta.dirname, "..", "..", "..");
+  const lnk = await fs.readFile(path.join(root, "windows-portable", "create-shortcut.ps1"), "utf8");
+  // Windows PowerShell 5.1 reads a BOM-less script as ANSI: keep the scripts pure ASCII.
+  for (const f of ["create-shortcut.ps1", "start-hidden.ps1"]) assert.ok(!/[^\x00-\x7f]/.test(await fs.readFile(path.join(root, "windows-portable", f), "utf8")), f);
+  assert.ok(lnk.includes("IShellLinkW") && lnk.includes("IPersistFile"), "Unicode shell API");
+  assert.ok(!/CreateShortcut/.test(lnk), "WScript.Shell shortcuts turn Cyrillic into question marks");
+  assert.ok(/-cne \$arguments/.test(lnk) && /-cne \$program/.test(lnk), "the saved link is read back and compared");
+  const launcher = await fs.readFile(path.join(root, "launcher", "launcher.mjs"), "utf8");
+  assert.ok(!/\bcpSync\(/.test(launcher), "fs.cpSync aborts Node 22 on Windows for non-ASCII folders");
+  assert.ok(/copyMissing\(legacy\.dir, dataDir\)/.test(launcher));
+});

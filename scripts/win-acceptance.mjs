@@ -128,9 +128,23 @@ function status(p = prog) {
   const r = spawnSync(path.join(p, "runtime", "node.exe"), [path.join(p, "app", "launcher", "launcher.mjs"), "--status"], { env: ciEnv, encoding: "utf8", timeout: 60_000 });
   try { return JSON.parse(r.stdout.trim().split(/\r?\n/).pop()); } catch { return null; }
 }
+// Read the .lnk through the Unicode shell API (the package's own script in read mode):
+// WScript.Shell would show a Cyrillic folder as question marks even when the link is right.
 function readShortcut() {
-  const r = ps("$s=(New-Object -ComObject WScript.Shell).CreateShortcut($env:TS_LNK); @{target=$s.TargetPath;args=$s.Arguments;wd=$s.WorkingDirectory;icon=$s.IconLocation} | ConvertTo-Json -Compress", { TS_LNK: lnkPath });
-  try { return JSON.parse(r.out); } catch { return null; }
+  const script = fs.readFileSync(path.join(prog, "app", "windows", "create-shortcut.ps1"), "utf8").replace(/^\uFEFF/, "");
+  const r = ps(script, { TS_LNK_READ: lnkPath });
+  try { return JSON.parse(r.out.split(/\r?\n/).filter(Boolean).pop()); } catch { return null; }
+}
+// Double-click equivalent: the Windows shell opens the .lnk (ShellExecute), no output captured.
+function openShortcut() {
+  return ps("Start-Process -FilePath $env:TS_LNK", { TS_LNK: lnkPath, TUBESTUDIO_CI: "1", TUBESTUDIO_NO_BROWSER: "1", TUBESTUDIO_NO_DIALOGS: "1" });
+}
+function copyTree(src, dst) {
+  fs.mkdirSync(dst, { recursive: true });
+  for (const e of fs.readdirSync(src, { withFileTypes: true })) {
+    const from = path.join(src, e.name), to = path.join(dst, e.name);
+    if (e.isDirectory()) copyTree(from, to); else if (e.isFile()) fs.copyFileSync(from, to);
+  }
 }
 const descriptorsIn = (dir) => { try { return fs.readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => readJson(path.join(dir, f))).filter(Boolean); } catch { return []; } };
 
@@ -219,7 +233,8 @@ await phase("C. Первый запуск «Запустить TubeStudio.cmd» 
   note(`Версия сервера: ${version.json?.data?.version}`);
   const lnk = readShortcut();
   check("Ярлык TubeStudio на рабочем столе создан", lnk && /powershell\.exe$/i.test(lnk.target) && lnk.args.includes(path.join(prog, "app", "windows", "start-hidden.ps1")), JSON.stringify(lnk));
-  check("У ярлыка есть значок", lnk && lnk.icon.includes("tubestudio.ico"), lnk?.icon);
+  check("Путь в ярлыке с кириллицей без искажений", lnk && lnk.wd === prog && !/\?/.test(lnk.args + lnk.wd + lnk.icon), JSON.stringify(lnk));
+  check("У ярлыка есть значок", lnk && lnk.icon.includes("tubestudio.ico") && exists(lnk.icon.replace(/,\d+$/, "")), lnk?.icon);
   check("Журнал лаунчера ведётся", exists(path.join(dataDir, "logs", "launcher.log")));
 });
 
@@ -245,13 +260,12 @@ await phase("E. Кнопка «Выход» (API) останавливает п�
   current = null;
 });
 
-await phase("F. Запуск ярлыком и остановка «Остановить TubeStudio.cmd»", async () => {
-  const lnk = readShortcut();
-  const r = await run(lnk.target, [lnk.args], { env: ciEnv, cwd: lnk.wd, verbatim: true });
-  transcript.push(`----- запуск ярлыком (код ${r.code})\n${r.out}\n${r.err}`);
-  const link = findLink(r.out);
-  check("Ярлык запустил программу", r.code === 0 && link && await portOpen(link.port), r.out + r.err);
-  const pid = status()?.running?.pid;
+await phase("F. Двойной щелчок по ярлыку и остановка «Остановить TubeStudio.cmd»", async () => {
+  const o = openShortcut();
+  check("Windows открыл ярлык", o.code === 0, o.out + o.err);
+  const st = await waitFor(() => { const s = status(); return s?.running?.pid && pidAlive(s.running.pid) ? s : null; }, 120_000, 1000);
+  check("Ярлык запустил программу", st && await portOpen(st.running.port), JSON.stringify(st));
+  const pid = st?.running?.pid;
   const s = await stopViaCmd("остановка");
   check("Остановка прошла", s.code === 0 && /остановлена/.test(s.out), s.out + s.err);
   check("Сервер завершился", await waitFor(() => !pidAlive(pid), 30_000));
@@ -286,7 +300,7 @@ await phase("H. Повреждённый settings.json восстанавлив�
 
 await phase("I. Обновление: новая версия распакована рядом и запущена", async () => {
   const next = path.join(base, "TubeStudio-9.9.9-test");
-  fs.cpSync(prog, next, { recursive: true });
+  copyTree(prog, next); // not fs.cpSync: it aborts Node 22 on Windows for non-ASCII paths
   const pkg = path.join(next, "app", "package.json");
   fs.writeFileSync(pkg, JSON.stringify({ ...readJson(pkg), version: "9.9.9-test" }, null, 2));
   const before = current?.pid;

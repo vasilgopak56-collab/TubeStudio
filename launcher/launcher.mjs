@@ -176,6 +176,18 @@ function tally(dir) {
   walk(dir);
   return { files, bytes };
 }
+// Plain recursive copy that never overwrites. Not fs.cpSync: its native fast path in Node 22
+// aborts the process on Windows for folders with non-ASCII names (e.g. «Программы»).
+function copyMissing(src, dst, rel = "") {
+  fs.mkdirSync(dst, { recursive: true });
+  for (const e of fs.readdirSync(src, { withFileTypes: true })) {
+    const r = rel ? path.join(rel, e.name) : e.name;
+    if (SKIP.test(r)) continue;
+    const from = path.join(src, e.name), to = path.join(dst, e.name);
+    if (e.isDirectory()) copyMissing(from, to, r);
+    else if (e.isFile() && !exists(to)) fs.copyFileSync(from, to, fs.constants.COPYFILE_EXCL);
+  }
+}
 function migrate(legacy) {
   if (exists(path.join(legacy.dir, ".tubestudio-server.lock"))) {
     const owner = readJsonSafe(path.join(legacy.dir, ".tubestudio-server.lock", "owner.json"));
@@ -184,7 +196,7 @@ function migrate(legacy) {
   say(`Переношу данные из старой версии: ${legacy.dir}`);
   const before = tally(legacy.dir);
   fs.mkdirSync(dataDir, { recursive: true });
-  fs.cpSync(legacy.dir, dataDir, { recursive: true, force: false, errorOnExist: false, filter: (src) => !SKIP.test(path.relative(legacy.dir, src)) });
+  copyMissing(legacy.dir, dataDir);
   const record = { schema: 1, from: legacy.dir, fromVersion: legacy.version, legacyEnv: legacy.env, envImported: false, copiedAt: new Date().toISOString(), files: before.files, bytes: before.bytes, originalKept: true };
   fs.writeFileSync(path.join(dataDir, "migration.json"), JSON.stringify(record, null, 2) + "\n");
   say(`Перенесено файлов: ${before.files} (${(before.bytes / 1048576).toFixed(1)} МБ). Старая папка не изменена.`);
