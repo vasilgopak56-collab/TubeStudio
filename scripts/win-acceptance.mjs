@@ -8,7 +8,9 @@
 //   node scripts/win-acceptance.mjs --zip release\TubeStudio-<ver>-windows.zip --base "<old install folder>" --out ci-out\acceptance
 // --base must contain a BUILT old version (apps\server\dist, apps\web\dist, node_modules).
 import { spawn, spawnSync } from "node:child_process";
+import crypto from "node:crypto";
 import fs from "node:fs";
+import net from "node:net";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
@@ -147,9 +149,20 @@ function copyTree(src, dst) {
     if (e.isDirectory()) copyTree(from, to); else if (e.isFile()) fs.copyFileSync(from, to);
   }
 }
+const samePathCI = (a, b) => !!a && !!b && path.resolve(a).toLowerCase() === path.resolve(b).toLowerCase();
+// A port nobody listens on: a service file left by a crash points to such a port.
+const closedPort = () => new Promise((resolve) => { const srv = net.createServer().listen(0, "127.0.0.1", () => { const port = srv.address().port; srv.close(() => resolve(port)); }); });
+function staleDescriptor(dir, pid, port) {
+  fs.mkdirSync(dir, { recursive: true });
+  const id = crypto.randomUUID(), file = path.join(dir, `${id}.json`);
+  fs.writeFileSync(file, JSON.stringify({ schema: 1, instance: id, pid, appPort: 8787, controlPort: port, token: crypto.randomBytes(32).toString("hex") }) + "\n");
+  return file;
+}
 const descriptorsIn = (dir) => { try { return fs.readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => readJson(path.join(dir, f))).filter(Boolean); } catch { return []; } };
 
 let legacyPid = 0, legacyEnvBefore = "", legacyProjectFile = "";
+// Stands in for "some other program": after a reboot Windows gives old process numbers to other programs.
+let foreign = null, staleFiles = [];
 let current = null; // { port, pid, cookie }
 
 await phase("A. Старая версия 0.12.x запущена с ключами в .env", async () => {
@@ -172,6 +185,16 @@ await phase("A. Старая версия 0.12.x запущена с ключа�
   legacyProjectFile = path.join(legacyData, "projects", `${created.json?.data?.id}.json`);
   check("Проект старой версии лежит в apps\\server\\data", exists(legacyProjectFile), legacyProjectFile);
   check("Старая версия записала канал остановки", descriptorsIn(path.join(base, ".tubestudio-control")).length >= 1);
+});
+
+await phase("A2. Служебные файлы старой версии после выключения компьютера", async () => {
+  foreign = spawn(path.join(WINDIR, "System32", "PING.EXE"), ["-n", "3600", "127.0.0.1"], { windowsHide: true, stdio: "ignore", detached: true });
+  foreign.unref();
+  check("Запущена посторонняя программа (ping.exe)", await waitFor(() => pidAlive(foreign.pid), 10_000), foreign.pid);
+  const gonePid = spawnSync(path.join(WINDIR, "System32", "cmd.exe"), ["/d", "/c", "exit 0"], { windowsHide: true }).pid;
+  const control = path.join(base, ".tubestudio-control");
+  staleFiles = [staleDescriptor(control, foreign.pid, await closedPort()), staleDescriptor(control, gonePid, await closedPort())];
+  check("Служебные файлы с чужим и со свободным номером процесса лежат рядом с настоящим", staleFiles.every(exists) && descriptorsIn(control).length >= 3);
 });
 
 await phase("B. Распаковка нового архива рядом со старой версией", async () => {
@@ -207,6 +230,8 @@ await phase("C. Первый запуск «Запустить TubeStudio.cmd» 
   check("Ключей нет открытым текстом нигде в TubeStudioData", hits.length === 0, hits.join("\n"));
   check("Старые данные не тронуты (проект на месте)", exists(legacyProjectFile));
   check("Старый .env не изменён", fs.readFileSync(path.join(base, ".env"), "utf8") === legacyEnvBefore);
+  check("Устаревшие служебные файлы старой версии не помешали и не тронуты", staleFiles.length === 2 && staleFiles.every(exists));
+  check("Посторонняя программа с номером из служебного файла не тронута", foreign && pidAlive(foreign.pid));
   if (!r.link) return;
   const st = status();
   current = { port: r.link.port, pid: st?.running?.pid };
@@ -285,6 +310,29 @@ await phase("G. После аварийного завершения прогр�
   await stopViaCmd("остановка после проверки G");
 });
 
+await phase("G2. Блокировка с номером, который Windows отдала другой программе", async () => {
+  const r = await launch("запуск перед выключением");
+  const pid = status()?.running?.pid;
+  check("Запущена", r.code === 0 && pid, r.out);
+  spawnSync("taskkill.exe", ["/F", "/PID", String(pid)]);
+  check("Процесс убит (как при выключении компьютера)", await waitFor(() => !pidAlive(pid), 15_000));
+  const owner = path.join(dataDir, ".tubestudio-server.lock", "owner.json");
+  const o = readJson(owner);
+  check("Осталась блокировка убитого процесса", o && o.pid === pid, JSON.stringify(o));
+  if (!o || !foreign) return;
+  // After the reboot the number from the lock and the service file belongs to another program.
+  fs.writeFileSync(owner, JSON.stringify({ ...o, pid: foreign.pid }) + "\n");
+  const control = path.join(dataDir, ".tubestudio-control");
+  for (const f of fs.readdirSync(control).filter((n) => n.endsWith(".json"))) { const d = readJson(path.join(control, f)); if (d) fs.writeFileSync(path.join(control, f), JSON.stringify({ ...d, pid: foreign.pid }) + "\n"); }
+  const asideBefore = fs.readdirSync(dataDir).filter((n) => n.startsWith(".tubestudio-server.lock.stale-")).length;
+  const r2 = await launch("запуск после выключения");
+  check("Запуск успешен, хотя номер из блокировки занят другой программой", r2.code === 0 && r2.link && await portOpen(r2.link.port), r2.out + r2.err);
+  check("Старая блокировка отложена в сторону", fs.readdirSync(dataDir).filter((n) => n.startsWith(".tubestudio-server.lock.stale-")).length === asideBefore + 1);
+  check("Устаревший служебный файл убран", descriptorsIn(control).every((d) => d.pid !== foreign.pid), JSON.stringify(descriptorsIn(control).map((d) => d.pid)));
+  check("Посторонняя программа не тронута", pidAlive(foreign.pid));
+  await stopViaCmd("остановка после проверки G2");
+});
+
 await phase("H. Повреждённый settings.json восстанавливается из копии", async () => {
   const file = path.join(dataDir, "settings.json");
   check("Есть резервная копия settings.json.bak", exists(`${file}.bak`));
@@ -359,6 +407,7 @@ await phase("K. Старая версия осталась нетронутой"
   check("Старый .env на месте и не изменён", fs.readFileSync(path.join(base, ".env"), "utf8") === legacyEnvBefore);
   check("Старые данные на месте", exists(legacyProjectFile));
   check("Старая версия не запущена", !pidAlive(legacyPid));
+  check("Служебные файлы старой версии не тронуты", staleFiles.length === 2 && staleFiles.every(exists));
 });
 
 await phase("L. Студия: канал, проверка сценария Shields и новые разделы", async () => {
@@ -433,7 +482,76 @@ await phase("L. Студия: канал, проверка сценария Shie
   }
 });
 
+await phase("M. Как у пользователя: старая версия в «Версия_33\\TubeStudio-main», архив распакован через «Извлечь всё»", async () => {
+  const top = path.join(path.dirname(path.dirname(base)), "Проверка M");
+  fs.rmSync(top, { recursive: true, force: true });
+  const home2 = path.join(top, "Программы", "TubeStudio");
+  const old2 = path.join(home2, "Версия_33", "TubeStudio-main"), oldData2 = path.join(old2, "apps", "server", "data");
+  fs.mkdirSync(path.join(old2, "apps", "server"), { recursive: true });
+  fs.writeFileSync(path.join(old2, "package.json"), JSON.stringify({ name: "tubestudio", private: true, version: "0.12.148-preview.1" }, null, 2));
+  fs.writeFileSync(path.join(old2, ".env"), `DATA_DIR=./data\r\nYOUTUBE_API_KEY=${FAKE.YOUTUBE_API_KEY}\r\nANYMODEL_API_KEY=${FAKE.ANYMODEL_API_KEY}\r\n`);
+  copyTree(legacyData, oldData2); // the real data of the old version from phase A
+  // Left by the power-off: the lock and the service file, their number now used by another program.
+  const lock2 = path.join(oldData2, ".tubestudio-server.lock");
+  fs.mkdirSync(lock2, { recursive: true });
+  fs.writeFileSync(path.join(lock2, "owner.json"), JSON.stringify({ schema: 1, id: crypto.randomUUID(), pid: foreign?.pid ?? 4, startedAt: new Date(Date.now() - 86_400_000).toISOString(), version: "0.12.148-preview.1" }) + "\n");
+  const stale2 = staleDescriptor(path.join(old2, ".tubestudio-control"), foreign?.pid ?? 4, await closedPort());
+  // "Extract all" keeps the archive name as an extra folder.
+  const wrapper = path.join(home2, path.basename(zip).replace(/\.zip$/i, ""));
+  const prog2 = path.join(wrapper, versionName);
+  copyTree(prog, prog2);
+  const env2 = { ...ciEnv, TUBESTUDIO_NO_SHORTCUT: "1" };
+  const data2 = path.join(home2, "TubeStudioData");
+  const start2 = async (label) => {
+    const r = await run("cmd.exe", ["/d", "/c", startCmd(prog2)], { env: env2, cwd: prog2 });
+    transcript.push(`----- M: ${label} (код ${r.code})\n${r.out}\n${r.err}`);
+    return { ...r, link: findLink(r.out) };
+  };
+  const stop2 = async (label) => {
+    const r = await run("cmd.exe", ["/d", "/c", stopCmd(prog2)], { env: env2, cwd: prog2 });
+    transcript.push(`----- M: ${label} (код ${r.code})\n${r.out}\n${r.err}`);
+    return r;
+  };
+  const projectsOf = async (link) => { const s = await session(link.port, link.token); return { s, p: await api(link.port, "GET", "/api/projects", { cookie: s.cookie }) }; };
+
+  const r = await start2("первый запуск");
+  check("M: запуск успешен, несмотря на блокировку и служебный файл после выключения", r.code === 0 && r.link, r.out + r.err);
+  check("M: данные в общей папке TubeStudio, а не внутри папки архива", exists(path.join(data2, "migration.json")) && !exists(path.join(wrapper, "TubeStudioData")), data2);
+  const m = readJson(path.join(data2, "migration.json"));
+  check("M: перенесено из «Версия_33\\TubeStudio-main\\apps\\server\\data»", m && samePathCI(m.from, oldData2), m?.from);
+  check("M: ключи из .env старой версии импортированы", m?.envImported === true && m.importedNames?.includes("YOUTUBE_API_KEY"), JSON.stringify(m));
+  if (r.link) { const { p } = await projectsOf(r.link); check("M: проект старой версии виден", JSON.stringify(p.json?.data ?? "").includes(TITLE), p.text.slice(0, 300)); }
+  check("M: блокировка и служебный файл старой версии не тронуты", exists(path.join(lock2, "owner.json")) && exists(stale2));
+  check("M: посторонняя программа не тронута", foreign && pidAlive(foreign.pid));
+  const s1 = await stop2("остановка");
+  check("M: остановлена", s1.code === 0 && /остановлена/.test(s1.out), s1.out + s1.err);
+
+  // An earlier 1.x unpacked into its own archive-named folder: its newer data are taken (old ones stay).
+  const earlier = path.join(home2, "TubeStudio-1.1.0-windows", "TubeStudioData");
+  copyTree(data2, earlier);
+  fs.rmSync(data2, { recursive: true, force: true });
+  const now = new Date();
+  fs.utimesSync(path.join(earlier, "settings.json"), now, now);
+  const r2 = await start2("запуск рядом с данными прежней 1.x");
+  check("M2: запуск успешен", r2.code === 0 && r2.link, r2.out + r2.err);
+  const m2 = readJson(path.join(data2, "migration.json"));
+  check("M2: взяты более свежие данные 1.x из соседней папки", m2 && samePathCI(m2.from, earlier), m2?.from);
+  if (r2.link) {
+    const { s, p } = await projectsOf(r2.link);
+    check("M2: проекты на месте", JSON.stringify(p.json?.data ?? "").includes(TITLE), p.text.slice(0, 300));
+    const health = await api(r2.link.port, "GET", "/api/health", { cookie: s.cookie });
+    const conf = (health.json?.data?.keys ?? []).filter((k) => k.configured).map((k) => k.provider);
+    check("M2: ключи на месте (защита Windows)", conf.includes("youtube") && conf.includes("anymodel"), JSON.stringify(conf));
+  }
+  check("M2: данные прежней 1.x не тронуты", exists(path.join(earlier, "settings.json")));
+  const s2 = await stop2("остановка M2");
+  check("M2: остановлена", s2.code === 0, s2.out + s2.err);
+  for (const d of descriptorsIn(path.join(data2, ".tubestudio-control"))) if (pidAlive(d.pid)) spawnSync("taskkill.exe", ["/F", "/PID", String(d.pid)]);
+  try { fs.rmSync(top, { recursive: true, force: true }); } catch { /* a file may still be locked */ }
+});
+
 // ---------- cleanup and report ----------
+if (foreign && pidAlive(foreign.pid)) spawnSync("taskkill.exe", ["/F", "/PID", String(foreign.pid)]);
 for (const d of descriptorsIn(path.join(dataDir, ".tubestudio-control"))) if (pidAlive(d.pid)) spawnSync("taskkill.exe", ["/F", "/PID", String(d.pid)]);
 if (pidAlive(legacyPid)) spawnSync("taskkill.exe", ["/F", "/PID", String(legacyPid)]);
 for (const f of ["launcher.log", "server-console.log", "app.log"]) { try { fs.copyFileSync(path.join(dataDir, "logs", f), path.join(out, f)); } catch { /* absent */ } }

@@ -33,8 +33,20 @@ function readJsonSafe(file) { try { return JSON.parse(fs.readFileSync(file, "utf
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const exists = (p) => { try { fs.accessSync(p); return true; } catch { return false; } };
 const isDir = (p) => { try { return fs.statSync(p).isDirectory(); } catch { return false; } };
+const kids = (dir) => { try { return fs.readdirSync(dir, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => path.join(dir, e.name)); } catch { return []; } };
+const samePath = (a, b) => process.platform === "win32" ? path.resolve(a).toLowerCase() === path.resolve(b).toLowerCase() : path.resolve(a) === path.resolve(b);
 
 // ---------- папка данных и журнал ----------
+// «Извлечь всё» в Проводнике по умолчанию создаёт папку с именем архива:
+// …\TubeStudio\TubeStudio-1.1.1-windows\TubeStudio-1.1.1. Тогда общая папка — на уровень выше,
+// чтобы данные и прежняя версия нашлись там же, где при распаковке прямо в …\TubeStudio.
+const ZIP_FOLDER = /^TubeStudio-\d+\.\d+\.\d+\S*-windows(?: \(\d+\))?$/i;
+export function homeFor(prog) {
+  const parent = path.dirname(prog);
+  if (!ZIP_FOLDER.test(path.basename(parent)) || isDir(path.join(parent, "TubeStudioData"))) return parent;
+  return path.dirname(parent);
+}
+const home = homeFor(programDir);
 export function resolveDataDir() {
   if (env.TUBESTUDIO_DATA_DIR) return path.resolve(env.TUBESTUDIO_DATA_DIR);
   const custom = path.join(programDir, "data-location.txt");
@@ -42,7 +54,7 @@ export function resolveDataDir() {
     const line = fs.readFileSync(custom, "utf8").replace(/^\uFEFF/, "").split(/\r?\n/).map((s) => s.trim()).find((s) => s && !s.startsWith("#"));
     if (line && path.isAbsolute(line)) return path.resolve(line);
   }
-  return path.join(path.dirname(programDir), "TubeStudioData");
+  return path.join(home, "TubeStudioData");
 }
 const dataDir = resolveDataDir();
 const controlDir = path.join(dataDir, ".tubestudio-control");
@@ -93,12 +105,41 @@ function pidAlive(pid) {
   if (!Number.isInteger(pid) || pid <= 0) return false;
   try { process.kill(pid, 0); return true; } catch (e) { return e.code === "EPERM"; }
 }
+// Windows быстро раздаёт номера процессов заново: после перезагрузки номер из старой блокировки
+// или служебного файла часто принадлежит другой программе. Сервер и лаунчер TubeStudio — это node.exe.
+export function parseTasklist(text, pid) {
+  for (const line of String(text ?? "").split(/\r?\n/)) {
+    const m = /^"([^"]*)","(\d+)"/.exec(line.trim());
+    if (m && Number(m[2]) === pid) return m[1];
+  }
+  return "";
+}
+export const isNodeImage = (image) => /^node(\.exe)?$/i.test(String(image ?? ""));
+/** Имя программы с этим номером процесса: "" — такого процесса нет, null — узнать не удалось. */
+function processImage(pid) {
+  if (process.platform !== "win32") return null;
+  const tasklist = path.join(env.SystemRoot || env.windir || "C:\\Windows", "System32", "tasklist.exe");
+  const r = spawnSync(tasklist, ["/FI", `PID eq ${pid}`, "/FO", "CSV", "/NH"], { windowsHide: true, encoding: "latin1", timeout: 15_000 });
+  const listed = !r.error && r.status === 0 ? parseTasklist(r.stdout, pid) : "";
+  if (listed) return listed;
+  const p = powershell("$p = Get-Process -Id ([int]$env:TS_PID) -ErrorAction SilentlyContinue; if ($p) { [Console]::Out.Write($p.ProcessName) }", { TS_PID: String(pid) }, 20_000);
+  const named = p.status === 0 && !p.error ? String(p.stdout || "").trim() : "";
+  if (named) return named;
+  // Not named by either tool: gone only if the number is really free now; otherwise unknown.
+  return pidAlive(pid) ? null : "";
+}
+/** Процесс с этим номером жив и может быть TubeStudio (а не чужой программой с тем же номером). */
+function ownerAlive(pid) {
+  if (!pidAlive(pid) || pid === process.pid) return false;
+  const image = processImage(pid);
+  return image === null || isNodeImage(image);
+}
 /** Running server of THIS data folder (new versions answer PING). */
 async function findRunning() {
   for (const d of descriptors(controlDir)) {
     const r = await controlCall(d, "PING");
     if (r.ok && r.reply.startsWith("PONG ")) { const [, version] = r.reply.split(" "); return { ...d, version }; }
-    if (!pidAlive(d.pid)) { try { fs.rmSync(d.file, { force: true }); } catch { /* not ours to fix */ } }
+    if (!ownerAlive(d.pid)) { try { fs.rmSync(d.file, { force: true }); } catch { /* not ours to fix */ } }
   }
   return null;
 }
@@ -108,20 +149,46 @@ async function stopServer(desc, why) {
   const reply = r.ok ? r.reply : r.error;
   if (reply !== "STOPPED") return reply || "NO_REPLY";
   for (let i = 0; i < 100 && pidAlive(desc.pid); i++) await sleep(200);
-  return pidAlive(desc.pid) ? "STILL_RUNNING" : "STOPPED";
+  return ownerAlive(desc.pid) ? "STILL_RUNNING" : "STOPPED";
+}
+function portListening(port) {
+  return new Promise((resolve) => {
+    let s;
+    try { s = net.connect({ host: "127.0.0.1", port }); } catch { resolve(false); return; }
+    const done = (v) => { s.destroy(); resolve(v); };
+    s.setTimeout(3000, () => done(true)); // something is there: STOP decides
+    s.once("connect", () => done(true));
+    s.once("error", () => done(false));
+  });
 }
 
-// ---------- старая версия (0.12.x) ----------
+// ---------- прежние версии: 0.12.x и копии 1.x в соседних папках ----------
+// Ищем в общей папке и на уровень выше: …\TubeStudio\Версия_34\TubeStudio-1.1.1 находит
+// …\TubeStudio\Версия_33\TubeStudio-main. Уровень выше не просматривается, если это корень диска.
+const searchBases = () => { const up = path.dirname(home); return path.parse(up).root === up || samePath(up, home) ? [home] : [home, up]; };
+const isTubeStudioRoot = (r) => exists(path.join(r, "apps", "server")) && /^tube-?studio$/i.test(readJsonSafe(path.join(r, "package.json"))?.name ?? "");
 function legacyRoots() {
-  const parent = path.dirname(programDir);
-  const roots = new Set([parent]);
-  const kids = (dir) => { try { return fs.readdirSync(dir, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => path.join(dir, e.name)); } catch { return []; } };
-  for (const a of kids(parent)) {
-    if (path.resolve(a) === path.resolve(programDir) || path.resolve(a) === path.resolve(dataDir)) continue;
-    roots.add(a);
-    for (const b of kids(a)) roots.add(b);
+  const roots = new Set();
+  for (const base of searchBases()) {
+    roots.add(base);
+    for (const a of kids(base)) {
+      if (samePath(a, programDir) || samePath(a, dataDir)) continue;
+      roots.add(a);
+      for (const b of kids(a)) if (!samePath(b, programDir)) roots.add(b);
+    }
   }
-  return [...roots].filter((r) => exists(path.join(r, "apps", "server")) && exists(path.join(r, "package.json")));
+  return [...roots].filter(isTubeStudioRoot);
+}
+/** TubeStudioData версий 1.x, распакованных в соседние папки (кроме своей). */
+function siblingDataDirs() {
+  const found = new Set();
+  for (const base of searchBases()) {
+    for (const a of [base, ...kids(base)]) {
+      const d = path.join(a, "TubeStudioData");
+      if (!samePath(d, dataDir) && looksLikeData(d)) found.add(d);
+    }
+  }
+  return [...found];
 }
 function legacyDataDirOf(root) {
   const envFile = path.join(root, ".env");
@@ -150,16 +217,29 @@ export function findLegacy() {
       found.push({ root, dir, version, env: exists(path.join(root, ".env")) ? path.join(root, ".env") : null, mtime: newestMtime(dir) });
     }
   }
+  for (const dir of siblingDataDirs()) {
+    const prog = kids(path.dirname(dir)).find((p) => !samePath(p, programDir) && exists(path.join(p, "app", "package.json")));
+    found.push({ root: path.dirname(dir), dir, version: (prog && readJsonSafe(path.join(prog, "app", "package.json"))?.version) || "1.x", env: null, mtime: newestMtime(dir) });
+  }
   return found.sort((a, b) => b.mtime - a.mtime);
 }
+// After these replies it is clear that the recorded port now belongs to someone else: the file was left by a crash.
+const STALE_REPLIES = new Set(["ECONNREFUSED", "ECONNRESET", "DENIED", "NO_REPLY"]);
 async function stopLegacyServers() {
-  for (const root of legacyRoots()) {
-    for (const d of descriptors(path.join(root, ".tubestudio-control"))) {
-      if (!pidAlive(d.pid)) continue;
-      const result = await stopServer({ ...d, version: readJsonSafe(path.join(root, "package.json"))?.version }, "старая версия");
+  const places = [
+    ...legacyRoots().map((root) => ({ dir: path.join(root, ".tubestudio-control"), version: readJsonSafe(path.join(root, "package.json"))?.version })),
+    ...siblingDataDirs().map((d) => ({ dir: path.join(d, ".tubestudio-control"), version: undefined })),
+  ];
+  for (const place of places) {
+    for (const d of descriptors(place.dir)) {
+      // Left by a power-off or a crash: the process is gone or its number now belongs to another program.
+      if (!ownerAlive(d.pid)) continue;
+      if (!(await portListening(d.controlPort))) { log(`Пропускаю устаревший служебный файл: ${d.file}`); continue; }
+      const result = await stopServer({ ...d, version: d.version ?? place.version }, "старая версия");
+      if (result === "STOPPED") { say("Старая версия остановлена."); continue; }
       if (result === "BUSY") fail("Старая версия TubeStudio сейчас выполняет задачу. Дождитесь её окончания и запустите TubeStudio снова.");
-      if (result !== "STOPPED") fail(`Не удалось остановить старую версию TubeStudio (${result}). Закройте её окно или перезагрузите компьютер и запустите снова.`);
-      say("Старая версия остановлена.");
+      if (STALE_REPLIES.has(result)) { log(`Пропускаю устаревший служебный файл: ${d.file} (${result})`); continue; }
+      fail(`Не удалось остановить старую версию TubeStudio (${result}). Закройте её окно или перезагрузите компьютер и запустите снова.`);
     }
   }
 }
@@ -169,7 +249,7 @@ function dataIsFresh() {
   if (exists(path.join(dataDir, "migration.json")) || exists(path.join(dataDir, "settings.json"))) return false;
   try { return !fs.readdirSync(path.join(dataDir, "projects")).length; } catch { return true; }
 }
-const SKIP = /(^|[\\/])(\.tubestudio-server\.lock|\.tubestudio-control)([\\/]|$)|\.tmp$/;
+const SKIP = /(^|[\\/])(\.tubestudio-server\.lock(\.stale-\d+)?|\.tubestudio-control|\.launcher\.lock|\.shortcut-target)([\\/]|$)|\.tmp$/;
 function tally(dir) {
   let files = 0, bytes = 0;
   const walk = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); if (SKIP.test(path.relative(dir, p))) continue; if (e.isDirectory()) walk(p); else if (e.isFile()) { files++; bytes += fs.statSync(p).size; } } };
@@ -191,7 +271,7 @@ function copyMissing(src, dst, rel = "") {
 function migrate(legacy) {
   if (exists(path.join(legacy.dir, ".tubestudio-server.lock"))) {
     const owner = readJsonSafe(path.join(legacy.dir, ".tubestudio-server.lock", "owner.json"));
-    if (owner && pidAlive(owner.pid)) fail("Старая версия TubeStudio всё ещё работает с данными. Закройте её и запустите снова.");
+    if (owner && ownerAlive(owner.pid)) fail("Старая версия TubeStudio всё ещё работает с данными. Закройте её и запустите снова.");
   }
   say(`Переношу данные из старой версии: ${legacy.dir}`);
   const before = tally(legacy.dir);
@@ -282,7 +362,7 @@ function takeLauncherLock() {
     catch {
       let other = 0, age = 0;
       try { other = Number(fs.readFileSync(file, "utf8")); age = Date.now() - fs.statSync(file).mtimeMs; } catch { /* vanished */ }
-      if (!pidAlive(other) || age > 3 * 60_000) { try { fs.rmSync(file, { force: true }); } catch { /* ignore */ } continue; }
+      if (!ownerAlive(other) || age > 3 * 60_000) { try { fs.rmSync(file, { force: true }); } catch { /* ignore */ } continue; }
       return null;
     }
   }
@@ -332,7 +412,7 @@ async function main() {
     if (dataIsFresh()) {
       const legacy = findLegacy();
       if (legacy.length) migrate(legacy[0]);
-      else say("Старых данных не найдено — начинаем с чистой папки.");
+      else say(`Прежних данных рядом не найдено — начинаем с чистой папки. Если у вас уже была TubeStudio: нажмите в программе «Выход», перенесите папку ${programDir} в папку, где лежит прежняя версия, и запустите снова.`);
     }
     const port = await choosePort();
     const token = crypto.randomBytes(32).toString("hex");
@@ -345,4 +425,5 @@ async function main() {
   } finally { release(); }
 }
 
-main().catch((e) => fail(`Непредвиденная ошибка лаунчера: ${e?.stack || e}`));
+// Unit tests import the helpers without starting anything.
+if (env.TUBESTUDIO_LAUNCHER_NO_MAIN !== "1") main().catch((e) => fail(`Непредвиденная ошибка лаунчера: ${e?.stack || e}`));
