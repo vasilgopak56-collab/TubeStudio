@@ -1,0 +1,15 @@
+node: v22.23.4
+npm: 10.9.9
+os: Microsoft Windows NT 10.0.26100.0
+pwsh: 7.6.9
+winps: 5.1.26100.33648
+user: runnervmm7ud1\runneradmin
+desktop: C:\Users\runneradmin\Desktop
+temp: C:\Users\RUNNER~1\AppData\Local\Temp
+culture: en-US ui: en-US oem: 65001
+dpapi(winps): roundtrip=True len=246 ms=985
+cyrillic: cwd ok C:\Users\runneradmin\Desktop\Программы\TubeStudio тест true
+npm ci exit=0 s=18
+build exit=0 s=24
+unit exit=1 s=160
+run=41975445307 sha=3795501b5a51f651a6c72637ca64274e0208af5d
