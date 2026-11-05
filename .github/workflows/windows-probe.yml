@@ -1,0 +1,93 @@
+name: windows-probe
+on:
+  push:
+    branches: [ci-probe]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: info
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          New-Item -ItemType Directory -Force ci-out | Out-Null
+          $o = @()
+          $o += "node: $(node -v)"
+          $o += "npm: $(npm -v)"
+          $o += "os: $([Environment]::OSVersion.VersionString)"
+          $o += "pwsh: $($PSVersionTable.PSVersion)"
+          $o += "winps: $(& powershell.exe -NoProfile -Command '$PSVersionTable.PSVersion.ToString()')"
+          $o += "user: $([Security.Principal.WindowsIdentity]::GetCurrent().Name)"
+          $o += "desktop: $([Environment]::GetFolderPath('DesktopDirectory'))"
+          $o += "temp: $env:TEMP"
+          $o += "culture: $((Get-Culture).Name) ui: $((Get-UICulture).Name) oem: $([Console]::OutputEncoding.CodePage)"
+          $o | Set-Content -Encoding utf8 ci-out/info.txt
+      - name: dpapi
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $script = @'
+          $ErrorActionPreference = 'Stop'
+          Add-Type -AssemblyName System.Security
+          $data = [Text.Encoding]::UTF8.GetBytes('секрет-123')
+          $p = [Security.Cryptography.ProtectedData]::Protect($data, $null, 'CurrentUser')
+          $u = [Security.Cryptography.ProtectedData]::Unprotect($p, $null, 'CurrentUser')
+          'roundtrip=' + ([Text.Encoding]::UTF8.GetString($u) -eq 'секрет-123') + ' len=' + $p.Length
+          '@
+          $enc = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($script))
+          $sw = [Diagnostics.Stopwatch]::StartNew()
+          $r = & powershell.exe -NoProfile -NonInteractive -EncodedCommand $enc 2>&1
+          "dpapi(winps): $r ms=$($sw.ElapsedMilliseconds)" | Add-Content -Encoding utf8 ci-out/info.txt
+      - name: cyrillic path
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $d = Join-Path $env:USERPROFILE 'Desktop\Программы\TubeStudio тест'
+          New-Item -ItemType Directory -Force $d | Out-Null
+          Set-Content -Encoding utf8 (Join-Path $d 'a.mjs') "import fs from 'node:fs'; console.log('cwd ok', process.cwd(), fs.existsSync(process.argv[1]));"
+          Push-Location $d
+          $r = & node (Join-Path $d 'a.mjs') 2>&1
+          Pop-Location
+          "cyrillic: $r" | Add-Content -Encoding utf8 ci-out/info.txt
+      - name: npm ci
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $sw = [Diagnostics.Stopwatch]::StartNew()
+          npm ci --no-audit --no-fund *> ci-out/npm-ci.log
+          "npm ci exit=$LASTEXITCODE s=$([int]$sw.Elapsed.TotalSeconds)" | Add-Content -Encoding utf8 ci-out/info.txt
+      - name: build
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $sw = [Diagnostics.Stopwatch]::StartNew()
+          npm run build *> ci-out/build.log
+          "build exit=$LASTEXITCODE s=$([int]$sw.Elapsed.TotalSeconds)" | Add-Content -Encoding utf8 ci-out/info.txt
+      - name: unit tests
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $sw = [Diagnostics.Stopwatch]::StartNew()
+          npm run test:unit *> ci-out/unit.log
+          "unit exit=$LASTEXITCODE s=$([int]$sw.Elapsed.TotalSeconds)" | Add-Content -Encoding utf8 ci-out/info.txt
+      - name: publish report
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          OUT="$GITHUB_WORKSPACE/ci-out"; mkdir -p "$OUT"
+          echo "run=$GITHUB_RUN_ID sha=$GITHUB_SHA" >> "$OUT/info.txt"
+          D="$RUNNER_TEMP/rep"; rm -rf "$D"; mkdir -p "$D"; cp -r "$OUT/." "$D/"; cd "$D"
+          git init -q; git checkout -q -b r; git add -A
+          git -c user.name="TubeStudio CI" -c user.email="ci@tubestudio.local" commit -qm "probe $GITHUB_RUN_ID"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ci/probe-${GITHUB_RUN_NUMBER}
