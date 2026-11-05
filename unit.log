@@ -1,0 +1,2171 @@
+
+> tubestudio@1.0.0 test:unit
+> node scripts/test-unit.mjs
+
+TAP version 13
+# Subtest: A/B strict schema accepts a plan with unknown metrics; rejects credentials/derived or extra fields
+ok 1 - A/B strict schema accepts a plan with unknown metrics; rejects credentials/derived or extra fields
+  ---
+  duration_ms: 6.5219
+  type: 'test'
+  ...
+# Subtest: A/B requires named title/thumbnail variants and ordered unique codes A B optional C
+ok 2 - A/B requires named title/thumbnail variants and ordered unique codes A B optional C
+  ---
+  duration_ms: 1.0922
+  type: 'test'
+  ...
+# Subtest: A/B dates must be actual calendar dates, complete pairs and ordered; empty planned periods allowed
+ok 3 - A/B dates must be actual calendar dates, complete pairs and ordered; empty planned periods allowed
+  ---
+  duration_ms: 0.8255
+  type: 'test'
+  ...
+# Subtest: A/B does not coerce strings, negative, fractional or unsafe impressions to numbers or zero
+ok 4 - A/B does not coerce strings, negative, fractional or unsafe impressions to numbers or zero
+  ---
+  duration_ms: 0.907
+  type: 'test'
+  ...
+# Subtest: A/B zero impressions have undefined CTR; zero CTR with positive or unknown denominator stays known
+ok 5 - A/B zero impressions have undefined CTR; zero CTR with positive or unknown denominator stays known
+  ---
+  duration_ms: 0.6871
+  type: 'test'
+  ...
+# Subtest: A/B descriptive CTR differences use percentage points, correct sign and pair order, never infer clicks or winner
+ok 6 - A/B descriptive CTR differences use percentage points, correct sign and pair order, never infer clicks or winner
+  ---
+  duration_ms: 0.9923
+  type: 'test'
+  ...
+# Subtest: A/B unknown CTR gives unknown difference; no zero fill, division or automatic winner
+ok 7 - A/B unknown CTR gives unknown difference; no zero fill, division or automatic winner
+  ---
+  duration_ms: 0.3109
+  type: 'test'
+  ...
+# Subtest: A/B manual decisions need finished status, existing variant and explanatory conclusion
+ok 8 - A/B manual decisions need finished status, existing variant and explanatory conclusion
+  ---
+  duration_ms: 0.4894
+  type: 'test'
+  ...
+# Subtest: A/B warns about sequential testing, differing periods, combined changes and unverified channel
+ok 9 - A/B warns about sequential testing, differing periods, combined changes and unverified channel
+  ---
+  duration_ms: 0.4666
+  type: 'test'
+  ...
+# Subtest: A/B all local save/read/history actions make no network requests
+ok 10 - A/B all local save/read/history actions make no network requests
+  ---
+  duration_ms: 50.9331
+  type: 'test'
+  ...
+# Subtest: A/B revisions and concurrent branches retain identity without changing any previous bytes
+ok 11 - A/B revisions and concurrent branches retain identity without changing any previous bytes
+  ---
+  duration_ms: 15.929
+  type: 'test'
+  ...
+# Subtest: A/B rejects missing parent and changes to pinned video/channel/kind without writing files
+ok 12 - A/B rejects missing parent and changes to pinned video/channel/kind without writing files
+  ---
+  duration_ms: 7.9446
+  type: 'test'
+  ...
+# Subtest: A/B failed validation never destroys saved results or creates incomplete snapshots
+ok 13 - A/B failed validation never destroys saved results or creates incomplete snapshots
+  ---
+  duration_ms: 8.5357
+  type: 'test'
+  ...
+# Subtest: A/B rejects traversal, wrong ID, broken JSON and unknown stored fields but does not delete files
+ok 14 - A/B rejects traversal, wrong ID, broken JSON and unknown stored fields but does not delete files
+  ---
+  duration_ms: 13.0283
+  type: 'test'
+  ...
+# Subtest: A/B refuses symlink/oversized files and symlink roots
+ok 15 - A/B refuses symlink/oversized files and symlink roots
+  ---
+  duration_ms: 18.6475
+  type: 'test'
+  ...
+# Subtest: A/B local history retains files, returns newest 50 snapshots and flags corrupt entries
+ok 16 - A/B local history retains files, returns newest 50 snapshots and flags corrupt entries
+  ---
+  duration_ms: 307.9643
+  type: 'test'
+  ...
+# Subtest: A/B history over 5000 files fails explicitly instead of silently truncating scan
+ok 17 - A/B history over 5000 files fails explicitly instead of silently truncating scan
+  ---
+  duration_ms: 5905.6918
+  type: 'test'
+  ...
+# Subtest: A/B backup accepts its catalogue but not traversal/temp entries; snapshots contain only declared fields
+ok 18 - A/B backup accepts its catalogue but not traversal/temp entries; snapshots contain only declared fields
+  ---
+  duration_ms: 4.0305
+  type: 'test'
+  ...
+# Subtest: A/B Markdown exports saved identity, manual status, unknowns and plain user text
+ok 19 - A/B Markdown exports saved identity, manual status, unknowns and plain user text
+  ---
+  duration_ms: 10.6737
+  type: 'test'
+  ...
+# Subtest: A/B Markdown known zero CTR and nonzero signed difference are not null or relative lift
+ok 20 - A/B Markdown known zero CTR and nonzero signed difference are not null or relative lift
+  ---
+  duration_ms: 10.3765
+  type: 'test'
+  ...
+# Subtest: adbreaks: strict input, finite numbers, bounds, UUIDs and defaults
+ok 21 - adbreaks: strict input, finite numbers, bounds, UUIDs and defaults
+  ---
+  duration_ms: 6.1778
+  type: 'test'
+  ...
+# Subtest: adbreaks: candidates are exact original-time midpoints, chronological and never in speech
+ok 22 - adbreaks: candidates are exact original-time midpoints, chronological and never in speech
+  ---
+  duration_ms: 2.5937
+  type: 'test'
+  ...
+# Subtest: adbreaks: pause must intersect a genuine positive fragment gap; overlapping pause cannot cut speech
+ok 23 - adbreaks: pause must intersect a genuine positive fragment gap; overlapping pause cannot cut speech
+  ---
+  duration_ms: 0.8611
+  type: 'test'
+  ...
+# Subtest: adbreaks: no stored pause, touching fragments, too-short intervals and protected edges produce no invented points
+ok 24 - adbreaks: no stored pause, touching fragments, too-short intervals and protected edges produce no invented points
+  ---
+  duration_ms: 0.8127
+  type: 'test'
+  ...
+# Subtest: adbreaks: longest-first deterministic greedy selection respects spacing and target, may return fewer
+ok 25 - adbreaks: longest-first deterministic greedy selection respects spacing and target, may return fewer
+  ---
+  duration_ms: 2.2485
+  type: 'test'
+  ...
+# Subtest: adbreaks: manual choice allows empty, rejects duplicate/unknown/close points, sorts chronologically
+ok 26 - adbreaks: manual choice allows empty, rejects duplicate/unknown/close points, sorts chronologically
+  ---
+  duration_ms: 0.4962
+  type: 'test'
+  ...
+# Subtest: adbreaks: corrupt segments, nonfinite duration and overlaps fail instead of manufacturing timing
+ok 27 - adbreaks: corrupt segments, nonfinite duration and overlaps fail instead of manufacturing timing
+  ---
+  duration_ms: 1.1515
+  type: 'test'
+  ...
+# Subtest: adbreaks: millisecond rounding stays strictly inside an interval and timestamps carry correctly
+ok 28 - adbreaks: millisecond rounding stays strictly inside an interval and timestamps carry correctly
+  ---
+  duration_ms: 0.2821
+  type: 'test'
+  ...
+# Subtest: adbreaks: acoustic detector output feeds planner locally on synthetic PCM
+ok 29 - adbreaks: acoustic detector output feeds planner locally on synthetic PCM
+  ---
+  duration_ms: 28.1363
+  type: 'test'
+  ...
+# Subtest: adbreaks: snapshots pin source revision; stale and missing sources do not create plans
+ok 30 - adbreaks: snapshots pin source revision; stale and missing sources do not create plans
+  ---
+  duration_ms: 99.5218
+  type: 'test'
+  ...
+# Subtest: adbreaks: source/history listings skip malformed JSON, ID mismatch and unsafe names
+ok 31 - adbreaks: source/history listings skip malformed JSON, ID mismatch and unsafe names
+  ---
+  duration_ms: 25.3894
+  type: 'test'
+  ...
+# Subtest: adbreaks: manual saves branch immutably, including empty choice, with source untouched
+ok 32 - adbreaks: manual saves branch immutably, including empty choice, with source untouched
+  ---
+  duration_ms: 36.1541
+  type: 'test'
+  ...
+# Subtest: adbreaks: failed selection neither writes a snapshot nor mutates the previous one
+ok 33 - adbreaks: failed selection neither writes a snapshot nor mutates the previous one
+  ---
+  duration_ms: 19.7351
+  type: 'test'
+  ...
+# Subtest: adbreaks: exports use saved selected points, include source and limitations, preserve Unicode
+ok 34 - adbreaks: exports use saved selected points, include source and limitations, preserve Unicode
+  ---
+  duration_ms: 1.4314
+  type: 'test'
+  ...
+# Subtest: adbreaks: real route HTTP contracts: create, stale conflict, selection, history, missing and invalid
+ok 35 - adbreaks: real route HTTP contracts: create, stale conflict, selection, history, missing and invalid
+  ---
+  duration_ms: 40.7759
+  type: 'test'
+  ...
+# Subtest: adbreaks: history bounded to 50 latest without deleting files; malformed candidates rejected
+ok 36 - adbreaks: history bounded to 50 latest without deleting files; malformed candidates rejected
+  ---
+  duration_ms: 408.6742
+  type: 'test'
+  ...
+# Subtest: adbreaks v2: pins bounded source projection and exact greedy rejection reasons
+ok 37 - adbreaks v2: pins bounded source projection and exact greedy rejection reasons
+  ---
+  duration_ms: 0.8795
+  type: 'test'
+  ...
+# Subtest: adbreaks v2: explains exclusions without inventing silence
+ok 38 - adbreaks v2: explains exclusions without inventing silence
+  ---
+  duration_ms: 0.4808
+  type: 'test'
+  ...
+# Subtest: adbreaks v2: hash deterministic, binds metadata/options/boundaries, ignores unretained text tail
+ok 39 - adbreaks v2: hash deterministic, binds metadata/options/boundaries, ignores unretained text tail
+  ---
+  duration_ms: 1.383
+  type: 'test'
+  ...
+# Subtest: adbreaks v2: manual branches retain original auto evidence and work without original source
+ok 40 - adbreaks v2: manual branches retain original auto evidence and work without original source
+  ---
+  duration_ms: 17.0356
+  type: 'test'
+  ...
+# Subtest: adbreaks v2: reject missing or tampered evidence, options, candidates and source projection
+ok 41 - adbreaks v2: reject missing or tampered evidence, options, candidates and source projection
+  ---
+  duration_ms: 50.5492
+  type: 'test'
+  ...
+# Subtest: adbreaks legacy: loads and branches v1 without fabricating evidence
+ok 42 - adbreaks legacy: loads and branches v1 without fabricating evidence
+  ---
+  duration_ms: 21.552
+  type: 'test'
+  ...
+# Subtest: adbreaks v2: Markdown includes bounded evidence in a safe fence; TXT remains selected-only
+ok 43 - adbreaks v2: Markdown includes bounded evidence in a safe fence; TXT remains selected-only
+  ---
+  duration_ms: 0.6695
+  type: 'test'
+  ...
+# Subtest: Аномалии: стартовые пороги и независимость от Outlier
+ok 44 - Аномалии: стартовые пороги и независимость от Outlier
+  ---
+  duration_ms: 1.5062
+  type: 'test'
+  ...
+# Subtest: Аномалии: скрытые и отсутствующие подписчики — неизвестны, не нули
+ok 45 - Аномалии: скрытые и отсутствующие подписчики — неизвестны, не нули
+  ---
+  duration_ms: 14.8096
+  type: 'test'
+  ...
+# Subtest: Аномалии: API не принимает поиск без обязательных порогов; старый Research совместим
+ok 46 - Аномалии: API не принимает поиск без обязательных порогов; старый Research совместим
+  ---
+  duration_ms: 7.2374
+  type: 'test'
+  ...
+# Subtest: Аномалии: полный поиск через mock YouTube, сохранение и разделение истории
+ok 47 - Аномалии: полный поиск через mock YouTube, сохранение и разделение истории
+  ---
+  duration_ms: 183.0922
+  type: 'test'
+  ...
+# Subtest: assistant: strict schemas reject unknown controls, paths and fake approvals
+ok 48 - assistant: strict schemas reject unknown controls, paths and fake approvals
+  ---
+  duration_ms: 9.4882
+  type: 'test'
+  ...
+# Subtest: assistant: local creation, history and documents never call providers
+ok 49 - assistant: local creation, history and documents never call providers
+  ---
+  duration_ms: 51.7872
+  type: 'test'
+  ...
+# Subtest: assistant: empty assignments allow local conversation but block send
+ok 50 - assistant: empty assignments allow local conversation but block send
+  ---
+  duration_ms: 12.0394
+  type: 'test'
+  ...
+# Subtest: assistant: exact task roles are separate, preview does not generate or write
+ok 51 - assistant: exact task roles are separate, preview does not generate or write
+  ---
+  duration_ms: 23.9192
+  type: 'test'
+  ...
+# Subtest: assistant: pinned project excludes arbitrary fields, notes, files and secrets
+ok 52 - assistant: pinned project excludes arbitrary fields, notes, files and secrets
+  ---
+  duration_ms: 53.2086
+  type: 'test'
+  ...
+# Subtest: assistant: reserved request dispatches exact routine model once, saves immutable branch
+ok 53 - assistant: reserved request dispatches exact routine model once, saves immutable branch
+  ---
+  duration_ms: 80.8643
+  type: 'test'
+  ...
+# Subtest: assistant: stale question/hash is rejected before reservation or provider call
+ok 54 - assistant: stale question/hash is rejected before reservation or provider call
+  ---
+  duration_ms: 11.9899
+  type: 'test'
+  ...
+# Subtest: assistant: duplicate concurrent submission permits only one reservation
+ok 55 - assistant: duplicate concurrent submission permits only one reservation
+  ---
+  duration_ms: 23.876
+  type: 'test'
+  ...
+# Subtest: assistant: questions prohibit project action and contradictory deliverable
+ok 56 - assistant: questions prohibit project action and contradictory deliverable
+  ---
+  duration_ms: 79.0547
+  type: 'test'
+  ...
+# Subtest: assistant: routine deliverable is rejected, no automatic repair
+ok 57 - assistant: routine deliverable is rejected, no automatic repair
+  ---
+  duration_ms: 32.0769
+  type: 'test'
+  ...
+# Subtest: assistant: malformed and extra-field model answers are rejected without retry
+ok 58 - assistant: malformed and extra-field model answers are rejected without retry
+  ---
+  duration_ms: 64.6524
+  type: 'test'
+  ...
+# Subtest: assistant: history includes original user replies and source documents for author role
+ok 59 - assistant: history includes original user replies and source documents for author role
+  ---
+  duration_ms: 34.3853
+  type: 'test'
+  ...
+# Subtest: assistant: text from sources is never executed as a tool
+ok 60 - assistant: text from sources is never executed as a tool
+  ---
+  duration_ms: 35.6235
+  type: 'test'
+  ...
+# Subtest: assistant: confirmed skill has name/description, explicit origin and no silent save
+ok 61 - assistant: confirmed skill has name/description, explicit origin and no silent save
+  ---
+  duration_ms: 88.3299
+  type: 'test'
+  ...
+# Subtest: assistant: skill cannot be attached to a nonexistent or empty source conversation
+ok 62 - assistant: skill cannot be attached to a nonexistent or empty source conversation
+  ---
+  duration_ms: 6.6481
+  type: 'test'
+  ...
+# Subtest: assistant: project preview is local, approved creation is idempotent, source untouched
+ok 63 - assistant: project preview is local, approved creation is idempotent, source untouched
+  ---
+  duration_ms: 50.692
+  type: 'test'
+  ...
+# Subtest: assistant: author result becomes a native script artifact, not rewritten by routine
+ok 64 - assistant: author result becomes a native script artifact, not rewritten by routine
+  ---
+  duration_ms: 41.7295
+  type: 'test'
+  ...
+# Subtest: assistant: pinned provider error never falls back or retries generation
+ok 65 - assistant: pinned provider error never falls back or retries generation
+  ---
+  duration_ms: 2.8673
+  type: 'test'
+  ...
+# Subtest: assistant: missing provider key fails before any fetch
+ok 66 - assistant: missing provider key fails before any fetch
+  ---
+  duration_ms: 0.4994
+  type: 'test'
+  ...
+# Subtest: assistant: cancellation before send and during response saves no completed branch
+ok 67 - assistant: cancellation before send and during response saves no completed branch
+  ---
+  duration_ms: 29.914
+  type: 'test'
+  ...
+# Subtest: assistant: symlink record and corrupt record are never treated as empty
+ok 68 - assistant: symlink record and corrupt record are never treated as empty
+  ---
+  duration_ms: 8.7411
+  type: 'test'
+  ...
+# Subtest: assistant: server routes validate JSON, body, origin and private access
+ok 69 - assistant: server routes validate JSON, body, origin and private access
+  ---
+  duration_ms: 11.8925
+  type: 'test'
+  ...
+# Subtest: assistant: help search uses real sections; backup includes all assistant folders
+ok 70 - assistant: help search uses real sections; backup includes all assistant folders
+  ---
+  duration_ms: 0.6419
+  type: 'test'
+  ...
+# Subtest: assistant: author follow-up includes the exact earlier deliverable, not just routine summary
+ok 71 - assistant: author follow-up includes the exact earlier deliverable, not just routine summary
+  ---
+  duration_ms: 35.7502
+  type: 'test'
+  ...
+# Subtest: assistant: Gemini pinned route does not retry or fall back to Anthropic
+ok 72 - assistant: Gemini pinned route does not retry or fall back to Anthropic
+  ---
+  duration_ms: 3.1934
+  type: 'test'
+  ...
+# Subtest: assistant: AnyModel pinned route makes only selected POST, no metadata refresh or fallback
+ok 73 - assistant: AnyModel pinned route makes only selected POST, no metadata refresh or fallback
+  ---
+  duration_ms: 34.0547
+  type: 'test'
+  ...
+# Subtest: assistant: project source symlink is refused without reading or modifying its target
+ok 74 - assistant: project source symlink is refused without reading or modifying its target
+  ---
+  duration_ms: 37.6563
+  type: 'test'
+  ...
+# Subtest: append: preview and confirmation preserve old artifacts, exact text, provenance and unknown fields
+ok 75 - append: preview and confirmation preserve old artifacts, exact text, provenance and unknown fields
+  ---
+  duration_ms: 68.7692
+  type: 'test'
+  ...
+# Subtest: append: stale rename invalidates even unchanged timestamp
+ok 76 - append: stale rename invalidates even unchanged timestamp
+  ---
+  duration_ms: 56.8606
+  type: 'test'
+  ...
+# Subtest: append: stale add invalidates even unchanged timestamp
+ok 77 - append: stale add invalidates even unchanged timestamp
+  ---
+  duration_ms: 39.8266
+  type: 'test'
+  ...
+# Subtest: append: stale delete invalidates even unchanged timestamp
+ok 78 - append: stale delete invalidates even unchanged timestamp
+  ---
+  duration_ms: 36.5126
+  type: 'test'
+  ...
+# Subtest: append: stale update invalidates even unchanged timestamp
+ok 79 - append: stale update invalidates even unchanged timestamp
+  ---
+  duration_ms: 39.268
+  type: 'test'
+  ...
+# Subtest: append: stale raw invalidates even unchanged timestamp
+ok 80 - append: stale raw invalidates even unchanged timestamp
+  ---
+  duration_ms: 24.5184
+  type: 'test'
+  ...
+# Subtest: append: concurrent duplicate approvals save once and retries never append
+ok 81 - append: concurrent duplicate approvals save once and retries never append
+  ---
+  duration_ms: 23.5734
+  type: 'test'
+  ...
+# Subtest: append: normal concurrent writers do not lose artifacts
+ok 82 - append: normal concurrent writers do not lose artifacts
+  ---
+  duration_ms: 58.341
+  type: 'test'
+  ...
+# Subtest: append: refuses incomplete or routine routine050
+ok 83 - append: refuses incomplete or routine routine050
+  ---
+  duration_ms: 20.1497
+  type: 'test'
+  ...
+# Subtest: append: refuses incomplete or routine script150
+ok 84 - append: refuses incomplete or routine script150
+  ---
+  duration_ms: 16.1405
+  type: 'test'
+  ...
+# Subtest: append: refuses incomplete or routine script02
+ok 85 - append: refuses incomplete or routine script02
+  ---
+  duration_ms: 22.8621
+  type: 'test'
+  ...
+# Subtest: append: imagePrompt is a note, not generated media
+ok 86 - append: imagePrompt is a note, not generated media
+  ---
+  duration_ms: 20.1328
+  type: 'test'
+  ...
+# Subtest: append: animationPrompt is a note, not generated media
+ok 87 - append: animationPrompt is a note, not generated media
+  ---
+  duration_ms: 23.6907
+  type: 'test'
+  ...
+# Subtest: append: title and target are bound to confirmation; false and extra controls rejected
+ok 88 - append: title and target are bound to confirmation; false and extra controls rejected
+  ---
+  duration_ms: 33.0983
+  type: 'test'
+  ...
+# Subtest: append: corrupt, symlink, hardlink and oversize project rejected without writes
+ok 89 - append: corrupt, symlink, hardlink and oversize project rejected without writes
+  ---
+  duration_ms: 40.6103
+  type: 'test'
+  ...
+# Subtest: append: cancellation before commit leaves original bytes intact
+ok 90 - append: cancellation before commit leaves original bytes intact
+  ---
+  duration_ms: 15.1527
+  type: 'test'
+  ...
+# Subtest: append: rebinding retains original author and cannot duplicate original answer
+ok 91 - append: rebinding retains original author and cannot duplicate original answer
+  ---
+  duration_ms: 53.3389
+  type: 'test'
+  ...
+# Subtest: append: failed atomic rename keeps original and cleans temporary file
+ok 92 - append: failed atomic rename keeps original and cleans temporary file
+  ---
+  duration_ms: 38.8175
+  type: 'test'
+  ...
+# Subtest: append: original connection identifiers survive rebind and save
+ok 93 - append: original connection identifiers survive rebind and save
+  ---
+  duration_ms: 85.076
+  type: 'test'
+  ...
+# Subtest: channel: local preview validates exact identity and uses no network
+ok 94 - channel: local preview validates exact identity and uses no network
+  ---
+  duration_ms: 33.0721
+  type: 'test'
+  ...
+# Subtest: channel: consent, reservation, one bounded page and no comments or AI
+ok 95 - channel: consent, reservation, one bounded page and no comments or AI
+  ---
+  duration_ms: 87.9837
+  type: 'test'
+  ...
+# Subtest: channel: changed conversation and bad hash block before network
+ok 96 - channel: changed conversation and bad hash block before network
+  ---
+  duration_ms: 12.4722
+  type: 'test'
+  ...
+# Subtest: channel: missing metadata remains visible but unavailable
+ok 97 - channel: missing metadata remains visible but unavailable
+  ---
+  duration_ms: 25.7946
+  type: 'test'
+  ...
+# Subtest: channel: malformed page, foreign video, missing uploads and unknown channel fail closed
+ok 98 - channel: malformed page, foreign video, missing uploads and unknown channel fail closed
+  ---
+  duration_ms: 59.2136
+  type: 'test'
+  ...
+# Subtest: channel: cancellation before dispatch prevents network
+ok 99 - channel: cancellation before dispatch prevents network
+  ---
+  duration_ms: 16.9505
+  type: 'test'
+  ...
+# Subtest: channel next: each page has preview, consent, bounded token, recorded attempt and no implicit network
+ok 100 - channel next: each page has preview, consent, bounded token, recorded attempt and no implicit network
+  ---
+  duration_ms: 114.9612
+  type: 'test'
+  ...
+# Subtest: channel next: changed handle stops before playlist, repeated token stops before metadata
+ok 101 - channel next: changed handle stops before playlist, repeated token stops before metadata
+  ---
+  duration_ms: 25.6253
+  type: 'test'
+  ...
+# Subtest: channel next: rejects malformed or overlong tokens and unknown continuation keys
+ok 102 - channel next: rejects malformed or overlong tokens and unknown continuation keys
+  ---
+  duration_ms: 6.4383
+  type: 'test'
+  ...
+# Subtest: channel list sorts globally, unknown last, zero distinct and stable ties without mutation
+ok 103 - channel list sorts globally, unknown last, zero distinct and stable ties without mutation
+  ---
+  duration_ms: 1.7759
+  type: 'test'
+  ...
+# Subtest: channel list matches title and id case-insensitively and marks duplicate independent of filter and sort
+ok 104 - channel list matches title and id case-insensitively and marks duplicate independent of filter and sort
+  ---
+  duration_ms: 0.4484
+  type: 'test'
+  ...
+# Subtest: channel snapshot copies only explicitly selected positions in received order and never page tokens
+ok 105 - channel snapshot copies only explicitly selected positions in received order and never page tokens
+  ---
+  duration_ms: 0.6254
+  type: 'test'
+  ...
+# Subtest: channel snapshot rejects more than twenty selected positions without truncation
+ok 106 - channel snapshot rejects more than twenty selected positions without truncation
+  ---
+  duration_ms: 0.3422
+  type: 'test'
+  ...
+# Subtest: channel research recognizes only bounded snapshot markers without claiming provenance
+ok 107 - channel research recognizes only bounded snapshot markers without claiming provenance
+  ---
+  duration_ms: 1.5296
+  type: 'test'
+  ...
+# Subtest: channel research preserves draft, identifies exact documents and refuses truncation
+ok 108 - channel research preserves draft, identifies exact documents and refuses truncation
+  ---
+  duration_ms: 0.4161
+  type: 'test'
+  ...
+# Subtest: snapshot statistics count positions and unique valid IDs, not duplicate views
+ok 109 - snapshot statistics count positions and unique valid IDs, not duplicate views
+  ---
+  duration_ms: 1.922
+  type: 'test'
+  ...
+# Subtest: snapshot statistics omit conflicting, missing, unavailable and invalid views instead of guessing
+ok 110 - snapshot statistics omit conflicting, missing, unavailable and invalid views instead of guessing
+  ---
+  duration_ms: 0.2358
+  type: 'test'
+  ...
+# Subtest: snapshot statistics refuse wrong markers or oversized lists
+ok 111 - snapshot statistics refuse wrong markers or oversized lists
+  ---
+  duration_ms: 0.1773
+  type: 'test'
+  ...
+# Subtest: comment selection keeps identical comment IDs from different sources separate and filters locally
+ok 112 - comment selection keeps identical comment IDs from different sources separate and filters locally
+  ---
+  duration_ms: 1.7996
+  type: 'test'
+  ...
+# Subtest: ambiguous identifiers and unavailable sources are not selectable
+ok 113 - ambiguous identifiers and unavailable sources are not selectable
+  ---
+  duration_ms: 0.2506
+  type: 'test'
+  ...
+# Subtest: draft retains exact text, uses source and comment IDs, limits selection and never truncates
+ok 114 - draft retains exact text, uses source and comment IDs, limits selection and never truncates
+  ---
+  duration_ms: 0.5312
+  type: 'test'
+  ...
+# Subtest: document branch preserves old conversation and exact reviewed text, next preview sees it
+ok 115 - document branch preserves old conversation and exact reviewed text, next preview sees it
+  ---
+  duration_ms: 55.8473
+  type: 'test'
+  ...
+# Subtest: document branch rejects invalid, unknown, absent consent and oversized documents
+ok 116 - document branch rejects invalid, unknown, absent consent and oversized documents
+  ---
+  duration_ms: 11.5286
+  type: 'test'
+  ...
+# Subtest: document branch detects duplicates and global limits
+ok 117 - document branch detects duplicates and global limits
+  ---
+  duration_ms: 46.7142
+  type: 'test'
+  ...
+# Subtest: document branch invalidates stale preview and edited input
+ok 118 - document branch invalidates stale preview and edited input
+  ---
+  duration_ms: 12.6046
+  type: 'test'
+  ...
+# Subtest: document branch replay and concurrent saves do not overwrite
+ok 119 - document branch replay and concurrent saves do not overwrite
+  ---
+  duration_ms: 24.5775
+  type: 'test'
+  ...
+# Subtest: document branch refuses exhausted conversation
+ok 120 - document branch refuses exhausted conversation
+  ---
+  duration_ms: 8.0148
+  type: 'test'
+  ...
+# Subtest: document revision: replace same name at capacity, preserve run and compare full removed text
+ok 121 - document revision: replace same name at capacity, preserve run and compare full removed text
+  ---
+  duration_ms: 14.9661
+  type: 'test'
+  ...
+# Subtest: document revision: remove only, including all, and keep original message history
+ok 122 - document revision: remove only, including all, and keep original message history
+  ---
+  duration_ms: 13.1055
+  type: 'test'
+  ...
+# Subtest: document revision: invalid indices, duplicate selection, no change and remaining-name collision reject
+ok 123 - document revision: invalid indices, duplicate selection, no change and remaining-name collision reject
+  ---
+  duration_ms: 17.0504
+  type: 'test'
+  ...
+# Subtest: document revision: stale preview or changed removal cannot create branch
+ok 124 - document revision: stale preview or changed removal cannot create branch
+  ---
+  duration_ms: 12.195
+  type: 'test'
+  ...
+# Subtest: document revision: historical duplicate names can remove a single positional entry
+ok 125 - document revision: historical duplicate names can remove a single positional entry
+  ---
+  duration_ms: 11.387
+  type: 'test'
+  ...
+# Subtest: document revision: removing a document does not erase prior messages or prevent their transmission
+ok 126 - document revision: removing a document does not erase prior messages or prevent their transmission
+  ---
+  duration_ms: 14.6334
+  type: 'test'
+  ...
+# Subtest: DOCX preview: plain paragraphs/entities/Cyrillic, exact source hash and no network
+ok 127 - DOCX preview: plain paragraphs/entities/Cyrillic, exact source hash and no network
+  ---
+  duration_ms: 10.284
+  type: 'test'
+  ...
+# Subtest: DOCX preview: tabs, line breaks and table cells retain text order
+ok 128 - DOCX preview: tabs, line breaks and table cells retain text order
+  ---
+  duration_ms: 2.3167
+  type: 'test'
+  ...
+# Subtest: DOCX preview: actual docx package output readable, numbering not falsely claimed
+ok 129 - DOCX preview: actual docx package output readable, numbering not falsely claimed
+  ---
+  duration_ms: 89.7191
+  type: 'test'
+  ...
+# Subtest: DOCX preview: deleted, hidden and drawing text excluded; insertion included
+ok 130 - DOCX preview: deleted, hidden and drawing text excluded; insertion included
+  ---
+  duration_ms: 4.3276
+  type: 'test'
+  ...
+# Subtest: DOCX preview: explicitly visible run retained; custom namespace prefix supported
+ok 131 - DOCX preview: explicitly visible run retained; custom namespace prefix supported
+  ---
+  duration_ms: 4.9812
+  type: 'test'
+  ...
+# Subtest: DOCX preview: comments, footnotes, headers and relationships never resolved
+ok 132 - DOCX preview: comments, footnotes, headers and relationships never resolved
+  ---
+  duration_ms: 3.5546
+  type: 'test'
+  ...
+# Subtest: DOCX preview: drawing-only and empty files refused, not claimed OCR
+ok 133 - DOCX preview: drawing-only and empty files refused, not claimed OCR
+  ---
+  duration_ms: 4.87
+  type: 'test'
+  ...
+# Subtest: DOCX preview: text over 30000 refuses instead of silently truncating
+ok 134 - DOCX preview: text over 30000 refuses instead of silently truncating
+  ---
+  duration_ms: 42.2301
+  type: 'test'
+  ...
+# Subtest: DOCX preview: malformed XML, DTD, entities and excessive nesting refused
+ok 135 - DOCX preview: malformed XML, DTD, entities and excessive nesting refused
+  ---
+  duration_ms: 16.5678
+  type: 'test'
+  ...
+# Subtest: DOCX preview: wrong namespace, altChunk and missing main parts refused
+ok 136 - DOCX preview: wrong namespace, altChunk and missing main parts refused
+  ---
+  duration_ms: 3.3735
+  type: 'test'
+  ...
+# Subtest: DOCX preview: macro-enabled content type, macro binary and embedded objects refused
+ok 137 - DOCX preview: macro-enabled content type, macro binary and embedded objects refused
+  ---
+  duration_ms: 3.4713
+  type: 'test'
+  ...
+# Subtest: DOCX preview: invalid UTF-8 XML and binary non-ZIP refused
+ok 138 - DOCX preview: invalid UTF-8 XML and binary non-ZIP refused
+  ---
+  duration_ms: 1.2957
+  type: 'test'
+  ...
+# Subtest: DOCX preview: strict file name, base64 and extra keys
+ok 139 - DOCX preview: strict file name, base64 and extra keys
+  ---
+  duration_ms: 10.0757
+  type: 'test'
+  ...
+# Subtest: DOCX preview: compressed size limit enforced before parse
+ok 140 - DOCX preview: compressed size limit enforced before parse
+  ---
+  duration_ms: 9.9637
+  type: 'test'
+  ...
+# Subtest: DOCX preview: traversal, absolute and duplicate ZIP paths refused
+ok 141 - DOCX preview: traversal, absolute and duplicate ZIP paths refused
+  ---
+  duration_ms: 3.2772
+  type: 'test'
+  ...
+# Subtest: DOCX preview: CRC tampering, truncated directory, overlapping offsets and encrypted ZIP refused
+ok 142 - DOCX preview: CRC tampering, truncated directory, overlapping offsets and encrypted ZIP refused
+  ---
+  duration_ms: 1.0449
+  type: 'test'
+  ...
+# Subtest: DOCX preview: zip bomb declared size and lying originalSize rejected
+ok 143 - DOCX preview: zip bomb declared size and lying originalSize rejected
+  ---
+  duration_ms: 68.6868
+  type: 'test'
+  ...
+# Subtest: DOCX preview: too many entries and declared aggregate expansion rejected
+ok 144 - DOCX preview: too many entries and declared aggregate expansion rejected
+  ---
+  duration_ms: 235.49
+  type: 'test'
+  ...
+# Subtest: DOCX preview: stored/uncompressed ZIP supported, original unchanged
+ok 145 - DOCX preview: stored/uncompressed ZIP supported, original unchanged
+  ---
+  duration_ms: 25.4409
+  type: 'test'
+  ...
+# Subtest: DOCX preview: confirmed extracted text persists under DOCX source name, no original binary
+ok 146 - DOCX preview: confirmed extracted text persists under DOCX source name, no original binary
+  ---
+  duration_ms: 31.2438
+  type: 'test'
+  ...
+# Subtest: draft snapshot preserves exact text and task, including boundary and scope flag
+ok 147 - draft snapshot preserves exact text and task, including boundary and scope flag
+  ---
+  duration_ms: 1.3273
+  type: 'test'
+  ...
+# Subtest: draft snapshot rejects wrong run, invalid shape, versions, roles and scope
+ok 148 - draft snapshot rejects wrong run, invalid shape, versions, roles and scope
+  ---
+  duration_ms: 0.4339
+  type: 'test'
+  ...
+# Subtest: draft snapshot refuses empty, oversize and malformed data without truncation
+ok 149 - draft snapshot refuses empty, oversize and malformed data without truncation
+  ---
+  duration_ms: 0.1772
+  type: 'test'
+  ...
+# Subtest: draft snapshot has no model, approval, credentials or source data fields
+ok 150 - draft snapshot has no model, approval, credentials or source data fields
+  ---
+  duration_ms: 0.7274
+  type: 'test'
+  ...
+# Subtest: idea handoff requires unambiguous exact quotes against saved comments
+ok 151 - idea handoff requires unambiguous exact quotes against saved comments
+  ---
+  duration_ms: 0.9863
+  type: 'test'
+  ...
+# Subtest: idea choices identify precise message and idea position without deduplication
+ok 152 - idea choices identify precise message and idea position without deduplication
+  ---
+  duration_ms: 0.8842
+  type: 'test'
+  ...
+# Subtest: multi-idea author draft preserves all text and full quoted evidence, avoids hidden truncation
+ok 153 - multi-idea author draft preserves all text and full quoted evidence, avoids hidden truncation
+  ---
+  duration_ms: 0.6074
+  type: 'test'
+  ...
+# Subtest: single handoff and source prompt preserve drafts or refuse the whole change
+ok 154 - single handoff and source prompt preserve drafts or refuse the whole change
+  ---
+  duration_ms: 0.169
+  type: 'test'
+  ...
+# Subtest: ideas project: exact preview and confirmed note, no extra context or network
+ok 155 - ideas project: exact preview and confirmed note, no extra context or network
+  ---
+  duration_ms: 84.6606
+  type: 'test'
+  ...
+# Subtest: ideas project: strict selections, scope and confirmation
+ok 156 - ideas project: strict selections, scope and confirmation
+  ---
+  duration_ms: 34.2373
+  type: 'test'
+  ...
+# Subtest: ideas project: missing, ambiguous and altered comments fail without writes
+ok 157 - ideas project: missing, ambiguous and altered comments fail without writes
+  ---
+  duration_ms: 81.702
+  type: 'test'
+  ...
+# Subtest: ideas project: stale project or changed dialogue invalidates preview
+ok 158 - ideas project: stale project or changed dialogue invalidates preview
+  ---
+  duration_ms: 45.6618
+  type: 'test'
+  ...
+# Subtest: ideas project: concurrent duplicate and replay blocked even with new title or reversed order
+ok 159 - ideas project: concurrent duplicate and replay blocked even with new title or reversed order
+  ---
+  duration_ms: 33.7825
+  type: 'test'
+  ...
+# Subtest: ideas project: re-bound branch cannot duplicate the same saved selection
+ok 160 - ideas project: re-bound branch cannot duplicate the same saved selection
+  ---
+  duration_ms: 36.2539
+  type: 'test'
+  ...
+# Subtest: ideas branch: exact saved text, independent run, pinned snapshot and no network
+ok 161 - ideas branch: exact saved text, independent run, pinned snapshot and no network
+  ---
+  duration_ms: 52.6436
+  type: 'test'
+  ...
+# Subtest: ideas branch: stale project and changed dialogue refuse approved snapshot
+ok 162 - ideas branch: stale project and changed dialogue refuse approved snapshot
+  ---
+  duration_ms: 92.2519
+  type: 'test'
+  ...
+# Subtest: ideas branch: wrong note, corruption, checksum and ambiguous IDs never pass
+ok 163 - ideas branch: wrong note, corruption, checksum and ambiguous IDs never pass
+  ---
+  duration_ms: 152.973
+  type: 'test'
+  ...
+# Subtest: ideas branch: copy size, context limits and schema are strict without truncation
+ok 164 - ideas branch: copy size, context limits and schema are strict without truncation
+  ---
+  duration_ms: 232.3767
+  type: 'test'
+  ...
+# Subtest: ideas branch: original note can be modified later without changing copied text
+ok 165 - ideas branch: original note can be modified later without changing copied text
+  ---
+  duration_ms: 86.8005
+  type: 'test'
+  ...
+# Subtest: manual skill: preview is read-only; exact confirmed card becomes reusable ordinary skill, no network
+ok 166 - manual skill: preview is read-only; exact confirmed card becomes reusable ordinary skill, no network
+  ---
+  duration_ms: 60.617
+  type: 'test'
+  ...
+# Subtest: manual skill: strict schema, required consent, stale hash and replay
+ok 167 - manual skill: strict schema, required consent, stale hash and replay
+  ---
+  duration_ms: 60.998
+  type: 'test'
+  ...
+# Subtest: manual skill: preview binds normalized full text and length limits without truncation
+ok 168 - manual skill: preview binds normalized full text and length limits without truncation
+  ---
+  duration_ms: 26.0349
+  type: 'test'
+  ...
+# Subtest: manual skill: duplicate name reserved even after archive or rename
+ok 169 - manual skill: duplicate name reserved even after archive or rename
+  ---
+  duration_ms: 70.6196
+  type: 'test'
+  ...
+# Subtest: manual skill: changing another library record invalidates prior preview
+ok 170 - manual skill: changing another library record invalidates prior preview
+  ---
+  duration_ms: 94.1481
+  type: 'test'
+  ...
+# Subtest: manual skill: concurrent saves serialize and cannot reuse preview or names
+ok 171 - manual skill: concurrent saves serialize and cannot reuse preview or names
+  ---
+  duration_ms: 74.632
+  type: 'test'
+  ...
+# Subtest: manual skill: source must exist and unsafe source is never followed
+ok 172 - manual skill: source must exist and unsafe source is never followed
+  ---
+  duration_ms: 9.6078
+  type: 'test'
+  ...
+# Subtest: manual skill: corrupted library fails closed without overwriting
+ok 173 - manual skill: corrupted library fails closed without overwriting
+  ---
+  duration_ms: 17.5156
+  type: 'test'
+  ...
+# Subtest: manual skill: cancellation does not create a record
+ok 174 - manual skill: cancellation does not create a record
+  ---
+  duration_ms: 39.6783
+  type: 'test'
+  ...
+# Subtest: manual skill: versions and archive work; existing pinned dialogue remains unchanged
+ok 175 - manual skill: versions and archive work; existing pinned dialogue remains unchanged
+  ---
+  duration_ms: 229.6625
+  type: 'test'
+  ...
+# Subtest: manual skill: damaged archive state stops creation without modifying files
+ok 176 - manual skill: damaged archive state stops creation without modifying files
+  ---
+  duration_ms: 18.2471
+  type: 'test'
+  ...
+# Subtest: plan: preview local, exact routine mode and source catalog avoids duplicated document text
+ok 177 - plan: preview local, exact routine mode and source catalog avoids duplicated document text
+  ---
+  duration_ms: 32.6405
+  type: 'test'
+  ...
+# Subtest: plan: actual response persists mode and review resolves exact document line ranges
+ok 178 - plan: actual response persists mode and review resolves exact document line ranges
+  ---
+  duration_ms: 68.8804
+  type: 'test'
+  ...
+# Subtest: plan: source catalog accepts user prompts, earlier user messages and skill, not assistant replies
+ok 179 - plan: source catalog accepts user prompts, earlier user messages and skill, not assistant replies
+  ---
+  duration_ms: 0.7192
+  type: 'test'
+  ...
+# Subtest: plan: invalid quote rejected, one call, no saved reply
+ok 180 - plan: invalid quote rejected, one call, no saved reply
+  ---
+  duration_ms: 84.2244
+  type: 'test'
+  ...
+# Subtest: plan: invalid source rejected, one call, no saved reply
+ok 181 - plan: invalid source rejected, one call, no saved reply
+  ---
+  duration_ms: 52.3026
+  type: 'test'
+  ...
+# Subtest: plan: invalid id rejected, one call, no saved reply
+ok 182 - plan: invalid id rejected, one call, no saved reply
+  ---
+  duration_ms: 55.5328
+  type: 'test'
+  ...
+# Subtest: plan: invalid duplicate rejected, one call, no saved reply
+ok 183 - plan: invalid duplicate rejected, one call, no saved reply
+  ---
+  duration_ms: 47.4046
+  type: 'test'
+  ...
+# Subtest: plan: invalid unused rejected, one call, no saved reply
+ok 184 - plan: invalid unused rejected, one call, no saved reply
+  ---
+  duration_ms: 50.7981
+  type: 'test'
+  ...
+# Subtest: plan: invalid stepDuplicate rejected, one call, no saved reply
+ok 185 - plan: invalid stepDuplicate rejected, one call, no saved reply
+  ---
+  duration_ms: 69.0056
+  type: 'test'
+  ...
+# Subtest: plan: issues/questions must match and unsupported actions cannot become executable role
+ok 186 - plan: issues/questions must match and unsupported actions cannot become executable role
+  ---
+  duration_ms: 26.6491
+  type: 'test'
+  ...
+# Subtest: plan: no material returns questions without fabricated requirements or executable steps
+ok 187 - plan: no material returns questions without fabricated requirements or executable steps
+  ---
+  duration_ms: 31.8532
+  type: 'test'
+  ...
+# Subtest: plan: question-bearing draft cannot be converted to workflow, explicit review is required
+ok 188 - plan: question-bearing draft cannot be converted to workflow, explicit review is required
+  ---
+  duration_ms: 72.5171
+  type: 'test'
+  ...
+# Subtest: plan: reviewed conversion stores evidence, model provenance and unchanged plan; manual edits labeled
+ok 189 - plan: reviewed conversion stores evidence, model provenance and unchanged plan; manual edits labeled
+  ---
+  duration_ms: 75.1391
+  type: 'test'
+  ...
+# Subtest: plan: user clarification in follow-up is cited as current prompt, history retained
+ok 190 - plan: user clarification in follow-up is cited as current prompt, history retained
+  ---
+  duration_ms: 60.1908
+  type: 'test'
+  ...
+# Subtest: plan: origin cannot be rebound to unrelated conversation and plan mode never appears unrequested
+ok 191 - plan: origin cannot be rebound to unrelated conversation and plan mode never appears unrequested
+  ---
+  duration_ms: 181.7936
+  type: 'test'
+  ...
+# Subtest: plan: source text containing tool instructions cannot add controls or unsupported roles
+ok 192 - plan: source text containing tool instructions cannot add controls or unsupported roles
+  ---
+  duration_ms: 0.6924
+  type: 'test'
+  ...
+# Subtest: process skill: preview is local and saving requires strict explicit reusable consent
+ok 193 - process skill: preview is local and saving requires strict explicit reusable consent
+  ---
+  duration_ms: 55.6029
+  type: 'test'
+  ...
+# Subtest: process skill: exact reviewed card is searchable and contains no copied source material/models/state
+ok 194 - process skill: exact reviewed card is searchable and contains no copied source material/models/state
+  ---
+  duration_ms: 67.4108
+  type: 'test'
+  ...
+# Subtest: process skill: accepted answers and source edits do not enter reusable card automatically
+ok 195 - process skill: accepted answers and source edits do not enter reusable card automatically
+  ---
+  duration_ms: 122.4448
+  type: 'test'
+  ...
+# Subtest: process skill: name collision and duplicate confirmation never overwrite or silently version existing approach
+ok 196 - process skill: name collision and duplicate confirmation never overwrite or silently version existing approach
+  ---
+  duration_ms: 67.236
+  type: 'test'
+  ...
+# Subtest: process skill: ordinary and process skills share atomic name uniqueness
+ok 197 - process skill: ordinary and process skills share atomic name uniqueness
+  ---
+  duration_ms: 74.2798
+  type: 'test'
+  ...
+# Subtest: process skill: changed card and stale source revision invalidate confirmation
+ok 198 - process skill: changed card and stale source revision invalidate confirmation
+  ---
+  duration_ms: 24.3214
+  type: 'test'
+  ...
+# Subtest: process skill: pending/interrupted cannot be saved as a shortcut around recovery
+ok 199 - process skill: pending/interrupted cannot be saved as a shortcut around recovery
+  ---
+  duration_ms: 16.7838
+  type: 'test'
+  ...
+# Subtest: process skill: schema limits, duplicate questions and oversized compiled instructions fail without truncation
+ok 200 - process skill: schema limits, duplicate questions and oversized compiled instructions fail without truncation
+  ---
+  duration_ms: 15.0862
+  type: 'test'
+  ...
+# Subtest: process skill: saving cancellation and publication failure leave no partial skill or temp files
+ok 201 - process skill: saving cancellation and publication failure leave no partial skill or temp files
+  ---
+  duration_ms: 24.4687
+  type: 'test'
+  ...
+# Subtest: process skill: fresh dialogue pins only skill snapshot, new explicit models, no old history/docs or workflow
+ok 202 - process skill: fresh dialogue pins only skill snapshot, new explicit models, no old history/docs or workflow
+  ---
+  duration_ms: 54.8118
+  type: 'test'
+  ...
+# Subtest: process skill: applying requires all new answers, exact pinned skill and a fresh dialogue
+ok 203 - process skill: applying requires all new answers, exact pinned skill and a fresh dialogue
+  ---
+  duration_ms: 78.3012
+  type: 'test'
+  ...
+# Subtest: process skill: preview and confirmed apply create only a new unstarted workflow with intake provenance
+ok 204 - process skill: preview and confirmed apply create only a new unstarted workflow with intake provenance
+  ---
+  duration_ms: 60.9362
+  type: 'test'
+  ...
+# Subtest: process skill: new step preview carries only new conditions and exact current role, not old deliverable
+ok 205 - process skill: new step preview carries only new conditions and exact current role, not old deliverable
+  ---
+  duration_ms: 72.6146
+  type: 'test'
+  ...
+# Subtest: process skill: manual draft/future edits are marked; immutable skill and original workflow never change
+ok 206 - process skill: manual draft/future edits are marked; immutable skill and original workflow never change
+  ---
+  duration_ms: 58.2746
+  type: 'test'
+  ...
+# Subtest: process skill: missing model is explicit; selecting skill cannot import source model or authorize tools
+ok 207 - process skill: missing model is explicit; selecting skill cannot import source model or authorize tools
+  ---
+  duration_ms: 44.0189
+  type: 'test'
+  ...
+# Subtest: process skill: existing ordinary skills remain usable without process or forced intake
+ok 208 - process skill: existing ordinary skills remain usable without process or forced intake
+  ---
+  duration_ms: 72.076
+  type: 'test'
+  ...
+# Subtest: process skill: immutable snapshot remains valid when original source is unavailable, unsafe skill links rejected
+ok 209 - process skill: immutable snapshot remains valid when original source is unavailable, unsafe skill links rejected
+  ---
+  duration_ms: 63.0744
+  type: 'test'
+  ...
+# Subtest: process skill: concurrent saves with distinct names but one attempt ID publish only one immutable record
+ok 210 - process skill: concurrent saves with distinct names but one attempt ID publish only one immutable record
+  ---
+  duration_ms: 99.03
+  type: 'test'
+  ...
+# Subtest: prompt branch: exact text copy, no private metadata, old project and dialogue intact
+ok 211 - prompt branch: exact text copy, no private metadata, old project and dialogue intact
+  ---
+  duration_ms: 81.8662
+  type: 'test'
+  ...
+# Subtest: prompt branch: strict schema, consent, foreign ID and unrelated notes refused
+ok 212 - prompt branch: strict schema, consent, foreign ID and unrelated notes refused
+  ---
+  duration_ms: 72.6604
+  type: 'test'
+  ...
+# Subtest: prompt branch: blank, oversized and JSON-escaped oversized copies rejected without cropping
+ok 213 - prompt branch: blank, oversized and JSON-escaped oversized copies rejected without cropping
+  ---
+  duration_ms: 71.3764
+  type: 'test'
+  ...
+# Subtest: prompt branch: duplicate material and document limits stop creation
+ok 214 - prompt branch: duplicate material and document limits stop creation
+  ---
+  duration_ms: 47.7679
+  type: 'test'
+  ...
+# Subtest: prompt branch: changed project or conversation prevents stale save
+ok 215 - prompt branch: changed project or conversation prevents stale save
+  ---
+  duration_ms: 48.2818
+  type: 'test'
+  ...
+# Subtest: prompt branch: replay cannot overwrite or create a second branch
+ok 216 - prompt branch: replay cannot overwrite or create a second branch
+  ---
+  duration_ms: 46.2013
+  type: 'test'
+  ...
+# Subtest: saved prompts: only author prompt notes listed without bodies, limits explicit
+ok 217 - saved prompts: only author prompt notes listed without bodies, limits explicit
+  ---
+  duration_ms: 107.0674
+  type: 'test'
+  ...
+# Subtest: saved prompts: exact full text and review hash depend on explicit field
+ok 218 - saved prompts: exact full text and review hash depend on explicit field
+  ---
+  duration_ms: 61.4722
+  type: 'test'
+  ...
+# Subtest: saved prompts: empty, oversized, foreign and non-prompt notes rejected
+ok 219 - saved prompts: empty, oversized, foreign and non-prompt notes rejected
+  ---
+  duration_ms: 115.8459
+  type: 'test'
+  ...
+# Subtest: saved prompts: strict schemas and stale snapshot fail closed
+ok 220 - saved prompts: strict schemas and stale snapshot fail closed
+  ---
+  duration_ms: 65.2175
+  type: 'test'
+  ...
+# Subtest: saved prompts: duplicate IDs and malformed matching notes fail rather than guess
+ok 221 - saved prompts: duplicate IDs and malformed matching notes fail rather than guess
+  ---
+  duration_ms: 79.6385
+  type: 'test'
+  ...
+# Subtest: saved prompts: reviewed copy becomes a separately confirmed storyboard version
+ok 222 - saved prompts: reviewed copy becomes a separately confirmed storyboard version
+  ---
+  duration_ms: 61.598
+  type: 'test'
+  ...
+# Subtest: saved ideas: exact full content from untrusted note copied in stable order
+ok 223 - saved ideas: exact full content from untrusted note copied in stable order
+  ---
+  duration_ms: 1.8109
+  type: 'test'
+  ...
+# Subtest: saved ideas: malformed, wrong format and partial idea reject whole document
+ok 224 - saved ideas: malformed, wrong format and partial idea reject whole document
+  ---
+  duration_ms: 0.3207
+  type: 'test'
+  ...
+# Subtest: saved ideas: limits reject oversize and non-string nested fields
+ok 225 - saved ideas: limits reject oversize and non-string nested fields
+  ---
+  duration_ms: 0.5179
+  type: 'test'
+  ...
+# Subtest: saved ideas: same ideas in separate materials stay distinct
+ok 226 - saved ideas: same ideas in separate materials stay distinct
+  ---
+  duration_ms: 0.2203
+  type: 'test'
+  ...
+# Subtest: saved ideas: never truncate old draft or selection
+ok 227 - saved ideas: never truncate old draft or selection
+  ---
+  duration_ms: 0.1981
+  type: 'test'
+  ...
+# Subtest: saved ideas: 200-character comment ID survives exactly
+ok 228 - saved ideas: 200-character comment ID survives exactly
+  ---
+  duration_ms: 0.1995
+  type: 'test'
+  ...
+# Subtest: scene branch: preview is read-only, branch preserves conversation and adds exact excerpt
+ok 229 - scene branch: preview is read-only, branch preserves conversation and adds exact excerpt
+  ---
+  duration_ms: 91.3837
+  type: 'test'
+  ...
+# Subtest: scene branch: strict input and consent, invalid ranges and unknown fields rejected
+ok 230 - scene branch: strict input and consent, invalid ranges and unknown fields rejected
+  ---
+  duration_ms: 21.349
+  type: 'test'
+  ...
+# Subtest: scene branch: changed source project invalidates preview, no branch created
+ok 231 - scene branch: changed source project invalidates preview, no branch created
+  ---
+  duration_ms: 53.2467
+  type: 'test'
+  ...
+# Subtest: scene branch: changed conversation invalidates preview
+ok 232 - scene branch: changed conversation invalidates preview
+  ---
+  duration_ms: 27.4031
+  type: 'test'
+  ...
+# Subtest: scene branch: existing same excerpt rejected; maximum materials and aggregate enforced
+ok 233 - scene branch: existing same excerpt rejected; maximum materials and aggregate enforced
+  ---
+  duration_ms: 41.7995
+  type: 'test'
+  ...
+# Subtest: scene branch: conversation with ten replies cannot imply continuation
+ok 234 - scene branch: conversation with ten replies cannot imply continuation
+  ---
+  duration_ms: 22.264
+  type: 'test'
+  ...
+# Subtest: scene branch: missing and malformed scenes, wrong project and oversized output fail
+ok 235 - scene branch: missing and malformed scenes, wrong project and oversized output fail
+  ---
+  duration_ms: 44.4663
+  type: 'test'
+  ...
+# Subtest: scene branch: repeated attempt and concurrent save never overwrite
+ok 236 - scene branch: repeated attempt and concurrent save never overwrite
+  ---
+  duration_ms: 49.3196
+  type: 'test'
+  ...
+# Subtest: scene branch: wrong preview hash cannot write; source and old run remain
+ok 237 - scene branch: wrong preview hash cannot write; source and old run remain
+  ---
+  duration_ms: 25.8815
+  type: 'test'
+  ...
+# Subtest: scene branch: audio excerpt identifies source and does not invent unselected data
+ok 238 - scene branch: audio excerpt identifies source and does not invent unselected data
+  ---
+  duration_ms: 29.2613
+  type: 'test'
+  ...
+# Subtest: scene branch: workflow remains on old branch until explicitly bound
+ok 239 - scene branch: workflow remains on old branch until explicitly bound
+  ---
+  duration_ms: 77.6367
+  type: 'test'
+  ...
+# Subtest: script branch: explicit old version copied exactly, old run and project preserved
+ok 240 - script branch: explicit old version copied exactly, old run and project preserved
+  ---
+  duration_ms: 89.5482
+  type: 'test'
+  ...
+# Subtest: script branch: schema, consent and foreign, duplicate or wrong kind blocked
+ok 241 - script branch: schema, consent and foreign, duplicate or wrong kind blocked
+  ---
+  duration_ms: 70.6394
+  type: 'test'
+  ...
+# Subtest: script branch: oversized or empty script rejected without truncation
+ok 242 - script branch: oversized or empty script rejected without truncation
+  ---
+  duration_ms: 103.0024
+  type: 'test'
+  ...
+# Subtest: script branch: duplicate, 4 documents, 40000 aggregate and 10 replies rejected
+ok 243 - script branch: duplicate, 4 documents, 40000 aggregate and 10 replies rejected
+  ---
+  duration_ms: 57.4168
+  type: 'test'
+  ...
+# Subtest: script branch: changed project or run blocks stale preview
+ok 244 - script branch: changed project or run blocks stale preview
+  ---
+  duration_ms: 46.1304
+  type: 'test'
+  ...
+# Subtest: script branch: same attempt is immutable and concurrent save never overwrites
+ok 245 - script branch: same attempt is immutable and concurrent save never overwrites
+  ---
+  duration_ms: 42.3368
+  type: 'test'
+  ...
+# Subtest: script branch: process remains on old branch until explicitly bound
+ok 246 - script branch: process remains on old branch until explicitly bound
+  ---
+  duration_ms: 112.8148
+  type: 'test'
+  ...
+# Subtest: skill archive: review and explicit confirmation preserve original versions and pinned dialogue
+ok 247 - skill archive: review and explicit confirmation preserve original versions and pinned dialogue
+  ---
+  duration_ms: 104.3764
+  type: 'test'
+  ...
+# Subtest: skill archive: all historical IDs blocked for new dialogues; unarchive restores availability
+ok 248 - skill archive: all historical IDs blocked for new dialogues; unarchive restores availability
+  ---
+  duration_ms: 221.3669
+  type: 'test'
+  ...
+# Subtest: skill archive: unchanged, extra fields, invalid hashes and replay refused
+ok 249 - skill archive: unchanged, extra fields, invalid hashes and replay refused
+  ---
+  duration_ms: 105.8865
+  type: 'test'
+  ...
+# Subtest: skill archive: changed skill version and changed state invalidate previews
+ok 250 - skill archive: changed skill version and changed state invalidate previews
+  ---
+  duration_ms: 341.8824
+  type: 'test'
+  ...
+# Subtest: skill archive: concurrently approved operations commit at most once
+ok 251 - skill archive: concurrently approved operations commit at most once
+  ---
+  duration_ms: 86.6738
+  type: 'test'
+  ...
+# Subtest: skill archive: serialized new dialogue cannot slip behind confirmed archive
+ok 252 - skill archive: serialized new dialogue cannot slip behind confirmed archive
+  ---
+  duration_ms: 95.4267
+  type: 'test'
+  ...
+# Subtest: skill archive: corrupted or orphan state hides library and blocks new skill use without modifying data
+ok 253 - skill archive: corrupted or orphan state hides library and blocks new skill use without modifying data
+  ---
+  duration_ms: 72.3676
+  type: 'test'
+  ...
+# Subtest: skill archive: linked state file refused and external bytes remain unchanged
+ok 254 - skill archive: linked state file refused and external bytes remain unchanged
+  ---
+  duration_ms: 31.833
+  type: 'test'
+  ...
+# Subtest: skill archive: cancellation or failed rename cannot change state and leave no temporary file
+ok 255 - skill archive: cancellation or failed rename cannot change state and leave no temporary file
+  ---
+  duration_ms: 121.1816
+  type: 'test'
+  ...
+# Subtest: skill archive: names remain reserved and ordinary dialogue remains creatable
+ok 256 - skill archive: names remain reserved and ordinary dialogue remains creatable
+  ---
+  duration_ms: 167.3718
+  type: 'test'
+  ...
+# Subtest: skill archive: prior version review becomes stale after archive and restoration
+ok 257 - skill archive: prior version review becomes stale after archive and restoration
+  ---
+  duration_ms: 352.4603
+  type: 'test'
+  ...
+# Subtest: skill branch: preview read-only; confirmed branch pins exact skill and retains source
+ok 258 - skill branch: preview read-only; confirmed branch pins exact skill and retains source
+  ---
+  duration_ms: 81.3591
+  type: 'test'
+  ...
+# Subtest: skill branch: replace and remove, identical choice blocked, no modification of earlier branches
+ok 259 - skill branch: replace and remove, identical choice blocked, no modification of earlier branches
+  ---
+  duration_ms: 97.1086
+  type: 'test'
+  ...
+# Subtest: skill branch: strict schema consent hash replay and cancellation
+ok 260 - skill branch: strict schema consent hash replay and cancellation
+  ---
+  duration_ms: 61.2653
+  type: 'test'
+  ...
+# Subtest: skill branch: revised skill and archive changes invalidate review and old versions
+ok 261 - skill branch: revised skill and archive changes invalidate review and old versions
+  ---
+  duration_ms: 281.5422
+  type: 'test'
+  ...
+# Subtest: skill branch: process skill cannot masquerade as ordinary selection
+ok 262 - skill branch: process skill cannot masquerade as ordinary selection
+  ---
+  duration_ms: 27.1437
+  type: 'test'
+  ...
+# Subtest: skill branch: corrupt library or source fails closed and no external call
+ok 263 - skill branch: corrupt library or source fails closed and no external call
+  ---
+  duration_ms: 39.1369
+  type: 'test'
+  ...
+# Subtest: skill branch: changed source bytes invalidate preview rather than silently copying a new context
+ok 264 - skill branch: changed source bytes invalidate preview rather than silently copying a new context
+  ---
+  duration_ms: 73.9621
+  type: 'test'
+  ...
+# Subtest: skill branch: competing identical confirmations create only one immutable branch
+ok 265 - skill branch: competing identical confirmations create only one immutable branch
+  ---
+  duration_ms: 101.9917
+  type: 'test'
+  ...
+# Subtest: skill versions: strict schemas require reviewed consent and deny type/tool/source injection
+ok 266 - skill versions: strict schemas require reviewed consent and deny type/tool/source injection
+  ---
+  duration_ms: 79.414
+  type: 'test'
+  ...
+# Subtest: skill versions: preview is local and read-only, shows exact before and proposed revision
+ok 267 - skill versions: preview is local and read-only, shows exact before and proposed revision
+  ---
+  duration_ms: 69.5945
+  type: 'test'
+  ...
+# Subtest: skill versions: immutable v2 becomes library head while exact legacy root stays readable
+ok 268 - skill versions: immutable v2 becomes library head while exact legacy root stays readable
+  ---
+  duration_ms: 72.6062
+  type: 'test'
+  ...
+# Subtest: skill versions: process questions, rules and ordered text steps revised, source provenance preserved
+ok 269 - skill versions: process questions, rules and ordered text steps revised, source provenance preserved
+  ---
+  duration_ms: 67.597
+  type: 'test'
+  ...
+# Subtest: skill versions: ordinary/process kinds cannot change; empty and no-op revisions rejected
+ok 270 - skill versions: ordinary/process kinds cannot change; empty and no-op revisions rejected
+  ---
+  duration_ms: 102.8502
+  type: 'test'
+  ...
+# Subtest: skill versions: restore copies old content as v3 without deleting v1/v2 or changing provenance
+ok 271 - skill versions: restore copies old content as v3 without deleting v1/v2 or changing provenance
+  ---
+  duration_ms: 204.7519
+  type: 'test'
+  ...
+# Subtest: skill versions: existing dialogue and workflow pin exact old skill, inputs and hash after edit/restore
+ok 272 - skill versions: existing dialogue and workflow pin exact old skill, inputs and hash after edit/restore
+  ---
+  duration_ms: 278.4617
+  type: 'test'
+  ...
+# Subtest: skill versions: new dialogue uses explicitly selected new revision; old ID remains an exact choice
+ok 273 - skill versions: new dialogue uses explicitly selected new revision; old ID remains an exact choice
+  ---
+  duration_ms: 176.9712
+  type: 'test'
+  ...
+# Subtest: skill versions: stale head, replay and concurrent confirmations publish only one successor
+ok 274 - skill versions: stale head, replay and concurrent confirmations publish only one successor
+  ---
+  duration_ms: 280.7067
+  type: 'test'
+  ...
+# Subtest: skill versions: changed reason, body or restoration target invalidates exact preview hash
+ok 275 - skill versions: changed reason, body or restoration target invalidates exact preview hash
+  ---
+  duration_ms: 205.6725
+  type: 'test'
+  ...
+# Subtest: skill versions: restore refuses other family, current version and identical-content operation
+ok 276 - skill versions: restore refuses other family, current version and identical-content operation
+  ---
+  duration_ms: 522.9087
+  type: 'test'
+  ...
+# Subtest: skill versions: 20 full immutable revisions retained; next update blocked without truncation
+ok 277 - skill versions: 20 full immutable revisions retained; next update blocked without truncation
+  ---
+  duration_ms: 3859.5358
+  type: 'test'
+  ...
+# Subtest: skill versions: broken parent/gap/restoration provenance fails closed without repairing bytes
+ok 278 - skill versions: broken parent/gap/restoration provenance fails closed without repairing bytes
+  ---
+  duration_ms: 594.9678
+  type: 'test'
+  ...
+# Subtest: skill versions: symlink and hardlink records denied; original snapshot remains unchanged
+ok 279 - skill versions: symlink and hardlink records denied; original snapshot remains unchanged
+  ---
+  duration_ms: 145.6731
+  type: 'test'
+  ...
+# Subtest: skill versions: cancellation and failed immutable publication leave no partial head or temp file
+ok 280 - skill versions: cancellation and failed immutable publication leave no partial head or temp file
+  ---
+  duration_ms: 393.4782
+  type: 'test'
+  ...
+# Subtest: skill versions: ordinary name uniqueness sees revisions as same reserved family, never overwrites
+ok 281 - skill versions: ordinary name uniqueness sees revisions as same reserved family, never overwrites
+  ---
+  duration_ms: 460.5732
+  type: 'test'
+  ...
+# Subtest: skill versions: unrelated malformed record blocks new publications but pinned dialogue stays readable
+ok 282 - skill versions: unrelated malformed record blocks new publications but pinned dialogue stays readable
+  ---
+  duration_ms: 288.0314
+  type: 'test'
+  ...
+# Subtest: skill versions: compiled limits and duplicate intake questions reject without truncation
+ok 283 - skill versions: compiled limits and duplicate intake questions reject without truncation
+  ---
+  duration_ms: 164.3623
+  type: 'test'
+  ...
+# Subtest: skill versions: same attempted publication ID across families creates one node, no corrupt second chain
+ok 284 - skill versions: same attempted publication ID across families creates one node, no corrupt second chain
+  ---
+  duration_ms: 823.2955
+  type: 'test'
+  ...
+# Subtest: skill rename: new immutable name, exact pinned dialogue and old bytes survive
+ok 285 - skill rename: new immutable name, exact pinned dialogue and old bytes survive
+  ---
+  duration_ms: 629.1296
+  type: 'test'
+  ...
+# Subtest: skill rename: restoring old snapshot restores its name and later names stay reserved
+ok 286 - skill rename: restoring old snapshot restores its name and later names stay reserved
+  ---
+  duration_ms: 899.0375
+  type: 'test'
+  ...
+# Subtest: skill rename: every historical name stays reserved across families and normalization
+ok 287 - skill rename: every historical name stays reserved across families and normalization
+  ---
+  duration_ms: 776.8275
+  type: 'test'
+  ...
+# Subtest: skill rename: name change after preview and competing claims fail closed
+ok 288 - skill rename: name change after preview and competing claims fail closed
+  ---
+  duration_ms: 1070.8019
+  type: 'test'
+  ...
+# Subtest: skill rename: invalid name and unchanged name cannot create a revision
+ok 289 - skill rename: invalid name and unchanged name cannot create a revision
+  ---
+  duration_ms: 247.1594
+  type: 'test'
+  ...
+# Subtest: sources: local preview canonicalizes only video URLs, never requests network
+ok 290 - sources: local preview canonicalizes only video URLs, never requests network
+  ---
+  duration_ms: 48.013
+  type: 'test'
+  ...
+# Subtest: sources: strict approvals, bounds and extra controls
+ok 291 - sources: strict approvals, bounds and extra controls
+  ---
+  duration_ms: 2.0008
+  type: 'test'
+  ...
+# Subtest: sources: stale preview cannot reserve; double reservation allows one and never fetches
+ok 292 - sources: stale preview cannot reserve; double reservation allows one and never fetches
+  ---
+  duration_ms: 38.893
+  type: 'test'
+  ...
+# Subtest: sources: one page, correct top-level IDs, canonical URL, immutable context, no AI
+ok 293 - sources: one page, correct top-level IDs, canonical URL, immutable context, no AI
+  ---
+  duration_ms: 74.8909
+  type: 'test'
+  ...
+# Subtest: sources: disabled comments are explicit missing data, not fabricated empty demand
+ok 294 - sources: disabled comments are explicit missing data, not fabricated empty demand
+  ---
+  duration_ms: 40.6062
+  type: 'test'
+  ...
+# Subtest: sources: empty page is distinguished from unavailable comments
+ok 295 - sources: empty page is distinguished from unavailable comments
+  ---
+  duration_ms: 41.4149
+  type: 'test'
+  ...
+# Subtest: sources: missing or mismatched video creates no new snapshot
+ok 296 - sources: missing or mismatched video creates no new snapshot
+  ---
+  duration_ms: 55.6309
+  type: 'test'
+  ...
+# Subtest: sources: comments are bounded, clipping disclosed, top 50 does not paginate
+ok 297 - sources: comments are bounded, clipping disclosed, top 50 does not paginate
+  ---
+  duration_ms: 37.3542
+  type: 'test'
+  ...
+# Subtest: sources: transcript optional, no silent translation and unavailable is explicit
+ok 298 - sources: transcript optional, no silent translation and unavailable is explicit
+  ---
+  duration_ms: 52.8962
+  type: 'test'
+  ...
+# Subtest: sources: obtained automatic captions have provenance and explicit text clipping
+ok 299 - sources: obtained automatic captions have provenance and explicit text clipping
+  ---
+  duration_ms: 32.8077
+  type: 'test'
+  ...
+# Subtest: sources: five distinct sources allowed, duplicate and sixth rejected locally
+ok 300 - sources: five distinct sources allowed, duplicate and sixth rejected locally
+  ---
+  duration_ms: 162.4658
+  type: 'test'
+  ...
+# Subtest: sources: cancellation before acquisition never fetches or publishes
+ok 301 - sources: cancellation before acquisition never fetches or publishes
+  ---
+  duration_ms: 12.5671
+  type: 'test'
+  ...
+# Subtest: sources: exact citation accepted, wrong source/comment/quote rejected
+ok 302 - sources: exact citation accepted, wrong source/comment/quote rejected
+  ---
+  duration_ms: 30.332
+  type: 'test'
+  ...
+# Subtest: sources: full AI path rejects fabricated evidence without repair; valid idea carries into author and native project
+ok 303 - sources: full AI path rejects fabricated evidence without repair; valid idea carries into author and native project
+  ---
+  duration_ms: 129.5028
+  type: 'test'
+  ...
+# Subtest: sources: schema rejects foreign persisted URL, local HTTP preview needs no network, fake confirmation blocked
+ok 304 - sources: schema rejects foreign persisted URL, local HTTP preview needs no network, fake confirmation blocked
+  ---
+  duration_ms: 52.0518
+  type: 'test'
+  ...
+# Subtest: source branch: preview, consent, immutable preservation, no network and replay
+ok 305 - source branch: preview, consent, immutable preservation, no network and replay
+  ---
+  duration_ms: 50.6886
+  type: 'test'
+  ...
+# Subtest: source branch: rejects wrong IDs, duplicates, extra fields and referenced evidence
+ok 306 - source branch: rejects wrong IDs, duplicates, extra fields and referenced evidence
+  ---
+  duration_ms: 37.6783
+  type: 'test'
+  ...
+# Subtest: assistant records: oversized UTF-8 publication fails rather than making an unreadable branch
+ok 307 - assistant records: oversized UTF-8 publication fails rather than making an unreadable branch
+  ---
+  duration_ms: 83.803
+  type: 'test'
+  ...
+# Subtest: scoped audience ideas: preview validates selected IDs, task and consent hash without network
+ok 308 - scoped audience ideas: preview validates selected IDs, task and consent hash without network
+  ---
+  duration_ms: 48.4965
+  type: 'test'
+  ...
+# Subtest: scoped audience ideas: reject exact quote from unselected source without retry and persist accepted scope
+ok 309 - scoped audience ideas: reject exact quote from unselected source without retry and persist accepted scope
+  ---
+  duration_ms: 200.7383
+  type: 'test'
+  ...
+# Subtest: scoped audience ideas: ambiguous source or comment rejected before provider
+ok 310 - scoped audience ideas: ambiguous source or comment rejected before provider
+  ---
+  duration_ms: 33.3463
+  type: 'test'
+  ...
+# Subtest: storyboard source: exact older text and hash; no write or network
+ok 311 - storyboard source: exact older text and hash; no write or network
+  ---
+  duration_ms: 29.9069
+  type: 'test'
+  ...
+# Subtest: storyboard source: project or source change invalidates preview hash
+ok 312 - storyboard source: project or source change invalidates preview hash
+  ---
+  duration_ms: 27.2964
+  type: 'test'
+  ...
+# Subtest: storyboard source: rejects missing, foreign, non-script and duplicate IDs
+ok 313 - storyboard source: rejects missing, foreign, non-script and duplicate IDs
+  ---
+  duration_ms: 45.1934
+  type: 'test'
+  ...
+# Subtest: storyboard source: exact limits, no truncation
+ok 314 - storyboard source: exact limits, no truncation
+  ---
+  duration_ms: 106.9526
+  type: 'test'
+  ...
+# Subtest: storyboard source: legacy string script works and unsafe requests fail
+ok 315 - storyboard source: legacy string script works and unsafe requests fail
+  ---
+  duration_ms: 15.233
+  type: 'test'
+  ...
+# Subtest: storyboard source: corrupted and linked project rejected without modification
+ok 316 - storyboard source: corrupted and linked project rejected without modification
+  ---
+  duration_ms: 42.7141
+  type: 'test'
+  ...
+# Subtest: storyboard context: exact selected positions and prompt data, no silent extras or mutation
+ok 317 - storyboard context: exact selected positions and prompt data, no silent extras or mutation
+  ---
+  duration_ms: 30.4609
+  type: 'test'
+  ...
+# Subtest: storyboard context: source audio and exact ordering reflected without invented content
+ok 318 - storyboard context: source audio and exact ordering reflected without invented content
+  ---
+  duration_ms: 17.497
+  type: 'test'
+  ...
+# Subtest: storyboard context: list metadata is read-only, no automatic latest choice
+ok 319 - storyboard context: list metadata is read-only, no automatic latest choice
+  ---
+  duration_ms: 20.813
+  type: 'test'
+  ...
+# Subtest: storyboard context: project change changes review hash without changing copied text
+ok 320 - storyboard context: project change changes review hash without changing copied text
+  ---
+  duration_ms: 24.3106
+  type: 'test'
+  ...
+# Subtest: storyboard context: invalid ranges, type coercion and unknown fields refused
+ok 321 - storyboard context: invalid ranges, type coercion and unknown fields refused
+  ---
+  duration_ms: 23.9357
+  type: 'test'
+  ...
+# Subtest: storyboard context: empty/missing list and malformed selected fields fail closed
+ok 322 - storyboard context: empty/missing list and malformed selected fields fail closed
+  ---
+  duration_ms: 75.1349
+  type: 'test'
+  ...
+# Subtest: storyboard context: oversize text and JSON escaping never truncated
+ok 323 - storyboard context: oversize text and JSON escaping never truncated
+  ---
+  duration_ms: 27.5506
+  type: 'test'
+  ...
+# Subtest: storyboard context: missing, foreign, wrong kind and duplicate IDs rejected
+ok 324 - storyboard context: missing, foreign, wrong kind and duplicate IDs rejected
+  ---
+  duration_ms: 44.2668
+  type: 'test'
+  ...
+# Subtest: storyboard context: corrupt or symlink project rejected without writes
+ok 325 - storyboard context: corrupt or symlink project rejected without writes
+  ---
+  duration_ms: 31.3933
+  type: 'test'
+  ...
+# Subtest: storyboard context: accepted document round-trips exact data in new conversation, no AI
+ok 326 - storyboard context: accepted document round-trips exact data in new conversation, no AI
+  ---
+  duration_ms: 23.1751
+  type: 'test'
+  ...
+# Subtest: text excerpt preserves CRLF, blank lines, Unicode and selected line terminator
+ok 327 - text excerpt preserves CRLF, blank lines, Unicode and selected line terminator
+  ---
+  duration_ms: 1.1617
+  type: 'test'
+  ...
+# Subtest: text excerpt rejects invalid range, names, empty selection and excess lines
+ok 328 - text excerpt rejects invalid range, names, empty selection and excess lines
+  ---
+  duration_ms: 2.6684
+  type: 'test'
+  ...
+# Subtest: text excerpt never truncates and counts formatting in limit
+ok 329 - text excerpt never truncates and counts formatting in limit
+  ---
+  duration_ms: 0.7981
+  type: 'test'
+  ...
+# Subtest: text excerpt escapes source metadata and can represent a complete file honestly
+ok 330 - text excerpt escapes source metadata and can represent a complete file honestly
+  ---
+  duration_ms: 0.2978
+  type: 'test'
+  ...
+# Subtest: voice preparation: exact explicitly chosen older script, complete raw and cleaned text; no network
+ok 331 - voice preparation: exact explicitly chosen older script, complete raw and cleaned text; no network
+  ---
+  duration_ms: 46.092
+  type: 'test'
+  ...
+# Subtest: voice preparation: preserves previous scripts, unknown fields, provenance and exact snapshot
+ok 332 - voice preparation: preserves previous scripts, unknown fields, provenance and exact snapshot
+  ---
+  duration_ms: 24.7005
+  type: 'test'
+  ...
+# Subtest: voice preparation: confirmation receipt is idempotent after lost response
+ok 333 - voice preparation: confirmation receipt is idempotent after lost response
+  ---
+  duration_ms: 23.5803
+  type: 'test'
+  ...
+# Subtest: voice preparation: concurrent duplicate confirmations add one note
+ok 334 - voice preparation: concurrent duplicate confirmations add one note
+  ---
+  duration_ms: 34.4905
+  type: 'test'
+  ...
+# Subtest: voice preparation: title/voice/language/speed changes invalidate preview
+ok 335 - voice preparation: title/voice/language/speed changes invalidate preview
+  ---
+  duration_ms: 116.418
+  type: 'test'
+  ...
+# Subtest: voice preparation: project change invalidates preview, source text is not silently refreshed
+ok 336 - voice preparation: project change invalidates preview, source text is not silently refreshed
+  ---
+  duration_ms: 28.1643
+  type: 'test'
+  ...
+# Subtest: voice preparation: replaced text invalidates preview
+ok 337 - voice preparation: replaced text invalidates preview
+  ---
+  duration_ms: 16.383
+  type: 'test'
+  ...
+# Subtest: voice preparation: missing and cross-project source fail instead of choosing latest
+ok 338 - voice preparation: missing and cross-project source fail instead of choosing latest
+  ---
+  duration_ms: 28.1634
+  type: 'test'
+  ...
+# Subtest: voice preparation: duplicate source IDs are ambiguous and rejected
+ok 339 - voice preparation: duplicate source IDs are ambiguous and rejected
+  ---
+  duration_ms: 14.8988
+  type: 'test'
+  ...
+# Subtest: voice preparation: non-script source is rejected
+ok 340 - voice preparation: non-script source is rejected
+  ---
+  duration_ms: 20.6372
+  type: 'test'
+  ...
+# Subtest: voice preparation: empty, fully removed, nonstring and oversized script are rejected
+ok 341 - voice preparation: empty, fully removed, nonstring and oversized script are rejected
+  ---
+  duration_ms: 56.4948
+  type: 'test'
+  ...
+# Subtest: voice preparation: long text is neither truncated nor sent; all chunks follow selected model limit
+ok 342 - voice preparation: long text is neither truncated nor sent; all chunks follow selected model limit
+  ---
+  duration_ms: 44.9958
+  type: 'test'
+  ...
+# Subtest: voice preparation: strict schema requires exact model, language, explicit confirmation; no arbitrary text/provider injection
+ok 343 - voice preparation: strict schema requires exact model, language, explicit confirmation; no arbitrary text/provider injection
+  ---
+  duration_ms: 46.7476
+  type: 'test'
+  ...
+# Subtest: voice preparation: string script legacy format supported
+ok 344 - voice preparation: string script legacy format supported
+  ---
+  duration_ms: 15.2681
+  type: 'test'
+  ...
+# Subtest: voice preparation: wrong preview hash cannot save
+ok 345 - voice preparation: wrong preview hash cannot save
+  ---
+  duration_ms: 15.37
+  type: 'test'
+  ...
+# Subtest: voice preparation: cancelled save leaves project unchanged and no temp files
+ok 346 - voice preparation: cancelled save leaves project unchanged and no temp files
+  ---
+  duration_ms: 14.3022
+  type: 'test'
+  ...
+# Subtest: voice preparation: corrupted project never becomes empty or overwritten
+ok 347 - voice preparation: corrupted project never becomes empty or overwritten
+  ---
+  duration_ms: 13.8022
+  type: 'test'
+  ...
+# Subtest: voice preparation: source file symlink is not followed
+ok 348 - voice preparation: source file symlink is not followed
+  ---
+  duration_ms: 18.1741
+  type: 'test'
+  ...
+# Subtest: voice preparation: project identity mismatch is rejected
+ok 349 - voice preparation: project identity mismatch is rejected
+  ---
+  duration_ms: 15.6096
+  type: 'test'
+  ...
+# Subtest: voice assembly: incomplete and unknown parts never trigger TTS or partial assembly
+ok 350 - voice assembly: incomplete and unknown parts never trigger TTS or partial assembly
+  ---
+  duration_ms: 57.1963
+  type: 'test'
+  ...
+# Subtest: voice assembly: strict schemas reject arbitrary URLs, files, order, text and false consent
+ok 351 - voice assembly: strict schemas reject arbitrary URLs, files, order, text and false consent
+  ---
+  duration_ms: 0.928
+  type: 'test'
+  ...
+# Subtest: voice assembly: ordered local concat decodes, duration matches, source bytes remain, no AI or automatic attachment
+ok 352 - voice assembly: ordered local concat decodes, duration matches, source bytes remain, no AI or automatic attachment
+  ---
+  duration_ms: 492.3784
+  type: 'test'
+  ...
+# Subtest: voice assembly: single part also produces a valid independent file without generating speech
+ok 353 - voice assembly: single part also produces a valid independent file without generating speech
+  ---
+  duration_ms: 178.4337
+  type: 'test'
+  ...
+# Subtest: voice assembly: repeated and concurrent confirmations reuse same immutable file and receipt
+ok 354 - voice assembly: repeated and concurrent confirmations reuse same immutable file and receipt
+  ---
+  duration_ms: 343.3735
+  type: 'test'
+  ...
+# Subtest: voice assembly: changed project invalidates unsent preview, fresh preview works locally
+ok 355 - voice assembly: changed project invalidates unsent preview, fresh preview works locally
+  ---
+  duration_ms: 282.7491
+  type: 'test'
+  ...
+# Subtest: voice assembly: attachment separately confirmed, old materials kept, approximate segments and source ID pinned
+ok 356 - voice assembly: attachment separately confirmed, old materials kept, approximate segments and source ID pinned
+  ---
+  duration_ms: 304.219
+  type: 'test'
+  ...
+# Subtest: voice assembly: stale attachment stops, repreview never reruns FFmpeg or TTS
+ok 357 - voice assembly: stale attachment stops, repreview never reruns FFmpeg or TTS
+  ---
+  duration_ms: 347.096
+  type: 'test'
+  ...
+# Subtest: voice assembly: missing receipt recovers already complete file without changing MP3 or calling provider
+ok 358 - voice assembly: missing receipt recovers already complete file without changing MP3 or calling provider
+  ---
+  duration_ms: 281.2636
+  type: 'test'
+  ...
+# Subtest: voice assembly: cancellation before local work leaves original parts intact and retry remains local
+ok 359 - voice assembly: cancellation before local work leaves original parts intact and retry remains local
+  ---
+  duration_ms: 418.6281
+  type: 'test'
+  ...
+# Subtest: voice assembly: cancelled at progress point never runs synthesis or publishes result
+ok 360 - voice assembly: cancelled at progress point never runs synthesis or publishes result
+  ---
+  duration_ms: 184.6008
+  type: 'test'
+  ...
+# Subtest: voice assembly: tampered source audio and final file fail closed without regeneration
+ok 361 - voice assembly: tampered source audio and final file fail closed without regeneration
+  ---
+  duration_ms: 453.5138
+  type: 'test'
+  ...
