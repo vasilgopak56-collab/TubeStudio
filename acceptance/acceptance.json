@@ -1,0 +1,663 @@
+{
+  "zip": "TubeStudio-1.1.1-windows.zip",
+  "base": "C:\\Users\\runneradmin\\Desktop\\Программы\\TubeStudio",
+  "passed": 131,
+  "failed": 0,
+  "results": [
+    {
+      "name": "Старая версия собрана",
+      "ok": true,
+      "detail": "C:\\Users\\runneradmin\\Desktop\\Программы\\TubeStudio"
+    },
+    {
+      "name": "Старый сервер отвечает на 8787",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Вход в старую версию по паролю",
+      "ok": true,
+      "detail": "{\"ok\":true,\"data\":{\"authed\":true}}"
+    },
+    {
+      "name": "В старой версии сохранены настройки",
+      "ok": true,
+      "detail": "{\"ok\":true,\"data\":{\"research\":{\"region\":\"\",\"language\":\"\",\"pages\":1,\"order\":\"relevance\",\"outlierBase\":\"median\",\"baseVideos\":30,\"viral\":{\"outlierMin\":20,\"rules\":[{\"maxAgeDays\":90,\"vphMin\":100},{\"maxAgeDays\":365,\"vphMin\":50},{\"maxAgeDays\":0,\"vphMin\":20}]},\"presets\":[{\"id\":\"viral\",\"name\":\"Вирусный потен"
+    },
+    {
+      "name": "В старой версии создан проект",
+      "ok": true,
+      "detail": "{\"ok\":true,\"data\":{\"id\":\"262461de-0643-4346-9d5f-4215ef6c88ec\",\"title\":\"Проверка переноса — канал «Психология»\",\"createdAt\":\"2026-11-05T14:32:32.925Z\",\"updatedAt\":\"2026-11-05T14:32:32.925Z\",\"artifacts\":[]}}"
+    },
+    {
+      "name": "Проект старой версии лежит в apps\\server\\data",
+      "ok": true,
+      "detail": "C:\\Users\\runneradmin\\Desktop\\Программы\\TubeStudio\\apps\\server\\data\\projects\\262461de-0643-4346-9d5f-4215ef6c88ec.json"
+    },
+    {
+      "name": "Старая версия записала канал остановки",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Запущена посторонняя программа (ping.exe)",
+      "ok": true,
+      "detail": "2140"
+    },
+    {
+      "name": "Служебные файлы с чужим и со свободным номером процесса лежат рядом с настоящим",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Архив распакован стандартными средствами Windows",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "В пакете есть Запустить TubeStudio.cmd",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "В пакете есть Остановить TubeStudio.cmd",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "В пакете есть ПРОЧТИ-МЕНЯ.txt",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "В пакете есть runtime\\node.exe",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "В пакете есть app\\launcher\\launcher.mjs",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "В пакете есть app\\apps\\server\\dist\\index.js",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "В пакете есть app\\apps\\web\\dist\\index.html",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "В пакете есть app\\windows\\start-hidden.ps1",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "ПРОЧТИ-МЕНЯ.txt в UTF-8 с BOM и CRLF",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Размер архива разумный (56.4 МБ)",
+      "ok": true,
+      "detail": "56.382283210754395"
+    },
+    {
+      "name": "Node.js недоступен в окружении пользователя",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Запуск завершился успешно",
+      "ok": true,
+      "detail": "TubeStudio 1.1.1. Данные: C:\\Users\\runneradmin\\Desktop\\Программы\\TubeStudio\\TubeStudioData\nОстанавливаю TubeStudio 0.12.148-preview.1 (старая версия)…\nСтарая версия остановлена.\nПереношу данные из старой версии: C:\\Users\\runneradmin\\Desktop\\Программы\\TubeStudio\\apps\\server\\data\nПеренесено файлов: 3 (0.0 МБ). Старая папка не изменена.\nЗапускаю сервер на http://127.0.0.1:8787 …\nЯрлык TubeStudio на рабочем столе обновлён.\nLINK http://127.0.0.1:8787/?launch=8b4ff647e92fb658226a29ac819679aa4943b6a851c8c967edefce943489bdc6\nГотово: TubeStudio открыта в браузере. Закрыть программу — кнопка «Выход» в меню.\n\r\nОкно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.\r\n"
+    },
+    {
+      "name": "Лаунчер напечатал ссылку входа",
+      "ok": true,
+      "detail": "TubeStudio 1.1.1. Данные: C:\\Users\\runneradmin\\Desktop\\Программы\\TubeStudio\\TubeStudioData\nОстанавливаю TubeStudio 0.12.148-preview.1 (старая версия)…\nСтарая версия остановлена.\nПереношу данные из старой версии: C:\\Users\\runneradmin\\Desktop\\Программы\\TubeStudio\\apps\\server\\data\nПеренесено файлов: 3 (0.0 МБ). Старая папка не изменена.\nЗапускаю сервер на http://127.0.0.1:8787 …\nЯрлык TubeStudio на рабочем столе обновлён.\nLINK http://127.0.0.1:8787/?launch=8b4ff647e92fb658226a29ac819679aa4943b6a851c8c967edefce943489bdc6\nГотово: TubeStudio открыта в браузере. Закрыть программу — кнопка «Выход» в меню.\n\r\nОкно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.\r\n"
+    },
+    {
+      "name": "Старая версия остановлена мягко",
+      "ok": true,
+      "detail": "TubeStudio 1.1.1. Данные: C:\\Users\\runneradmin\\Desktop\\Программы\\TubeStudio\\TubeStudioData\nОстанавливаю TubeStudio 0.12.148-preview.1 (старая версия)…\nСтарая версия остановлена.\nПереношу данные из старой версии: C:\\Users\\runneradmin\\Desktop\\Программы\\TubeStudio\\apps\\server\\data\nПеренесено файлов: 3 (0.0 МБ). Старая папка не изменена.\nЗапускаю сервер на http://127.0.0.1:8787 …\nЯрлык TubeStudio на рабочем столе обновлён.\nLINK http://127.0.0.1:8787/?launch=8b4ff647e92fb658226a29ac819679aa4943b6a851c8c967edefce943489bdc6\nГотово: TubeStudio открыта в браузере. Закрыть программу — кнопка «Выход» в меню.\n\r\nОкно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.\r\n"
+    },
+    {
+      "name": "Сообщение о переносе данных",
+      "ok": true,
+      "detail": "TubeStudio 1.1.1. Данные: C:\\Users\\runneradmin\\Desktop\\Программы\\TubeStudio\\TubeStudioData\nОстанавливаю TubeStudio 0.12.148-preview.1 (старая версия)…\nСтарая версия остановлена.\nПереношу данные из старой версии: C:\\Users\\runneradmin\\Desktop\\Программы\\TubeStudio\\apps\\server\\data\nПеренесено файлов: 3 (0.0 МБ). Старая папка не изменена.\nЗапускаю сервер на http://127.0.0.1:8787 …\nЯрлык TubeStudio на рабочем столе обновлён.\nLINK http://127.0.0.1:8787/?launch=8b4ff647e92fb658226a29ac819679aa4943b6a851c8c967edefce943489bdc6\nГотово: TubeStudio открыта в браузере. Закрыть программу — кнопка «Выход» в меню.\n\r\nОкно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.\r\n"
+    },
+    {
+      "name": "migration.json создан",
+      "ok": true,
+      "detail": "C:\\Users\\runneradmin\\Desktop\\Программы\\TubeStudio\\TubeStudioData"
+    },
+    {
+      "name": "Источник переноса — apps\\server\\data старой версии",
+      "ok": true,
+      "detail": "C:\\Users\\runneradmin\\Desktop\\Программы\\TubeStudio\\apps\\server\\data"
+    },
+    {
+      "name": "Версия источника записана",
+      "ok": true,
+      "detail": "0.12.148-preview.1"
+    },
+    {
+      "name": "Ключи из .env импортированы",
+      "ok": true,
+      "detail": "{\"schema\":1,\"from\":\"C:\\\\Users\\\\runneradmin\\\\Desktop\\\\Программы\\\\TubeStudio\\\\apps\\\\server\\\\data\",\"fromVersion\":\"0.12.148-preview.1\",\"legacyEnv\":\"C:\\\\Users\\\\runneradmin\\\\Desktop\\\\Программы\\\\TubeStudio\\\\.env\",\"envImported\":true,\"copiedAt\":\"2026-11-05T14:32:42.846Z\",\"files\":3,\"bytes\":5281,\"originalKept\":true,\"importedNames\":[\"ANYMODEL_API_KEY\",\"YOUTUBE_API_KEY\"],\"envImportedAt\":\"2026-11-05T14:32:44.387Z\"}"
+    },
+    {
+      "name": "Пароль старой версии не перенесён",
+      "ok": true,
+      "detail": "[\"ANYMODEL_API_KEY\",\"YOUTUBE_API_KEY\"]"
+    },
+    {
+      "name": "Хранилище ключей создано",
+      "ok": true,
+      "detail": "C:\\Users\\runneradmin\\Desktop\\Программы\\TubeStudio\\TubeStudioData\\secrets\\keys.json"
+    },
+    {
+      "name": "Ключи защищены DPAPI Windows",
+      "ok": true,
+      "detail": "dpapi"
+    },
+    {
+      "name": "Ключей нет открытым текстом нигде в TubeStudioData",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Старые данные не тронуты (проект на месте)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Старый .env не изменён",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Устаревшие служебные файлы старой версии не помешали и не тронуты",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Посторонняя программа с номером из служебного файла не тронута",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Статус лаунчера видит запущенный сервер",
+      "ok": true,
+      "detail": "{\"version\":\"1.1.1\",\"programDir\":\"C:\\\\Users\\\\runneradmin\\\\Desktop\\\\Программы\\\\TubeStudio\\\\TubeStudio-1.1.1\",\"dataDir\":\"C:\\\\Users\\\\runneradmin\\\\Desktop\\\\Программы\\\\TubeStudio\\\\TubeStudioData\",\"running\":{\"version\":\"1.1.1\",\"pid\":4400,\"port\":8787}}"
+    },
+    {
+      "name": "Без входа: вход требуется",
+      "ok": true,
+      "detail": "{\"ok\":true,\"data\":{\"required\":true,\"authed\":false,\"passwordLogin\":false}}"
+    },
+    {
+      "name": "Без входа: проекты закрыты (401)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Старый пароль больше не открывает программу",
+      "ok": true,
+      "detail": "401 {\"ok\":false,\"error\":{\"code\":\"UNAUTHORIZED\",\"message\":\"Неверный пароль\"}}"
+    },
+    {
+      "name": "Вход по ключу из ссылки",
+      "ok": true,
+      "detail": "200"
+    },
+    {
+      "name": "Ключ из ссылки одноразовый",
+      "ok": true,
+      "detail": "401"
+    },
+    {
+      "name": "Проект старой версии виден в новой",
+      "ok": true,
+      "detail": "{\"ok\":true,\"data\":[{\"id\":\"262461de-0643-4346-9d5f-4215ef6c88ec\",\"title\":\"Проверка переноса — канал «Психология»\",\"createdAt\":\"2026-11-05T14:32:32.925Z\",\"updatedAt\":\"2026-11-05T14:32:32.925Z\",\"counts\":{}}]}"
+    },
+    {
+      "name": "Лимит расходов $20 в месяц, режим «блокировать»",
+      "ok": true,
+      "detail": "{\"monthlyUsd\":20,\"mode\":\"block\",\"warnPct\":80,\"prices\":[{\"match\":\"claude-opus\",\"input\":15,\"output\":75,\"image\":0},{\"match\":\"claude-sonnet\",\"input\":3,\"output\":15,\"image\":0},{\"match\":\"claude-haiku\",\"input\":1,\"output\":5,\"image\":0},{\"match\":\"flash-lite\",\"input\":0.1,\"output\":0.4,\"image\":0},{\"match\":\"flash-image\",\"input\":0,\"output\":0,\"image\":0.04},{\"match\":\"tts\",\"input\":0.5,\"output\":10,\"image\":0},{\"match\":\"flash\",\"input\":0.3,\"output\":2.5,\"image\":0},{\"match\":\"pro\",\"input\":1.25,\"output\":10,\"image\":0},{\"match\":\"gpt-image\",\"input\":0,\"output\":0,\"image\":0.07},{\"match\":\"imagen\",\"input\":0,\"output\":0,\"image\":0.04}]}"
+    },
+    {
+      "name": "Сервер подтверждает защиту ключей Windows",
+      "ok": true,
+      "detail": "{\"protection\":\"dpapi\",\"protectedByWindows\":true,\"names\":[\"ANYMODEL_API_KEY\",\"TUBESTUDIO_INSTALL_SECRET\",\"YOUTUBE_API_KEY\"]}"
+    },
+    {
+      "name": "Ключи YouTube и AnyModel подключены в программе",
+      "ok": true,
+      "detail": "[\"anymodel\",\"youtube\"]"
+    },
+    {
+      "name": "Ярлык TubeStudio на рабочем столе создан",
+      "ok": true,
+      "detail": "{\"target\":\"C:\\\\Windows\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\",\"args\":\"-NoLogo -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File \\\"C:\\\\Users\\\\runneradmin\\\\Desktop\\\\Программы\\\\TubeStudio\\\\TubeStudio-1.1.1\\\\app\\\\windows\\\\start-hidden.ps1\\\"\",\"wd\":\"C:\\\\Users\\\\runneradmin\\\\Desktop\\\\Программы\\\\TubeStudio\\\\TubeStudio-1.1.1\",\"icon\":\"C:\\\\Users\\\\runneradmin\\\\Desktop\\\\Программы\\\\TubeStudio\\\\TubeStudio-1.1.1\\\\app\\\\windows\\\\tubestudio.ico,0\",\"show\":7}"
+    },
+    {
+      "name": "Путь в ярлыке с кириллицей без искажений",
+      "ok": true,
+      "detail": "{\"target\":\"C:\\\\Windows\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\",\"args\":\"-NoLogo -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File \\\"C:\\\\Users\\\\runneradmin\\\\Desktop\\\\Программы\\\\TubeStudio\\\\TubeStudio-1.1.1\\\\app\\\\windows\\\\start-hidden.ps1\\\"\",\"wd\":\"C:\\\\Users\\\\runneradmin\\\\Desktop\\\\Программы\\\\TubeStudio\\\\TubeStudio-1.1.1\",\"icon\":\"C:\\\\Users\\\\runneradmin\\\\Desktop\\\\Программы\\\\TubeStudio\\\\TubeStudio-1.1.1\\\\app\\\\windows\\\\tubestudio.ico,0\",\"show\":7}"
+    },
+    {
+      "name": "У ярлыка есть значок",
+      "ok": true,
+      "detail": "C:\\Users\\runneradmin\\Desktop\\Программы\\TubeStudio\\TubeStudio-1.1.1\\app\\windows\\tubestudio.ico,0"
+    },
+    {
+      "name": "Журнал лаунчера ведётся",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Ярлык открыл ссылку",
+      "ok": true,
+      "detail": "TubeStudio 1.1.1. Данные: C:\\Users\\runneradmin\\Desktop\\Программы\\TubeStudio\\TubeStudioData\nTubeStudio уже запущена — открываю браузер.\nLINK http://127.0.0.1:8787/?launch=8295817fcc7e48dc3a4ab22293e2398a34de153abc0b60e2824ee7a9e8327b43\n"
+    },
+    {
+      "name": "Второй сервер не запущен (тот же порт и процесс)",
+      "ok": true,
+      "detail": "{\"version\":\"1.1.1\",\"programDir\":\"C:\\\\Users\\\\runneradmin\\\\Desktop\\\\Программы\\\\TubeStudio\\\\TubeStudio-1.1.1\",\"dataDir\":\"C:\\\\Users\\\\runneradmin\\\\Desktop\\\\Программы\\\\TubeStudio\\\\TubeStudioData\",\"running\":{\"version\":\"1.1.1\",\"pid\":4400,\"port\":8787}}"
+    },
+    {
+      "name": "Новая ссылка даёт вход",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Только один канал управления",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Выход принят",
+      "ok": true,
+      "detail": "{\"ok\":true,\"data\":{\"stopping\":true}}"
+    },
+    {
+      "name": "Процесс сервера завершился",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Блокировка данных снята",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Канал управления закрыт",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Windows открыл ярлык",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Ярлык запустил программу",
+      "ok": true,
+      "detail": "{\"version\":\"1.1.1\",\"programDir\":\"C:\\\\Users\\\\runneradmin\\\\Desktop\\\\Программы\\\\TubeStudio\\\\TubeStudio-1.1.1\",\"dataDir\":\"C:\\\\Users\\\\runneradmin\\\\Desktop\\\\Программы\\\\TubeStudio\\\\TubeStudioData\",\"running\":{\"version\":\"1.1.1\",\"pid\":7712,\"port\":8787}}"
+    },
+    {
+      "name": "Остановка прошла",
+      "ok": true,
+      "detail": "Останавливаю TubeStudio 1.1.1 (по запросу)…\nTubeStudio остановлена.\n"
+    },
+    {
+      "name": "Сервер завершился",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Запущена",
+      "ok": true,
+      "detail": "TubeStudio 1.1.1. Данные: C:\\Users\\runneradmin\\Desktop\\Программы\\TubeStudio\\TubeStudioData\nЗапускаю сервер на http://127.0.0.1:8787 …\nЯрлык TubeStudio на рабочем столе обновлён.\nLINK http://127.0.0.1:8787/?launch=f7634b89b4f64698110bacd2c3cb1d27cc057943560d450ebcb7d2ad124cf20d\nГотово: TubeStudio открыта в браузере. Закрыть программу — кнопка «Выход» в меню.\n\r\nОкно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.\r\n"
+    },
+    {
+      "name": "Процесс убит принудительно",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Осталась блокировка от убитого процесса",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Повторный запуск успешен",
+      "ok": true,
+      "detail": "TubeStudio 1.1.1. Данные: C:\\Users\\runneradmin\\Desktop\\Программы\\TubeStudio\\TubeStudioData\nЗапускаю сервер на http://127.0.0.1:8787 …\nЯрлык TubeStudio на рабочем столе обновлён.\nLINK http://127.0.0.1:8787/?launch=1dc72992948d8b589faf3c67929f5e26cef5b52aa2e04d309a3a76d03650360e\nГотово: TubeStudio открыта в браузере. Закрыть программу — кнопка «Выход» в меню.\n\r\nОкно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.\r\n"
+    },
+    {
+      "name": "Старая блокировка отложена в сторону",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Запущена",
+      "ok": true,
+      "detail": "TubeStudio 1.1.1. Данные: C:\\Users\\runneradmin\\Desktop\\Программы\\TubeStudio\\TubeStudioData\nЗапускаю сервер на http://127.0.0.1:8787 …\nЯрлык TubeStudio на рабочем столе обновлён.\nLINK http://127.0.0.1:8787/?launch=3330af7947963c4dab4edb363680b85b72f4607ed1365b5f7dc7187825c9e4e1\nГотово: TubeStudio открыта в браузере. Закрыть программу — кнопка «Выход» в меню.\n\r\nОкно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.\r\n"
+    },
+    {
+      "name": "Процесс убит (как при выключении компьютера)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Осталась блокировка убитого процесса",
+      "ok": true,
+      "detail": "{\"schema\":1,\"id\":\"8fc69453-f740-477c-b66f-201208e4427b\",\"pid\":4968,\"startedAt\":\"2026-11-05T14:33:02.328Z\",\"version\":\"1.1.1\"}"
+    },
+    {
+      "name": "Запуск успешен, хотя номер из блокировки занят другой программой",
+      "ok": true,
+      "detail": "TubeStudio 1.1.1. Данные: C:\\Users\\runneradmin\\Desktop\\Программы\\TubeStudio\\TubeStudioData\nЗапускаю сервер на http://127.0.0.1:8787 …\nЯрлык TubeStudio на рабочем столе обновлён.\nLINK http://127.0.0.1:8787/?launch=5f936ad4a4f17caed4c3b3166b4f99e93743fdbd8169a4aabd7ca1f606b66cd0\nГотово: TubeStudio открыта в браузере. Закрыть программу — кнопка «Выход» в меню.\n\r\nОкно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.\r\n"
+    },
+    {
+      "name": "Старая блокировка отложена в сторону",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Устаревший служебный файл убран",
+      "ok": true,
+      "detail": "[4276]"
+    },
+    {
+      "name": "Посторонняя программа не тронута",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Есть резервная копия settings.json.bak",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Программа запустилась",
+      "ok": true,
+      "detail": "TubeStudio 1.1.1. Данные: C:\\Users\\runneradmin\\Desktop\\Программы\\TubeStudio\\TubeStudioData\nЗапускаю сервер на http://127.0.0.1:8787 …\nЯрлык TubeStudio на рабочем столе обновлён.\nLINK http://127.0.0.1:8787/?launch=e38eb6817ab0c0c7b79ef075e366479e0e725b8ac5f06d392e8da9ee55a17e05\nГотово: TubeStudio открыта в браузере. Закрыть программу — кнопка «Выход» в меню.\n\r\nОкно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.\r\n"
+    },
+    {
+      "name": "Настройки читаются",
+      "ok": true,
+      "detail": "{\"ok\":true,\"data\":{\"research\":{\"region\":\"\",\"language\":\"\",\"pages\":1,\"order\":\"relevance\",\"outlierBase\":\"median\",\"baseVideos\":30,\"viral\":{\"outlierMin\":20,\"rules\":[{\"maxAgeDays\":90,\"vphMin\":100},{\"maxAgeDays\":365,\"vphMin\":50},{\"maxAgeDays\":0,\"vphMin\":20}]},\"presets\":[{\"id\":\"viral\",\"name\":\"Вирусный потен"
+    },
+    {
+      "name": "Повреждённый файл сохранён для разбора",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Новая версия запустилась",
+      "ok": true,
+      "detail": "TubeStudio 9.9.9-test. Данные: C:\\Users\\runneradmin\\Desktop\\Программы\\TubeStudio\\TubeStudioData\nОстанавливаю TubeStudio 1.1.1 (обновление 1.1.1 → 9.9.9-test)…\nЗапускаю сервер на http://127.0.0.1:8787 …\nЯрлык TubeStudio на рабочем столе обновлён.\nLINK http://127.0.0.1:8787/?launch=8577fa689ac55d862fb31e8e2f86a3ab242a611ac2c2ed83d5b5500bb627ec2e\nГотово: TubeStudio открыта в браузере. Закрыть программу — кнопка «Выход» в меню.\n\r\nОкно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.\r\n"
+    },
+    {
+      "name": "Прежняя копия остановлена",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Работает сервер из новой папки",
+      "ok": true,
+      "detail": "[\"C:\\\\Users\\\\runneradmin\\\\Desktop\\\\Программы\\\\TubeStudio\\\\TubeStudio-9.9.9-test\"]"
+    },
+    {
+      "name": "Те же данные после обновления",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Ярлык переключён на новую папку",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Повторный запуск не перезапускает сервер",
+      "ok": true,
+      "detail": "TubeStudio 9.9.9-test. Данные: C:\\Users\\runneradmin\\Desktop\\Программы\\TubeStudio\\TubeStudioData\nTubeStudio уже запущена — открываю браузер.\nLINK http://127.0.0.1:8787/?launch=f1691d6bac1d4c57784ecd7496b3e626e9ad4ca220cc5eb471c019071ad82d6e\nЯрлык TubeStudio на рабочем столе обновлён.\n\r\nОкно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.\r\n"
+    },
+    {
+      "name": "Остановлена",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Программа запущена",
+      "ok": true,
+      "detail": "TubeStudio 1.1.1. Данные: C:\\Users\\runneradmin\\Desktop\\Программы\\TubeStudio\\TubeStudioData\nЗапускаю сервер на http://127.0.0.1:8787 …\nЯрлык TubeStudio на рабочем столе обновлён.\nLINK http://127.0.0.1:8787/?launch=a494691382b2a8fa24fb9d63ff2126d8c7a5cdd284e2928a507f2a23fa8390c9\nГотово: TubeStudio открыта в браузере. Закрыть программу — кнопка «Выход» в меню.\n\r\nОкно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.\r\n"
+    },
+    {
+      "name": "Без ссылки — подсказка открыть ярлыком",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "По ссылке открылась программа",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Ключ убран из адресной строки",
+      "ok": true,
+      "detail": "http://127.0.0.1:8787/"
+    },
+    {
+      "name": "После обновления страницы вход сохраняется",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Экран «TubeStudio закрыта»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Сервер остановлен кнопкой «Выход»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Нет ошибок JavaScript на странице",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Старый .env на месте и не изменён",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Старые данные на месте",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Старая версия не запущена",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Служебные файлы старой версии не тронуты",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Программа запущена",
+      "ok": true,
+      "detail": "TubeStudio 1.1.1. Данные: C:\\Users\\runneradmin\\Desktop\\Программы\\TubeStudio\\TubeStudioData\nЗапускаю сервер на http://127.0.0.1:8787 …\nЯрлык TubeStudio на рабочем столе обновлён.\nLINK http://127.0.0.1:8787/?launch=7c01147dbfb564eb3413e03a92334776f8bf82f85b308dcf54d932cf34b84334\nГотово: TubeStudio открыта в браузере. Закрыть программу — кнопка «Выход» в меню.\n\r\nОкно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.\r\n"
+    },
+    {
+      "name": "Вход по ссылке",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Канал создан",
+      "ok": true,
+      "detail": "{\"ok\":true,\"data\":{\"name\":\"Проверка Студии — Shields\",\"language\":\"en\",\"niche\":\"medieval weapons and armour history\",\"audience\":\"\",\"format\":\"\",\"lengthMin\":10,\"style\":\"\",\"skills\":\"\",\"samples\":[],\"ownChannel\":\"\",\"radar\":{\"seeds\":[],\"maxSubs\":60000,\"minMultiplier\":3,\"minViews\":10000,\"minDurationSec\":240"
+    },
+    {
+      "name": "Канал в списке и активный",
+      "ok": true,
+      "detail": "{\"ok\":true,\"data\":{\"activeId\":\"2c5cf5aa-ee9e-4048-92e2-5d2bf3d18d90\",\"channels\":[{\"name\":\"Проверка Студии — Shields\",\"language\":\"en\",\"niche\":\"medieval weapons and armour history\",\"audience\":\"\",\"format\":\"\",\"lengthMin\":10,\"style\":\"\",\"skills\":\"\",\"samples\":[],\"ownChannel\":\"\",\"radar\":{\"seeds\":[],\"maxSubs"
+    },
+    {
+      "name": "Shields: описательное вступление, оговорки и повтор вывода найдены",
+      "ok": true,
+      "detail": "200 length, hook, opening-descriptive, hedges, double-ending {\"ok\":true,\"data\":{\"language\":\"en\",\"words\":1683,\"paragraphs\":26,\"wpm\":150,\"minutes\":11.2,\"duration\":\"11:13\",\"targetWords\":1500,\"sentences\":{\"count\":162,\"avgWords\":10.4,\"long\":1},\"hedges\":{\"count\":8,\"a"
+    },
+    {
+      "name": "Идеи канала читаются",
+      "ok": true,
+      "detail": "{\"ok\":true,\"data\":{\"ideas\":[],\"counts\":{\"active\":0,\"hidden\":0,\"taken\":0,\"rejected\":0},\"lastRun\":null,\"samples\":[],\"running\":false,\"videos\":0,\"channels\":0}}"
+    },
+    {
+      "name": "Проверка фактов: маршрут отвечает понятными ошибками без платных запросов",
+      "ok": true,
+      "detail": "400 {\"ok\":false,\"error\":{\"code\":\"VALIDATION\",\"message\":\"Проверьте поля: тело — Выберите проект со сценарием или вставьте текст\",\"retryable\":false}} | 404 {\"ok\":false,\"error\":{\"code\":\"NOT_FOUND\",\"message\":\"Проект не найден\",\"retryable\":false}}"
+    },
+    {
+      "name": "Без ключа Lumean — понятная подсказка",
+      "ok": true,
+      "detail": "{\"ok\":false,\"error\":{\"code\":\"KEY_MISSING\",\"message\":\"Нет ключа Lumean. Создайте ключ в кабинете Lumean (раздел API, набор прав «full») и вставьте его в TubeStudio → Настройки → Ключи.\",\"retryable\":false}}"
+    },
+    {
+      "name": "Панель: блок «Студия»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Каналы: карточка канала",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Идеи для канала: кнопка «Найти идеи»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Сценарий: переключатель «Проверка фактов готового текста»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Сценарий: кнопка «Проверить факты — платно» для своего текста",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Сценарий: поле «Свой текст для проверки»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Сценарий: отчёт проверки на странице",
+      "ok": true,
+      "detail": "Проверка вашего текста\nОШИБОК: 4\nПРЕДУПРЕЖДЕНИЙ: 5\n\n1 683 слова · цель ≈ 1 500 слов · ≈ 11:13 при 150 сл/мин · 26 абз. · оговорок 8 из допустимых 5\n\nОшибка: Длина 1683 слов (≈11:13) при цели 1500 (10 мин): +12%\n\nСократите: уберите абзацы, которые повторяют тему или настроение, и лишние оговорки.\n\nОшибка: Хук не цепляет: в первые 15 секунд нет вопроса, противоречия или ставок\n\nНачните с удара: обра"
+    },
+    {
+      "name": "Озвучка: подсказка «Нужен ключ Lumean»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Справка: раздел «Студия»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Нет ошибок JavaScript в разделах Студии",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Остановлена",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "M: запуск успешен, несмотря на блокировку и служебный файл после выключения",
+      "ok": true,
+      "detail": "TubeStudio 1.1.1. Данные: C:\\Users\\runneradmin\\Desktop\\Проверка M\\Программы\\TubeStudio\\TubeStudioData\nПереношу данные из старой версии: C:\\Users\\runneradmin\\Desktop\\Проверка M\\Программы\\TubeStudio\\Версия_33\\TubeStudio-main\\apps\\server\\data\nПеренесено файлов: 3 (0.0 МБ). Старая папка не изменена.\nЗапускаю сервер на http://127.0.0.1:8787 …\nLINK http://127.0.0.1:8787/?launch=acd9de57567f295332b6a3dfd3f378f66fe1ed4196f8f071b3e156e57c6f66d3\nГотово: TubeStudio открыта в браузере. Закрыть программу — кнопка «Выход» в меню.\n\r\nОкно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.\r\n"
+    },
+    {
+      "name": "M: данные в общей папке TubeStudio, а не внутри папки архива",
+      "ok": true,
+      "detail": "C:\\Users\\runneradmin\\Desktop\\Проверка M\\Программы\\TubeStudio\\TubeStudioData"
+    },
+    {
+      "name": "M: перенесено из «Версия_33\\TubeStudio-main\\apps\\server\\data»",
+      "ok": true,
+      "detail": "C:\\Users\\runneradmin\\Desktop\\Проверка M\\Программы\\TubeStudio\\Версия_33\\TubeStudio-main\\apps\\server\\data"
+    },
+    {
+      "name": "M: ключи из .env старой версии импортированы",
+      "ok": true,
+      "detail": "{\"schema\":1,\"from\":\"C:\\\\Users\\\\runneradmin\\\\Desktop\\\\Проверка M\\\\Программы\\\\TubeStudio\\\\Версия_33\\\\TubeStudio-main\\\\apps\\\\server\\\\data\",\"fromVersion\":\"0.12.148-preview.1\",\"legacyEnv\":\"C:\\\\Users\\\\runneradmin\\\\Desktop\\\\Проверка M\\\\Программы\\\\TubeStudio\\\\Версия_33\\\\TubeStudio-main\\\\.env\",\"envImported\":true,\"copiedAt\":\"2026-11-05T14:33:58.822Z\",\"files\":3,\"bytes\":5281,\"originalKept\":true,\"importedNames\":[\"ANYMODEL_API_KEY\",\"YOUTUBE_API_KEY\"],\"envImportedAt\":\"2026-11-05T14:34:00.442Z\"}"
+    },
+    {
+      "name": "M: проект старой версии виден",
+      "ok": true,
+      "detail": "{\"ok\":true,\"data\":[{\"id\":\"262461de-0643-4346-9d5f-4215ef6c88ec\",\"title\":\"Проверка переноса — канал «Психология»\",\"createdAt\":\"2026-11-05T14:32:32.925Z\",\"updatedAt\":\"2026-11-05T14:32:32.925Z\",\"counts\":{}}]}"
+    },
+    {
+      "name": "M: блокировка и служебный файл старой версии не тронуты",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "M: посторонняя программа не тронута",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "M: остановлена",
+      "ok": true,
+      "detail": "Останавливаю TubeStudio 1.1.1 (по запросу)…\nTubeStudio остановлена.\n"
+    },
+    {
+      "name": "M2: запуск успешен",
+      "ok": true,
+      "detail": "TubeStudio 1.1.1. Данные: C:\\Users\\runneradmin\\Desktop\\Проверка M\\Программы\\TubeStudio\\TubeStudioData\nПереношу данные из старой версии: C:\\Users\\runneradmin\\Desktop\\Проверка M\\Программы\\TubeStudio\\TubeStudio-1.1.0-windows\\TubeStudioData\nПеренесено файлов: 7 (0.0 МБ). Старая папка не изменена.\nЗапускаю сервер на http://127.0.0.1:8787 …\nLINK http://127.0.0.1:8787/?launch=d9e041da66b62a974168740d407f57344bd70a574c44bcae99e4be1b2a3bf1ce\nГотово: TubeStudio открыта в браузере. Закрыть программу — кнопка «Выход» в меню.\n\r\nОкно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.\r\n"
+    },
+    {
+      "name": "M2: взяты более свежие данные 1.x из соседней папки",
+      "ok": true,
+      "detail": "C:\\Users\\runneradmin\\Desktop\\Проверка M\\Программы\\TubeStudio\\TubeStudio-1.1.0-windows\\TubeStudioData"
+    },
+    {
+      "name": "M2: проекты на месте",
+      "ok": true,
+      "detail": "{\"ok\":true,\"data\":[{\"id\":\"262461de-0643-4346-9d5f-4215ef6c88ec\",\"title\":\"Проверка переноса — канал «Психология»\",\"createdAt\":\"2026-11-05T14:32:32.925Z\",\"updatedAt\":\"2026-11-05T14:32:32.925Z\",\"counts\":{}}]}"
+    },
+    {
+      "name": "M2: ключи на месте (защита Windows)",
+      "ok": true,
+      "detail": "[\"anymodel\",\"youtube\"]"
+    },
+    {
+      "name": "M2: данные прежней 1.x не тронуты",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "M2: остановлена",
+      "ok": true,
+      "detail": "Останавливаю TubeStudio 1.1.1 (по запросу)…\nTubeStudio остановлена.\n"
+    }
+  ]
+}
