@@ -417,8 +417,8 @@
    "stage": "Картинки",
    "kind": "Правило",
    "release": "2 · Визуал (G-Labs)",
-   "status": "Нужны данные от вас",
-   "in_tubestudio": "TXT «1 строка = 1 промпт» и эталоны для G-Labs, автоприём файлов из папки вывода; на плане MAX — полностью автоматически через Webhook",
+   "status": "Утверждено",
+   "in_tubestudio": "план MAX — полностью автоматически через Webhook (сделано в TubeStudio 2.0.0); TXT «1 строка = 1 промпт» — запасной ручной режим",
    "sources": [
     "yt-visual-director — раскадровка и промпты",
     "Omni Storybook Director"

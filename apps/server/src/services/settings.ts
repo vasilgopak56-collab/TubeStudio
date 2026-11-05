@@ -126,6 +126,10 @@ export const SettingsSchema = z.object({
     /** $ за 1 млн токенов (input/output) и $ за картинку; совпадение по подстроке имени модели, сверху вниз */
     prices: z.array(PriceRow).default(DEFAULT_PRICES),
   }).prefault({}),
+  /** G-Labs на этом компьютере (Выпуск 2): адрес Webhook — не секрет, ключ хранится среди ключей. */
+  glabs: z.object({
+    url: z.string().trim().max(200).regex(/^https?:\/\/[^\s/?#]+(:\d{2,5})?\/?$/, "Адрес G-Labs: например http://127.0.0.1:8765").default("http://127.0.0.1:8765"),
+  }).prefault({}),
   /** Выполненные однократные миграции настроек (не редактируется пользователем). */
   migrations: z.array(z.string().max(100)).max(100).default([]),
   rpm: z.array(RpmRow).default([
@@ -175,7 +179,7 @@ export async function getSettings(): Promise<Settings> {
 
 export async function updateSettings(patch: unknown): Promise<Settings> {
   const cur = await getSettings();
-  const next = SettingsSchema.parse({ ...cur, ...(patch as object), models: { ...cur.models, ...((patch as any)?.models ?? {}) }, budget: { ...cur.budget, ...((patch as any)?.budget ?? {}) }, anymodel: { ...cur.anymodel, ...((patch as any)?.anymodel ?? {}) }, research: { ...cur.research, ...((patch as any)?.research ?? {}) } });
+  const next = SettingsSchema.parse({ ...cur, ...(patch as object), models: { ...cur.models, ...((patch as any)?.models ?? {}) }, budget: { ...cur.budget, ...((patch as any)?.budget ?? {}) }, anymodel: { ...cur.anymodel, ...((patch as any)?.anymodel ?? {}) }, research: { ...cur.research, ...((patch as any)?.research ?? {}) }, glabs: { ...cur.glabs, ...((patch as any)?.glabs ?? {}) } });
   next.migrations = cur.migrations; // служебное поле: клиент его не меняет
   await writeJson(FILE, next, { backup: true });
   return next;

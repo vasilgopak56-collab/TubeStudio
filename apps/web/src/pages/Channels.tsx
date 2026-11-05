@@ -1,4 +1,5 @@
 // Выпуск 1: профили каналов. У каждого канала своя ниша, язык, длина, стиль, образцы для Радара, голос и бюджет.
+// Выпуск 2: строка «Визуал» — стиль картинок и персонажи (настраиваются в разделе «Визуал»).
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -7,6 +8,7 @@ import { api } from "@/lib/api";
 import { CONTENT_LANGUAGES } from "@/lib/constants";
 import { Badge, Button, Card, ErrorAlert, Input, Label, SectionTitle, Select, Textarea, ToolHeader } from "@/components/ui";
 import { useChannels, num } from "@/features/studio/common";
+import { useVisualStyles } from "@/lib/visualStyles";
 import type { Channel, ChannelDraft } from "@/features/studio/types";
 
 const EMPTY: ChannelDraft = {
@@ -26,7 +28,8 @@ function ChannelForm({ initial, onDone }: { initial?: Channel; onDone: () => voi
   const setRadar = (k: keyof ChannelDraft["radar"], v: number | string) => setD((x) => ({ ...x, radar: { ...x.radar, [k]: v } }));
   const save = useMutation({
     mutationFn: () => {
-      const { voice: _v, ...rest } = d as ChannelDraft & { id?: string; createdAt?: string; updatedAt?: string; archived?: boolean };
+      // Голос и визуал настраиваются в своих разделах — форма профиля их не перезаписывает.
+      const { voice: _v, visual: _vis, ...rest } = d as ChannelDraft & { id?: string; createdAt?: string; updatedAt?: string; archived?: boolean };
       const { id: _i, createdAt: _c, updatedAt: _u, archived: _a, ...body } = rest as Record<string, unknown>;
       const payload = { ...body, samples: lines(samples).slice(0, 5), radar: { ...d.radar, seeds: lines(seeds).slice(0, 40) } };
       return initial ? api<Channel>(`/studio/channels/${initial.id}`, { method: "PATCH", json: payload }) : api<Channel>("/studio/channels", { method: "POST", json: payload });
@@ -68,7 +71,7 @@ function ChannelForm({ initial, onDone }: { initial?: Channel; onDone: () => voi
       <label className={field}><Label hint="$ в месяц, 0 — общий лимит">Бюджет канала</Label><Input type="number" min={0} step={1} value={d.budgetUsd} onChange={(e) => set("budgetUsd", Math.max(0, Number(e.target.value) || 0))} /></label>
     </div>
     <label className={field}><Label hint="необязательно">Ваш канал на YouTube</Label><Input value={d.ownChannel} maxLength={200} onChange={(e) => set("ownChannel", e.target.value)} placeholder="youtube.com/@ваш-канал" /></label>
-    <p className="text-sm text-muted-foreground">Голос озвучки выбирается в разделе <Link to="/studio/voice" className="text-primary hover:underline">Озвучка</Link>.</p>
+    <p className="text-sm text-muted-foreground">Голос озвучки выбирается в разделе <Link to="/studio/voice" className="text-primary hover:underline">Озвучка</Link>, стиль картинок и персонажи — в разделе <Link to="/studio/visual" className="text-primary hover:underline">Визуал</Link>.</p>
     {save.error && <ErrorAlert error={save.error} />}
     <div className="flex flex-wrap gap-3">
       <Button className="min-h-11" loading={save.isPending} loadingText="Сохраняю…" disabled={!d.name.trim()} onClick={() => save.mutate()}>Сохранить</Button>
@@ -89,6 +92,7 @@ export default function Channels() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["studio-channels"] }),
   });
   const channels = list.data?.channels ?? [];
+  const styles = useVisualStyles();
   return <div className="space-y-6" data-testid="channels-page">
     <ToolHeader icon={Users} title="Каналы" eyebrow="// ВЫПУСК 1" subtitle="Профиль на каждый канал: ниша, язык, длина, стиль, образцы для Радара, голос и своя часть бюджета"
       right={!editing && <Button className="min-h-11" onClick={() => setEditing("new")}><Plus className="h-4 w-4" />Добавить канал</Button>} />
@@ -111,13 +115,15 @@ export default function Channels() {
           <p className="text-sm text-muted-foreground">{langLabel(c.language)} · ролики ≈ {c.lengthMin} мин{c.niche ? ` · ${c.niche}` : ""}</p>
           <ul className="space-y-1 text-sm">
             <li>Радар: подписчиков до {num(c.radar.maxSubs)}, множитель от {c.radar.minMultiplier}×, образцов {c.samples.length}</li>
-            <li>Голос: {c.voice.voiceId ? `${c.voice.voiceName || c.voice.voiceId} (${c.voice.service})` : "не выбран"}</li>
+            <li>Голос: {c.voice.templateSource === "mine" ? (c.voice.ownTemplateId ? `мой шаблон «${c.voice.ownTemplateName || c.voice.ownTemplateId}»` : "мой шаблон не выбран") : c.voice.voiceId ? `${c.voice.voiceName || c.voice.voiceId} (${c.voice.service})` : "не выбран"}</li>
+            <li>Визуал: {c.visual?.styleId || c.visual?.anchor ? (styles.data?.find((s) => s.id === c.visual.styleId)?.name ?? (c.visual.anchor ? "свой стиль" : "стиль выбран")) : "стиль не выбран"}{c.visual?.cast.length ? ` · персонажей и локаций: ${c.visual.cast.length}` : ""}</li>
             <li>Расход в этом месяце: ${(spend?.usd ?? 0).toFixed(2)}{c.budgetUsd ? ` из $${c.budgetUsd}` : ""}{spend?.unknown ? ` · без цены: ${spend.unknown}` : ""}</li>
           </ul>
           <div className="flex flex-wrap gap-2">
             {!active && !c.archived && <Button variant="outline" size="sm" className="min-h-11" onClick={() => act.mutate({ id: c.id, action: "activate" })}><Star className="h-4 w-4" />Сделать активным</Button>}
             {!c.archived && <Button variant="outline" size="sm" className="min-h-11" onClick={() => setEditing(c)}><Pencil className="h-4 w-4" />Изменить</Button>}
             {!c.archived && <Link to="/ideas" onClick={() => !active && act.mutate({ id: c.id, action: "activate" })} className="inline-flex min-h-11 items-center rounded-md px-3 text-xs text-primary hover:bg-primary/10">Идеи для канала →</Link>}
+            {!c.archived && <Link to="/studio/visual" onClick={() => !active && act.mutate({ id: c.id, action: "activate" })} className="inline-flex min-h-11 items-center rounded-md px-3 text-xs text-primary hover:bg-primary/10">Визуал →</Link>}
             {!c.archived ? <Button variant="ghost" size="sm" className="min-h-11" onClick={() => { if (window.confirm(`Убрать «${c.name}» в архив? Идеи и проекты сохранятся.`)) act.mutate({ id: c.id, action: "archive" }); }}><Archive className="h-4 w-4" />В архив</Button>
               : <Button variant="outline" size="sm" className="min-h-11" onClick={() => act.mutate({ id: c.id, action: "restore" })}><RotateCcw className="h-4 w-4" />Вернуть</Button>}
           </div>

@@ -85,12 +85,13 @@ const ORIGINAL_NAV: NavGroup[] = [
 
 const existing = ORIGINAL_NAV.flatMap(g=>g.items);
 const item = (route:string) => existing.find(i=>i.to===route)!;
-// Выпуск 1: новые разделы сверху, прежние — под «Ещё».
+// Выпуск 1–2: новые разделы сверху, прежние — под «Ещё».
 const STUDIO: NavItem[] = [
  { to: "/channels", label: "Каналы", icon: Users, description: "Профили каналов: ниша, язык, длина, стиль, образцы, голос и бюджет", stage: 1 },
  { to: "/ideas", label: "Идеи для канала", icon: Radar, description: "Радар: маленькие каналы, у которых ролик обогнал канал в разы", stage: 3 },
  { to: "/studio/script", label: "Сценарий", icon: PenLine, description: "Сценарий под профиль канала: проверка кодом и второе мнение", stage: 4 },
  { to: "/studio/voice", label: "Озвучка", icon: Mic, description: "Голос канала через Lumean: оценка, один заказ, файлы в проект", stage: 5 },
+ { to: "/studio/visual", label: "Визуал", icon: Clapperboard, description: "Картинки и анимация через G-Labs: сцены по озвучке, промпты в стиле канала, проверка, файлы для монтажа", stage: 6 },
 ];
 export const NAV: NavGroup[] = [
  {title:"Студия",collapsible:"studio",items:[item("/"),...STUDIO,item("/projects"),item("/settings")]},

@@ -1,14 +1,15 @@
 // Выпуск 1: озвучка через Lumean — голос канала, бесплатная оценка, один заказ на сценарий, файлы в проект.
+// Выпуск 2: «Мой шаблон» — готовый шаблон Lumean пользователя вместо шаблона, который создаёт TubeStudio.
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Mic, Pause, Play } from "lucide-react";
+import { CheckCircle2, Folder, Mic, Pause, Play } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { useJob } from "@/lib/jobs";
 import type { Project, ProjectSummary } from "@/lib/types";
 import { Badge, Button, Card, ErrorAlert, Input, Label, SectionTitle, Select, ToolHeader } from "@/components/ui";
 import { ChannelPicker, JobBox, NeedChannel, num, useActiveChannel } from "@/features/studio/common";
-import type { FactCheckReport, LumeanAccount, OrderRec, VoiceEstimate, VoiceItem, VoiceResult, VoiceService } from "@/features/studio/types";
+import type { FactCheckReport, LumeanAccount, OrderRec, TemplateItem, TemplateList, VoiceEstimate, VoiceItem, VoiceResult, VoiceService } from "@/features/studio/types";
 import { factStatus } from "@/features/studio/factHash";
 
 const SERVICES: { v: VoiceService; label: string }[] = [
@@ -84,6 +85,55 @@ function VoicePicker({ channelId, language, current, onPicked }: { channelId: st
   </div>;
 }
 
+/** «Мой шаблон»: папки и шаблоны из кабинета Lumean, поиск по названию или номер шаблона. */
+function TemplatePicker({ channelId, currentId, onPicked }: { channelId: string; currentId: string; onPicked: () => void }) {
+  const [search, setSearch] = useState(""), [folder, setFolder] = useState(""), [page, setPage] = useState(1), [paste, setPaste] = useState("");
+  const [items, setItems] = useState<TemplateItem[]>([]);
+  const find = useMutation({
+    mutationFn: (o: { folder: string; page: number; search: string }) => api<TemplateList>(`/studio/voice/templates?${new URLSearchParams({ search: o.search, folderId: o.folder, page: String(o.page) })}`),
+    onSuccess: (r, o) => { setItems((x) => o.page === 1 ? r.items : [...x, ...r.items]); setPage(o.page); setFolder(o.folder); },
+  });
+  useEffect(() => { find.mutate({ folder: "", page: 1, search: "" }); }, []);
+  const pick = useMutation({
+    mutationFn: async (t: { id: string; name?: string }) => {
+      const real = t.name ? t : await api<TemplateItem>(`/studio/voice/templates/${encodeURIComponent(t.id)}`);
+      return api(`/studio/channels/${channelId}`, { method: "PATCH", json: { voice: { provider: "lumean", templateSource: "mine", ownTemplateId: real.id, ownTemplateName: real.name ?? real.id } } });
+    },
+    onSuccess: onPicked,
+  });
+  const data = find.data;
+  return <div className="space-y-3" data-testid="template-picker">
+    <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+      <Input aria-label="Поиск шаблона" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Название шаблона" onKeyDown={(e) => { if (e.key === "Enter") find.mutate({ folder, page: 1, search }); }} />
+      <Button className="min-h-11" loading={find.isPending && page === 1} loadingText="Ищу…" onClick={() => find.mutate({ folder, page: 1, search })}>Найти</Button>
+    </div>
+    {!search && data && (data.folder || folder) && <p className="flex flex-wrap items-center gap-1 text-sm">
+      <button type="button" className="min-h-11 text-primary hover:underline" onClick={() => find.mutate({ folder: "", page: 1, search: "" })}>Все шаблоны</button>
+      {data.breadcrumbs.filter((b) => b.id).map((b) => <span key={b.id}> / <button type="button" className="min-h-11 text-primary hover:underline" onClick={() => find.mutate({ folder: b.id, page: 1, search: "" })}>{b.name}</button></span>)}
+      {data.folder && <span> / {data.folder.name}</span>}
+    </p>}
+    {find.error && <ErrorAlert error={find.error} />}
+    {pick.error && <ErrorAlert error={pick.error} />}
+    {find.isSuccess && items.length === 0 && <p className="text-sm text-muted-foreground">Шаблонов не найдено.</p>}
+    <ul className="grid gap-2 md:grid-cols-2">
+      {items.map((t) => t.type === "folder"
+        ? <li key={`f-${t.id}`}><button type="button" className="flex min-h-11 w-full items-center gap-2 rounded-lg border p-3 text-left text-sm hover:bg-muted" onClick={() => { setSearch(""); find.mutate({ folder: t.id, page: 1, search: "" }); }}><Folder className="h-4 w-4 shrink-0" /><span className="flex-1" dir="auto">{t.name}</span><span className="text-xs text-muted-foreground">{t.count ?? 0}</span></button></li>
+        : <li key={t.id} className="flex items-start gap-3 rounded-lg border p-3 text-sm">
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold" dir="auto">{t.name}{currentId === t.id && <Badge tone="primary" className="ml-2">выбран</Badge>}</p>
+            <p className="text-muted-foreground">{[t.service, t.voiceId && `голос ${t.voiceId.slice(0, 12)}`, t.mode].filter(Boolean).join(" · ")}</p>
+          </div>
+          <Button size="sm" className="min-h-11 shrink-0" disabled={pick.isPending || currentId === t.id} onClick={() => pick.mutate({ id: t.id, name: t.name })}>Выбрать</Button>
+        </li>)}
+    </ul>
+    {data?.hasMore && <Button variant="ghost" className="min-h-11" loading={find.isPending && page > 1} onClick={() => find.mutate({ folder, page: page + 1, search })}>Показать ещё</Button>}
+    <div className="grid gap-3 border-t pt-3 md:grid-cols-[1fr_auto]">
+      <Input aria-label="Номер шаблона" value={paste} onChange={(e) => setPaste(e.target.value.trim())} placeholder="Или вставьте номер (ID) шаблона из кабинета Lumean" />
+      <Button variant="outline" className="min-h-11" disabled={!paste} loading={pick.isPending} loadingText="Проверяю…" onClick={() => pick.mutate({ id: paste })}>Проверить и выбрать</Button>
+    </div>
+  </div>;
+}
+
 export default function StudioVoice() {
   const [sp, setSp] = useSearchParams();
   const qc = useQueryClient();
@@ -98,7 +148,7 @@ export default function StudioVoice() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["studio-channels"] }),
   });
   const estimate = useMutation({ mutationFn: () => api<VoiceEstimate>("/studio/voice/estimate", { method: "POST", json: { channelId: channel!.id, projectId } }) });
-  useEffect(() => { estimate.reset(); }, [projectId, channel?.id, channel?.voice.voiceId, channel?.voice.mode]);
+  useEffect(() => { estimate.reset(); }, [projectId, channel?.id, channel?.voice.voiceId, channel?.voice.mode, channel?.voice.templateSource, channel?.voice.ownTemplateId]);
   const job = useJob<VoiceResult>("/studio/voice");
   useEffect(() => { if (job.status === "done" || job.status === "error") { void qc.invalidateQueries({ queryKey: ["lumean-orders"] }); void qc.invalidateQueries({ queryKey: ["lumean-account"] }); } }, [job.status]);
   const run = (extra: { again?: boolean; topupMaxLmc?: number } = {}) => channel && job.start({ channelId: channel.id, projectId, ...extra });
@@ -116,6 +166,7 @@ export default function StudioVoice() {
   if (loading) return null;
   if (!list?.channels.length || !channel) return <div className="space-y-6"><ToolHeader icon={Mic} title="Озвучка" eyebrow="// ВЫПУСК 1" subtitle="Голос канала через Lumean" /><NeedChannel /></div>;
   const v = channel.voice, running = job.status === "running";
+  const mine = v.templateSource === "mine", ready = mine ? !!v.ownTemplateId : !!v.voiceId;
   const err = job.error as ApiError | undefined;
   const topup = err?.code === "LUMEAN_PAYG_REQUIRED" ? (err.details as { topupLmc?: number } | undefined)?.topupLmc : undefined;
   const canAgain = !!err && /Озвучить ещё раз/.test(err.message);
@@ -126,16 +177,23 @@ export default function StudioVoice() {
     <ToolHeader icon={Mic} title="Озвучка" eyebrow="// ВЫПУСК 1" subtitle="Голос канала через Lumean: бесплатная оценка, один заказ на сценарий, аудио и субтитры сразу в проект" right={<ChannelPicker disabled={running} />} />
     <Account />
     <Card className="space-y-4 p-5">
-      <SectionTitle right={<Button variant="outline" size="sm" className="min-h-11" onClick={() => setPicking((x) => !x)}>{picking ? "Скрыть выбор" : v.voiceId ? "Сменить голос" : "Выбрать голос"}</Button>}>Голос канала «{channel.name}»</SectionTitle>
-      <p className="text-sm">{v.voiceId ? <>{v.voiceName || v.voiceId} · {SERVICES.find((s) => s.v === v.service)?.label}</> : <span className="text-muted-foreground">Голос не выбран.</span>}</p>
+      <SectionTitle right={<Button variant="outline" size="sm" className="min-h-11" onClick={() => setPicking((x) => !x)}>{picking ? "Скрыть выбор" : mine ? (v.ownTemplateId ? "Сменить шаблон" : "Выбрать шаблон") : v.voiceId ? "Сменить голос" : "Выбрать голос"}</Button>}>Голос канала «{channel.name}»</SectionTitle>
+      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Чем озвучивать">
+        <Button size="sm" role="radio" aria-checked={!mine} variant={mine ? "outline" : "primary"} className="min-h-11" disabled={settings.isPending} onClick={() => { if (mine) { setPicking(false); settings.mutate({ templateSource: "auto" }); } }}>Голос — шаблон создаст TubeStudio</Button>
+        <Button size="sm" role="radio" aria-checked={mine} variant={mine ? "primary" : "outline"} className="min-h-11" disabled={settings.isPending} onClick={() => { if (!mine) { setPicking(!v.ownTemplateId); settings.mutate({ templateSource: "mine", provider: "lumean" }); } }}>Мой шаблон Lumean</Button>
+      </div>
+      {mine
+        ? <p className="text-sm">{v.ownTemplateId ? <>Шаблон «<span dir="auto">{v.ownTemplateName || v.ownTemplateId}</span>» — голос, модель и скорость как в вашем шаблоне, TubeStudio его не меняет.</> : <span className="text-muted-foreground">Шаблон не выбран — нажмите «Выбрать шаблон».</span>}</p>
+        : <p className="text-sm">{v.voiceId ? <>{v.voiceName || v.voiceId} · {SERVICES.find((s) => s.v === v.service)?.label}</> : <span className="text-muted-foreground">Голос не выбран.</span>}</p>}
       <div className="grid gap-4 md:grid-cols-2">
         <label className="block space-y-1 text-sm"><Label>Как отправлять текст</Label>
           <Select value={v.mode} onChange={(e) => settings.mutate({ mode: e.target.value })}><option value="whole">Весь сценарий одним заказом (ровный голос)</option><option value="paragraph">По абзацам (каждый абзац отдельно)</option></Select></label>
-        <label className="block space-y-1 text-sm"><Label hint={`${v.speed.toFixed(2)}×`}>Скорость речи</Label>
-          <input type="range" aria-label="Скорость речи" min={0.7} max={1.2} step={0.05} defaultValue={v.speed} key={`${channel.id}-${v.speed}`} onPointerUp={(e) => settings.mutate({ speed: Number((e.target as HTMLInputElement).value) })} onKeyUp={(e) => settings.mutate({ speed: Number((e.target as HTMLInputElement).value) })} className="w-full accent-[hsl(var(--primary))]" /></label>
+        {!mine && <label className="block space-y-1 text-sm"><Label hint={`${v.speed.toFixed(2)}×`}>Скорость речи</Label>
+          <input type="range" aria-label="Скорость речи" min={0.7} max={1.2} step={0.05} defaultValue={v.speed} key={`${channel.id}-${v.speed}`} onPointerUp={(e) => settings.mutate({ speed: Number((e.target as HTMLInputElement).value) })} onKeyUp={(e) => settings.mutate({ speed: Number((e.target as HTMLInputElement).value) })} className="w-full accent-[hsl(var(--primary))]" /></label>}
       </div>
       {settings.error && <ErrorAlert error={settings.error} />}
-      {picking && <VoicePicker channelId={channel.id} language={channel.language} current={v} onPicked={() => { void qc.invalidateQueries({ queryKey: ["studio-channels"] }); setPicking(false); }} />}
+      {picking && !mine && <VoicePicker channelId={channel.id} language={channel.language} current={v} onPicked={() => { void qc.invalidateQueries({ queryKey: ["studio-channels"] }); setPicking(false); }} />}
+      {picking && mine && <TemplatePicker channelId={channel.id} currentId={v.ownTemplateId} onPicked={() => { void qc.invalidateQueries({ queryKey: ["studio-channels"] }); setPicking(false); }} />}
     </Card>
     <Card className="space-y-4 p-5">
       <SectionTitle>Что озвучить</SectionTitle>
@@ -152,8 +210,8 @@ export default function StudioVoice() {
       </div>}
       {facts === "passed" && factReport && <p className="flex items-center gap-2 text-sm text-success" data-testid="voice-facts"><CheckCircle2 className="h-4 w-4 shrink-0" />Факты проверены {new Date(factReport.at).toLocaleDateString("ru-RU")}{factReport.changed + factReport.removed ? ` · исправлено мест: ${factReport.changed + factReport.removed}` : " · неточностей не найдено"}{factReport.mode !== "web" ? " · без поиска Google" : ""}</p>}
       <div className="flex flex-wrap gap-3">
-        <Button variant="outline" className="min-h-11" disabled={!projectId || !v.voiceId || running} loading={estimate.isPending} loadingText="Считаю…" onClick={() => estimate.mutate()}>Оценить бесплатно</Button>
-        <Button className="min-h-11" disabled={!projectId || !v.voiceId || running} loading={running} loadingText="Озвучиваю…" onClick={voiceNow}>Озвучить</Button>
+        <Button variant="outline" className="min-h-11" disabled={!projectId || !ready || running} loading={estimate.isPending} loadingText="Считаю…" onClick={() => estimate.mutate()}>Оценить бесплатно</Button>
+        <Button className="min-h-11" disabled={!projectId || !ready || running} loading={running} loadingText="Озвучиваю…" onClick={voiceNow}>Озвучить</Button>
       </div>
       <p className="text-xs text-muted-foreground">Слова сценария не меняются: убираются только пометки в скобках, заголовки и разметка. Паузы {"{{pause=1s}}"} бесплатны. Повторное нажатие с тем же текстом и голосом не создаёт второй заказ.</p>
       {estimate.error && <ErrorAlert error={estimate.error} />}

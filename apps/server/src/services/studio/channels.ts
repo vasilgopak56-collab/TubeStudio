@@ -34,7 +34,54 @@ export const VoiceSettings = z.object({
   templateKey: Line(200).default(""),
   mode: z.enum(["whole", "paragraph"]).default("whole"),
   speed: z.number().min(0.7).max(1.2).default(1),
+  /** Выпуск 2: «auto» — TubeStudio создаёт шаблон под голос; «mine» — ваш готовый шаблон Lumean без изменений. */
+  templateSource: z.enum(["auto", "mine"]).default("auto"),
+  ownTemplateId: Line(80).default(""),
+  ownTemplateName: Line(255).default(""),
 }).strict();
+
+/** Персонаж, локация или предмет канала: имя = @имя в промптах G-Labs (карточка 230). */
+export const CastItem = z.object({
+  name: z.string().trim().regex(/^[A-Za-z][A-Za-z0-9]{2,31}$/, "Имя персонажа или локации: латинские буквы и цифры, от 3 символов, без пробелов — например OldKing или ThroneHall"),
+  kind: z.enum(["character", "location", "object"]).default("character"),
+  description: Line(1500).default(""),
+  /** Эталон: путь внутри data/files, например _cast/<канал>/OldKing.png. */
+  image: Line(300).default(""),
+  /** Отметка последней отправки в библиотеку персонажей G-Labs. */
+  glabs: Line(120).default(""),
+}).strict();
+export type CastItemT = z.infer<typeof CastItem>;
+
+/** Визуал канала (Выпуск 2): стиль, модели G-Labs, анимация, нарезка на сцены, персонажи и локации. */
+export const VisualSettings = z.object({
+  /** Стиль из Библиотеки стилей; его стилевой ключ дословно стоит в каждом промпте. */
+  styleId: Line(120).default(""),
+  /** Своя правка стилевого ключа и ключа движения ("" — как в стиле). */
+  anchor: Line(2000).default(""),
+  motion: Line(1000).default(""),
+  negative: Line(1000).default(""),
+  palette: Line(300).default(""),
+  imageModel: z.enum(["nano_banana_2", "nano_banana_pro", "nano_banana_2_lite"]).default("nano_banana_2"),
+  videoModel: z.enum(["veo_31_fast", "veo_31_lite", "veo_31_quality", "omni_flash"]).default("veo_31_fast"),
+  /** Длина клипа: Veo 4 и 6 с — только с аккаунтом Ultra; Omni Flash — 4–10 с. */
+  clipSec: z.union([z.literal(4), z.literal(6), z.literal(8), z.literal(10)]).default(8),
+  /** Какие сцены оживлять: никакие, хук и ключевые, каждую N-ю, все. */
+  animate: z.enum(["none", "key", "every", "all"]).default("key"),
+  animateEvery: z.number().int().min(2).max(10).default(3),
+  /** Нарезка (карточка 200): «Ритм» — по смыслу до maxSceneSec; «Предложение» — сцена на предложение. */
+  sceneMode: z.enum(["rhythm", "sentence"]).default("rhythm"),
+  maxSceneSec: z.number().min(3).max(10).default(8),
+  aspect: z.enum(["16:9", "9:16"]).default("16:9"),
+  cast: z.array(CastItem).max(30).default([]),
+}).strict().superRefine((v, ctx) => {
+  const seen = new Set<string>();
+  for (const c of v.cast) {
+    const k = c.name.toLowerCase();
+    if (seen.has(k)) ctx.addIssue({ code: "custom", path: ["cast"], message: `Имя @${c.name} повторяется: у каждого персонажа и локации своё имя` });
+    seen.add(k);
+  }
+});
+export type VisualSettingsT = z.infer<typeof VisualSettings>;
 
 export const ChannelInput = z.object({
   name: Line(80).min(1, "Укажите название канала"),
@@ -49,6 +96,7 @@ export const ChannelInput = z.object({
   ownChannel: Line(200).default(""),
   radar: RadarSettings.prefault({}),
   voice: VoiceSettings.prefault({}),
+  visual: VisualSettings.prefault({}),
   models: z.object({ author: Line(120).default(""), critic: Line(120).default("") }).strict().prefault({}),
   /** Своя часть месячного бюджета, $. 0 — без отдельного лимита (действует общий). */
   budgetUsd: z.number().min(0).max(10_000).default(0),
@@ -104,16 +152,28 @@ export async function createChannel(input: unknown): Promise<Channel> {
     return ch;
   });
 }
-export function updateChannel(id: string, patch: unknown): Promise<Channel> {
+/** internal — правка из самой программы (эталоны, отметки G-Labs). Из интерфейса пути к файлам эталонов
+ *  не принимаются: они берутся из сохранённого канала по имени, чтобы старая копия формы не стёрла загрузку. */
+export function updateChannel(id: string, patch: unknown, o: { internal?: boolean } = {}): Promise<Channel> {
   return mutate((s) => {
     const i = s.channels.findIndex((c) => c.id === id);
     if (i < 0) throw new ApiError("NOT_FOUND", "Канал не найден", 404);
     const cur = s.channels[i];
     const p = (patch ?? {}) as Record<string, unknown>;
+    let pv = (p.visual ?? {}) as Record<string, unknown>;
+    if (!o.internal && Array.isArray(pv.cast)) {
+      const old = new Map(cur.visual.cast.map((c) => [c.name.toLowerCase(), c]));
+      pv = { ...pv, cast: pv.cast.map((x) => {
+        if (!x || typeof x !== "object") return x;
+        const was = old.get(String((x as { name?: unknown }).name ?? "").trim().toLowerCase());
+        return { ...(x as object), image: was?.image ?? "", glabs: was?.glabs ?? "" };
+      }) };
+    }
     const merged = ChannelInput.parse({
       ...stripMeta(cur), ...p,
       radar: { ...cur.radar, ...((p.radar as object) ?? {}) },
       voice: { ...cur.voice, ...((p.voice as object) ?? {}) },
+      visual: { ...cur.visual, ...pv },
       models: { ...cur.models, ...((p.models as object) ?? {}) },
     });
     const next: Channel = { ...merged, id: cur.id, createdAt: cur.createdAt, updatedAt: new Date().toISOString(), ...(cur.archived ? { archived: true } : {}) };

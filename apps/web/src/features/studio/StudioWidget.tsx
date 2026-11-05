@@ -1,7 +1,7 @@
-// Блок «Студия» на главной панели: активный канал и четыре шага выпуска.
+// Блок «Студия» на главной панели: активный канал и пять шагов выпуска.
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Lightbulb, Mic, PenLine, Sparkles, Users } from "lucide-react";
+import { ArrowRight, Clapperboard, Lightbulb, Mic, PenLine, Sparkles, Users } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button, Card, SectionTitle, Skeleton } from "@/components/ui";
 import { ChannelPicker, agoDays, num, plural, useActiveChannel } from "./common";
@@ -29,11 +29,12 @@ export function StudioWidget() {
     { to: "/channels", icon: Users, title: "Канал", text: `${channel.name} · ${channel.language.toUpperCase()} · ${channel.lengthMin} мин${(list?.channels.length ?? 0) > 1 ? ` · всего ${list!.channels.length}` : ""}` },
     { to: "/ideas", icon: Lightbulb, title: "Идеи для канала", text: !d ? "…" : d.lastRun ? `${num(active)} ${plural(active, ["новая идея", "новые идеи", "новых идей"])} · поиск ${agoDays(lastDays)}` : "Поиск ещё не запускался" },
     { to: "/studio/script", icon: PenLine, title: "Сценарий", text: "Автор, проверка кодом и второе мнение" },
-    { to: "/studio/voice", icon: Mic, title: "Озвучка", text: channel.voice?.voiceName ? `Голос: ${channel.voice.voiceName}` : "Голос канала не выбран" },
+    { to: "/studio/voice", icon: Mic, title: "Озвучка", text: channel.voice?.templateSource === "mine" ? (channel.voice.ownTemplateName ? `Мой шаблон: ${channel.voice.ownTemplateName}` : "Мой шаблон не выбран") : channel.voice?.voiceName ? `Голос: ${channel.voice.voiceName}` : "Голос канала не выбран" },
+    { to: "/studio/visual", icon: Clapperboard, title: "Визуал", text: channel.visual?.styleId || channel.visual?.anchor ? `Картинки и клипы через G-Labs${channel.visual.cast.length ? ` · персонажей ${channel.visual.cast.length}` : ""}` : "Стиль картинок не выбран" },
   ];
   return <Card className="space-y-4 p-5" data-testid="studio-widget">
     <SectionTitle icon={<Sparkles className="h-4 w-4" />} right={<ChannelPicker />}>Студия</SectionTitle>
-    <div className="grid gap-3 md:grid-cols-4">
+    <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-5">
       {steps.map((s, i) => <Link key={s.to} to={s.to} className="bracket-card group flex flex-col p-4 transition-colors hover:border-primary/60">
         <div className="flex items-center justify-between">
           <span className="grid h-8 w-8 place-items-center rounded-lg border border-primary/50 bg-primary/10 text-primary"><s.icon className="h-4 w-4" /></span>

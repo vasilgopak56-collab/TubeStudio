@@ -14,6 +14,7 @@ import net from "node:net";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import { fakeGlabs, visualChecks } from "./acceptance-visual.mjs";
 
 const argv = process.argv.slice(2);
 const arg = (n) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
@@ -479,6 +480,31 @@ await phase("L. Студия: канал, проверка сценария Shie
     await browser.close();
     await stopViaCmd("остановка после Студии");
     check("Остановлена", await waitFor(() => !pidAlive(pid), 30_000));
+  }
+});
+
+await phase("N. Визуал: G-Labs на этом компьютере (имитация Webhook, квота не тратится)", async () => {
+  const gl = await fakeGlabs();
+  const r = await launch("запуск для Визуала");
+  if (!check("N: программа запущена", r.code === 0 && r.link, r.out + r.err)) { await gl.close(); return; }
+  const pid = status()?.running?.pid;
+  const require = createRequire(import.meta.url);
+  const { chromium } = require("playwright-core");
+  const chrome = ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe", "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"].find(exists);
+  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  try {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await ctx.newPage();
+    const errors = []; page.on("pageerror", (e) => errors.push(e.message));
+    await page.goto(r.link.url);
+    if (!check("N: вход по ссылке", await page.getByTestId("exit-button").first().waitFor({ timeout: 30_000 }).then(() => true, () => false))) return;
+    const sid = (await ctx.cookies()).find((c) => c.name === "ts_session");
+    await visualChecks({ port: r.link.port, cookie: sid ? `ts_session=${sid.value}` : "", page, gl, dataDir, out, errors }, { check, api, waitFor, exists, readJson, samePathCI, treeContains });
+  } finally {
+    await browser.close();
+    await stopViaCmd("остановка после Визуала");
+    check("N: остановлена", await waitFor(() => !pidAlive(pid), 30_000));
+    await gl.close();
   }
 });
 

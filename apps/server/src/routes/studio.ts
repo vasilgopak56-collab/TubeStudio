@@ -1,4 +1,5 @@
 // Выпуск 1 «Темы и сценарий»: каналы, Радар «Идеи для канала», сценарий с проверкой, озвучка Lumean.
+// Выпуск 2 «Визуал через G-Labs»: сцены, промпты, картинки и клипы, эталоны персонажей, «Мой шаблон» Lumean.
 import { Hono, type Context } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { z } from "zod";
@@ -8,10 +9,16 @@ import { activateChannel, archiveChannel, channelSpend, createChannel, getChanne
 import { IdeaPeriod, IdeaSort, listIdeas, radarRunning, runRadar, setIdeaStatus, takeIdea } from "../services/studio/radar.js";
 import { FactCheckJobInput, StudioScriptInput, lintForChannel, runFactCheck, runStudioScript } from "../services/studio/scriptFlow.js";
 import { lintScript } from "../services/studio/scriptLint.js";
-import { VoiceOrderInput, VoiceQuery, estimateVoice, listVoices, lumeanAccount, lumeanOrders, runVoice } from "../services/studio/lumean.js";
+import { TemplateQuery, VoiceOrderInput, VoiceQuery, estimateVoice, getTemplate, listTemplates, listVoices, lumeanAccount, lumeanOrders, runVoice } from "../services/studio/lumean.js";
+import { checkGlabs } from "../services/studio/glabs.js";
+import { PromptsInput, REDO_REASONS, RenderInput, buildScenes, editScene, exportBoard, generateCastImage, runRender, saveCastImage, syncCast, visualBusy, visualState, writePrompts, type ExportKind } from "../services/studio/visual.js";
 
 export const studioRoute = new Hono();
-studioRoute.use("/studio/*", bodyLimit({ maxSize: 1024 * 1024, onError: (c) => c.json({ ok: false, error: { code: "VALIDATION", message: "Слишком большой запрос" } }, 413) }));
+const tooBig = (c: Context) => c.json({ ok: false, error: { code: "VALIDATION", message: "Слишком большой запрос" } }, 413);
+const small = bodyLimit({ maxSize: 1024 * 1024, onError: tooBig });
+/** Эталон персонажа — картинка до 12 МБ (в base64 ~16 МБ). */
+const large = bodyLimit({ maxSize: 17 * 1024 * 1024, onError: (c) => c.json({ ok: false, error: { code: "VALIDATION", message: "Картинка больше 12 МБ — уменьшите её" } }, 413) });
+studioRoute.use("/studio/*", (c, next) => (/\/cast\/[A-Za-z0-9]+\/image$/.test(c.req.path) ? large(c, next) : small(c, next)));
 const body = async (c: Context): Promise<unknown> => { try { return await c.req.json(); } catch { throw new ApiError("VALIDATION", "Некорректный JSON запроса"); } };
 const handle = (fn: (c: Context) => Promise<unknown>) => async (c: Context) => { try { return ok(c, await fn(c)); } catch (e) { return fail(c, e); } };
 const Id = z.string().uuid("Неверный номер канала");
@@ -125,3 +132,55 @@ studioRoute.post("/studio/voice", handle(async (c) => {
   return job(i.channelId, "voice", (ctx) => runVoice(i, ctx));
 }));
 studioRoute.get("/studio/voice/orders", handle(async () => ({ orders: (await lumeanOrders()).slice(0, 100) })));
+studioRoute.get("/studio/voice/templates", handle(async (c) => listTemplates({
+  search: c.req.query("search") ?? "", service: (c.req.query("service") ?? "") as z.input<typeof TemplateQuery>["service"],
+  folderId: c.req.query("folderId") ?? "", page: Math.max(1, Number(c.req.query("page")) || 1),
+})));
+studioRoute.get("/studio/voice/templates/:tid", handle(async (c) => getTemplate(c.req.param("tid") ?? "")));
+
+// ---------- Визуал: G-Labs (Выпуск 2) ----------
+const ProjectId = z.string().regex(/^[\w-]{1,80}$/, "Неверный номер проекта");
+const CastName = z.string().regex(/^[A-Za-z][A-Za-z0-9]{2,31}$/, "Неверное имя персонажа");
+const pid = (c: Context) => ProjectId.parse(c.req.param("projectId"));
+studioRoute.get("/studio/visual/glabs", handle(async () => checkGlabs()));
+studioRoute.get("/studio/visual/projects/:projectId", handle(async (c) => ({ ...(await visualState(pid(c))), reasons: REDO_REASONS })));
+/** Нарезка на сцены — бесплатно, кодом. */
+studioRoute.post("/studio/visual/projects/:projectId/scenes", handle(async (c) => buildScenes(pid(c), (await body(c)) as never)));
+/** Промпты: черновик бесплатно и сразу; моделью — платно, задачей с подтверждением цены. */
+studioRoute.post("/studio/visual/projects/:projectId/prompts", handle(async (c) => {
+  const id = pid(c), i = PromptsInput.parse(await body(c));
+  await getChannel(i.channelId);
+  if (i.free) return { result: await writePrompts(id, i) };
+  if (visualBusy(id)) throw new ApiError("VALIDATION", "В этом проекте уже идёт работа «Визуала». Дождитесь окончания.", 409);
+  return job(i.channelId, "visual-prompts", (ctx) => writePrompts(id, i, ctx));
+}));
+studioRoute.patch("/studio/visual/projects/:projectId/scenes/:n", handle(async (c) => {
+  const n = z.coerce.number().int().min(1).max(5000).parse(c.req.param("n"));
+  return editScene(pid(c), n, (await body(c)) as never);
+}));
+/** Картинки или клипы в G-Labs: квота аккаунтов G-Labs, деньги TubeStudio не тратятся. */
+studioRoute.post("/studio/visual/projects/:projectId/render", handle(async (c) => {
+  const id = pid(c), i = RenderInput.parse(await body(c));
+  await getChannel(i.channelId);
+  if (visualBusy(id)) throw new ApiError("VALIDATION", "В этом проекте уже идёт работа «Визуала». Дождитесь окончания или остановите её.", 409);
+  return job(i.channelId, i.what === "images" ? "visual-images" : "visual-clips", (ctx) => runRender(id, i, ctx));
+}));
+studioRoute.get("/studio/visual/projects/:projectId/export/:kind", async (c) => {
+  try {
+    const kind = z.enum(["images.txt", "motion.txt", "scenes.json"]).parse(c.req.param("kind")) as ExportKind;
+    const { body: text, name } = await exportBoard(pid(c), kind);
+    return c.body(text, 200, { "content-type": kind === "scenes.json" ? "application/json; charset=utf-8" : "text/plain; charset=utf-8", "content-disposition": `attachment; filename="${name}"` });
+  } catch (e) { return fail(c, e); }
+});
+
+// ---------- персонажи и локации канала: эталоны ----------
+studioRoute.post("/studio/channels/:id/cast/:name/image", handle(async (c) => {
+  const { image } = z.object({ image: z.string().min(100).max(17 * 1024 * 1024) }).strict().parse(await body(c));
+  return saveCastImage(Id.parse(c.req.param("id")), CastName.parse(c.req.param("name")), image);
+}));
+studioRoute.post("/studio/channels/:id/cast/:name/generate", handle(async (c) => {
+  const id = Id.parse(c.req.param("id")), name = CastName.parse(c.req.param("name"));
+  await getChannel(id);
+  return job(id, "visual-cast", (ctx) => generateCastImage(id, name, ctx));
+}));
+studioRoute.post("/studio/channels/:id/cast/sync", handle(async (c) => syncCast(Id.parse(c.req.param("id")))));

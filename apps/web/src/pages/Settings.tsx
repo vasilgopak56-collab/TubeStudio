@@ -21,6 +21,16 @@ const KEY_LINKS: Record<string, string> = {
   lumean: "https://lumean.app",
 };
 
+/** Проверка связи с G-Labs по сохранённому адресу и ключу. */
+function GlabsCheck({ dirty }: { dirty: boolean }) {
+  const q = useQuery({ queryKey: ["glabs-check"], queryFn: () => api<{ ok: boolean; message: string }>("/studio/visual/glabs"), enabled: false, retry: false });
+  return <div className="space-y-1">
+    <Button type="button" variant="outline" className="min-h-10" disabled={dirty} title={dirty ? "Сначала сохраните адрес" : undefined} loading={q.isFetching} loadingText="Проверяю…" onClick={() => void q.refetch()}><RefreshCw className="h-3.5 w-3.5" />Проверить связь</Button>
+    {q.data && <p role="status" className={`max-w-md text-[12px] ${q.data.ok ? "text-success" : "text-accent"}`}>{q.data.message}</p>}
+    {q.error && <p role="alert" className="max-w-md text-[12px] text-accent">{(q.error as Error).message}</p>}
+  </div>;
+}
+
 const envName = (p: string) => { const m = p.match(/^youtube(\d)$/); return m ? `YOUTUBE_API_KEY_${m[1]}` : `${p.toUpperCase()}_API_KEY`; };
 
 type YtPool = { active: string | null; resetAt: string; dailyLimitPerKey: number; keys: { slot: string; n: number; configured: boolean; masked: string; unitsToday: number; state: "empty" | "exhausted" | "bad" | "active" | "standby"; lastError?: string }[] };
@@ -110,6 +120,7 @@ export default function Settings() {
                         <Button type="submit" size="sm" loading={keyBusy} loadingText="Сохраняем…" disabled={!keyVal.trim()}><Check className="h-3.5 w-3.5" />Сохранить ключ</Button>
                         {k.configured && <Button type="button" size="sm" variant="ghost" onClick={() => { if (confirm("Удалить ключ из .env?")) saveKey(k.provider, ""); }}><Trash2 className="h-3.5 w-3.5" />Удалить</Button>}
                         {KEY_LINKS[k.provider] && <a className="inline-flex items-center gap-1 text-[12px] text-primary underline" href={KEY_LINKS[k.provider]} target="_blank" rel="noreferrer">Где взять<ExternalLink className="h-3 w-3" /></a>}
+                        {k.provider === "glabs" && <span className="text-[12px] text-muted-foreground">Где взять: программа G-Labs → вкладка Webhook → API key (тариф MAX)</span>}
                         {keyErr && <div className="w-full text-[12px] text-accent">{keyErr}</div>}
                       </form>
                     )}
@@ -144,6 +155,17 @@ export default function Settings() {
                   </Select>
                 </label>
               </div>
+            </Card>
+
+            <Card id="glabs">
+              <SectionTitle right={<Link to="/studio/visual" className="text-xs text-primary hover:underline">Раздел «Визуал» →</Link>}>G-Labs — картинки и анимация</SectionTitle>
+              <p className="mb-3 text-[13px] text-muted-foreground">Программа G-Labs на этом компьютере, тариф MAX. В G-Labs откройте вкладку <b>Webhook</b> → <b>Start</b> (или включите <b>Auto-start</b>), скопируйте <b>API key</b> и вставьте его выше в «Ключи API» → G-Labs.</p>
+              <div className="grid items-end gap-3 md:grid-cols-[1fr_auto]">
+                <label><Label hint="обычно менять не нужно">Адрес Webhook</Label>
+                  <Input className="font-mono text-sm" value={form.glabs?.url ?? ""} autoComplete="off" spellCheck={false} placeholder="http://127.0.0.1:8765" onChange={(e) => set("glabs", { url: e.target.value.trim() })} /></label>
+                <GlabsCheck dirty={!!settings.data && (form.glabs?.url ?? "") !== (settings.data.glabs?.url ?? "")} />
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">G-Labs на другом компьютере в сети — укажите его адрес, например http://192.168.0.5:8765. Новый адрес сохраняется кнопкой «Сохранить» внизу страницы.</p>
             </Card>
 
             <Card id="anymodel">

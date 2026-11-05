@@ -13,7 +13,7 @@ export const PROVIDER_ENV_NAMES = () => ({ ...NAMES });
 
 export const envPath = () => process.env.ENV_FILE || path.resolve(process.cwd(), "../../.env");
 const NAMES: Record<Provider, string> = {
-  anymodel: "ANYMODEL_API_KEY", youtube: "YOUTUBE_API_KEY", youtube2: "YOUTUBE_API_KEY_2", youtube3: "YOUTUBE_API_KEY_3", gemini: "GEMINI_API_KEY", lumean: "LUMEAN_API_KEY", anthropic: "ANTHROPIC_API_KEY", openai: "OPENAI_API_KEY",
+  anymodel: "ANYMODEL_API_KEY", youtube: "YOUTUBE_API_KEY", youtube2: "YOUTUBE_API_KEY_2", youtube3: "YOUTUBE_API_KEY_3", gemini: "GEMINI_API_KEY", lumean: "LUMEAN_API_KEY", glabs: "GLABS_API_KEY", anthropic: "ANTHROPIC_API_KEY", openai: "OPENAI_API_KEY",
 };
 let pending: Promise<unknown> = Promise.resolve();
 // One in-process queue for keys AND OAuth variables. Not a cross-process lock.

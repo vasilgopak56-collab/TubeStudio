@@ -14,7 +14,7 @@ import { writeFileAtomic } from "./storage.js";
 const INSTALL = "TUBESTUDIO_INSTALL_SECRET";
 /** Names worth carrying over from an old .env (secrets and the few settings that lived there). */
 const IMPORTABLE = new Set([
-  "ANYMODEL_API_KEY", "YOUTUBE_API_KEY", "YOUTUBE_API_KEY_2", "YOUTUBE_API_KEY_3", "GEMINI_API_KEY", "LUMEAN_API_KEY",
+  "ANYMODEL_API_KEY", "YOUTUBE_API_KEY", "YOUTUBE_API_KEY_2", "YOUTUBE_API_KEY_3", "GEMINI_API_KEY", "LUMEAN_API_KEY", "GLABS_API_KEY",
   "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "ANYMODEL_BASE_URL", "FFMPEG_PATH",
 ]);
 

@@ -25,6 +25,7 @@ const META: Record<Provider, { label: string; required: boolean }> = {
   anthropic: { label: "Claude напрямую (резерв)", required: false },
   openai: { label: "OpenAI напрямую (резерв)", required: false },
   lumean: { label: "Lumean (озвучка)", required: false },
+  glabs: { label: "G-Labs (картинки и анимация)", required: false },
 };
 
 async function probe(p: Provider, key: string): Promise<Omit<KeyStatus, "provider" | "label" | "required" | "configured">> {
@@ -69,6 +70,11 @@ async function probe(p: Provider, key: string): Promise<Omit<KeyStatus, "provide
       if (r.status === 401 || r.status === 403) return { ok: false, message: "Ключ недействителен или нет прав (нужен billing.read)" };
       if (!r.ok) return { ok: false, message: j?.message ?? j?.detail ?? `HTTP ${r.status}` };
       return { ok: true, message: "Ключ работает", info: { usage: j } };
+    }
+    case "glabs": {
+      const { checkGlabs } = await import("./studio/glabs.js");
+      const r = await checkGlabs();
+      return { ok: r.ok, message: r.message, info: r.health ? { health: r.health } : undefined };
     }
     case "openai": {
       const r = await fetchRetry("https://api.openai.com/v1/models", { headers: { authorization: `Bearer ${key}` } }, opts);

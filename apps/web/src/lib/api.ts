@@ -28,7 +28,7 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
 }
 
 export type KeyStatus = {
-  provider: "anymodel" | "youtube" | "youtube2" | "youtube3" | "gemini" | "lumean" | "anthropic" | "openai";
+  provider: "anymodel" | "youtube" | "youtube2" | "youtube3" | "gemini" | "lumean" | "glabs" | "anthropic" | "openai";
   label: string; required: boolean; configured: boolean; ok: boolean; message: string;
   checkState?: "unverified" | "checked" | "stale"; checkedAt?: string; checkKind?: "metadata" | "quota";
   latencyMs?: number; info?: Record<string, unknown>;
@@ -46,6 +46,8 @@ export type Settings = {
   anymodel: AnymodelSettings;
   budget: { monthlyUsd: number; mode: "warn" | "block"; warnPct: number; prices: PriceRowT[] };
   research: ResearchSettingsT;
+  /** Выпуск 2: адрес G-Labs Webhook (по умолчанию http://127.0.0.1:8765). */
+  glabs: { url: string };
 };
 export type Filters = {
   outlierMin?: number; outlierMax?: number; vphMin?: number; vphMax?: number; viewsMin?: number; viewsMax?: number; subsMin?: number; subsMax?: number;

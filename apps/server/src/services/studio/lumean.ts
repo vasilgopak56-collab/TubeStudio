@@ -143,15 +143,55 @@ export function templateConfig(ch: Pick<Channel, "language" | "voice">): Record<
   return { tts_settings: { voice_id: v.voiceId } };
 }
 const templateKey = (ch: Pick<Channel, "language" | "voice">) => crypto.createHash("sha256").update(JSON.stringify([ch.voice.service, templateConfig(ch)])).digest("hex").slice(0, 32);
-/** Шаблон Lumean под голос канала: создаётся один раз и пересоздаётся только при смене голоса. */
+/** Шаблон Lumean под голос канала: создаётся один раз и пересоздаётся только при смене голоса.
+ *  «Мой шаблон» (Выпуск 2): берётся готовый шаблон пользователя как есть — TubeStudio его не меняет. */
 export async function ensureTemplate(channelId: string): Promise<string> {
   const ch = await getChannel(channelId);
+  if (ch.voice.templateSource === "mine") {
+    if (!ch.voice.ownTemplateId) throw new ApiError("VALIDATION", "Выберите свой шаблон Lumean: Студия → Озвучка → «Мой шаблон».", 400);
+    return ch.voice.ownTemplateId;
+  }
   const k = templateKey(ch);
   if (ch.voice.templateId && ch.voice.templateKey === k) return ch.voice.templateId;
   const t = await call<any>("POST", "/templates", { service_key: ch.voice.service, name: `TubeStudio · ${ch.name}`.slice(0, 255), config: templateConfig(ch) });
   if (!t?.id) throw new ApiError("UPSTREAM", "Lumean не вернул номер шаблона", 502);
   await updateChannel(ch.id, { voice: { templateId: String(t.id), templateKey: k } });
   return String(t.id);
+}
+
+// ---------- «Мой шаблон»: готовые шаблоны пользователя в Lumean ----------
+export const TemplateQuery = z.object({
+  search: z.string().trim().max(100).default(""), service: z.enum(["", "elevenlabs", "cartesia", "heygen", "fishaudio"]).default(""),
+  folderId: z.string().trim().regex(/^[\w-]{0,64}$/).default(""), page: z.number().int().min(1).max(500).default(1),
+}).strict();
+export type TemplateItem = { type: "template" | "folder"; id: string; name: string; service?: string; voiceId?: string; model?: string; mode?: string; isPublic?: boolean; count?: number; updatedAt?: string };
+function templateItem(t: any): TemplateItem {
+  const s = (x: unknown) => (typeof x === "string" && x ? x : undefined);
+  if (t?.type === "folder") return { type: "folder", id: String(t.id), name: s(t.name) ?? "Папка", count: Number(t.templates_count) || 0, updatedAt: s(t.updated_at) };
+  const tts = t?.config?.tts_settings ?? {};
+  return { type: "template", id: String(t?.id ?? ""), name: s(t?.name) ?? String(t?.id ?? ""), service: s(t?.service_key) ?? s(t?.service?.code), voiceId: s(tts.voice_id), model: s(tts.model_id), mode: s(tts.mode), isPublic: !!t?.is_public, updatedAt: s(t?.updated_at) };
+}
+/** Список шаблонов: по папкам (как в кабинете Lumean) или поиском по названию. */
+export async function listTemplates(raw: z.input<typeof TemplateQuery>) {
+  const q = TemplateQuery.parse(raw);
+  const qs = (o: Record<string, string | number>) => "?" + new URLSearchParams(Object.entries(o).filter(([, v]) => v !== "").map(([k, v]) => [k, String(v)])).toString();
+  const page = (d: any) => ({ hasMore: !Array.isArray(d) && Number(d?.current_page ?? 1) < Number(d?.last_page ?? 1), total: Array.isArray(d) ? d.length : Number(d?.total ?? 0) || null });
+  if (q.search) {
+    const d = await call<any>("GET", `/templates${qs({ page: q.page, per_page: 30, search: q.search, service: q.service, folder_id: q.folderId })}`);
+    const items = (Array.isArray(d) ? d : d?.items ?? []).map(templateItem).filter((t: TemplateItem) => t.id);
+    return { items, page: q.page, ...page(d), folder: null as { id: string; name: string } | null, breadcrumbs: [] as { id: string; name: string }[] };
+  }
+  const d = await call<any>("GET", `/templates/browse${qs({ page: q.page, per_page: 50, service: q.service, folder_id: q.folderId })}`);
+  const items = (Array.isArray(d) ? d : d?.items ?? []).map(templateItem).filter((t: TemplateItem) => t.id);
+  const crumb = (x: any) => ({ id: String(x?.id ?? ""), name: String(x?.name ?? "") });
+  return { items, page: q.page, ...page(d), folder: d?.current_folder ? crumb(d.current_folder) : null, breadcrumbs: Array.isArray(d?.breadcrumbs) ? d.breadcrumbs.map(crumb) : [] };
+}
+/** Один шаблон по номеру — для проверки вставленного ID. */
+export async function getTemplate(id: string): Promise<TemplateItem> {
+  if (!/^[\w-]{1,80}$/.test(id)) throw new ApiError("VALIDATION", "Номер шаблона Lumean выглядит неверно: скопируйте его из кабинета Lumean.", 400);
+  const t = templateItem(await call<any>("GET", `/templates/${encodeURIComponent(id)}`));
+  if (!t.id) throw new ApiError("NOT_FOUND", "Шаблон Lumean не найден", 404);
+  return t;
 }
 
 // ---------- текст для озвучки (карточка 180: слова сценария не меняются, только разметка) ----------
@@ -326,9 +366,10 @@ export async function runVoice(raw: z.input<typeof VoiceOrderInput>, ctx: JobCtx
     files.push({ path: fp, local: `${dirRel}/${base}`, bytes: buf.length });
   }
   const audio = files.find((f) => /\.(mp3|wav|ogg|m4a)$/i.test(f.local));
+  const mine = ch.voice.templateSource === "mine" && templateId === ch.voice.ownTemplateId;
   const art = await addArtifact(p.id, {
-    kind: "audio", title: `Озвучка Lumean · ${ch.voice.voiceName || ch.voice.voiceId}`.slice(0, 300), files: files.map((f) => f.local),
-    data: { source: "lumean", orderId, status: st, mode, voice: { service: ch.voice.service, voiceId: ch.voice.voiceId, name: ch.voice.voiceName }, chars: text.length, tokens: o.tokens_spent ?? o.total_tokens ?? null, tokensFromQuota: o.tokens_from_quota ?? null, tokensFromPayg: o.tokens_from_payg ?? null, durationMs: o.total_duration_ms ?? null, audio: audio?.local, subtitles: files.filter((f) => /\.(srt|vtt)$/i.test(f.local)).map((f) => f.local), timings: files.find((f) => /result\.json$|alignment/i.test(f.local))?.local ?? null, text, partial: st === "partially_completed", failedParts: failedItems.length },
+    kind: "audio", title: `Озвучка Lumean · ${mine ? `шаблон «${ch.voice.ownTemplateName || ch.voice.ownTemplateId}»` : ch.voice.voiceName || ch.voice.voiceId}`.slice(0, 300), files: files.map((f) => f.local),
+    data: { source: "lumean", orderId, status: st, mode, voice: mine ? { service: ch.voice.service, voiceId: "", name: ch.voice.ownTemplateName || "Мой шаблон", templateId: ch.voice.ownTemplateId, own: true } : { service: ch.voice.service, voiceId: ch.voice.voiceId, name: ch.voice.voiceName }, chars: text.length, tokens: o.tokens_spent ?? o.total_tokens ?? null, tokensFromQuota: o.tokens_from_quota ?? null, tokensFromPayg: o.tokens_from_payg ?? null, durationMs: o.total_duration_ms ?? null, audio: audio?.local, subtitles: files.filter((f) => /\.(srt|vtt)$/i.test(f.local)).map((f) => f.local), timings: files.find((f) => /result\.json$|alignment/i.test(f.local))?.local ?? null, text, partial: st === "partially_completed", failedParts: failedItems.length },
   });
   await withRegistry((r) => { const x = r.orders[hash]; if (x) { x.files = files; x.artifactId = art.id; x.projectId = p.id; } });
   ctx.progress("Готово", 100);

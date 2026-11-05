@@ -16,6 +16,8 @@ export const config = {
     youtube3: env("YOUTUBE_API_KEY_3"),
     gemini: env("GEMINI_API_KEY"),
     lumean: env("LUMEAN_API_KEY"),
+    /** G-Labs Webhook (Выпуск 2): ключ из вкладки Webhook программы G-Labs. */
+    glabs: env("GLABS_API_KEY"),
     anthropic: env("ANTHROPIC_API_KEY"),
     openai: env("OPENAI_API_KEY"),
   },
