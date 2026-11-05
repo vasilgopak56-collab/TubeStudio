@@ -1,12 +1,13 @@
 // Общие элементы Студии: выбор канала, ход задачи, отчёт проверки сценария, оценки критика.
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, Info, XCircle, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Info, SearchCheck, XCircle, X } from "lucide-react";
 import { api } from "@/lib/api";
 import type { JobState, PriceChallenge } from "@/lib/jobs";
 import { Badge, Button, Card, ErrorAlert, ProgressBar, Select } from "@/components/ui";
 import { cn } from "@/lib/cn";
-import type { Channel, ChannelList, CriticReport, LintIssue, LintReport } from "./types";
+import type { Channel, ChannelList, CriticReport, FactCheckReport, FactItem, FactSource, FactVerdict, LintIssue, LintReport } from "./types";
+import { factStatus } from "./factHash";
 
 export const useChannels = (archived = false) => useQuery({ queryKey: ["studio-channels", archived], queryFn: () => api<ChannelList>(`/studio/channels${archived ? "?archived=1" : ""}`), staleTime: 10_000 });
 
@@ -129,6 +130,69 @@ export function CriticView({ critic, after }: { critic: CriticReport; after?: Cr
         {p.after && <p className="mt-1">Стало: «{p.after}»</p>}
       </div>)}
     </div>}
+  </Card>;
+}
+
+const VERDICT: Record<FactVerdict, { label: string; tone: "success" | "danger" | "crown" | "default" }> = {
+  true: { label: "верно", tone: "success" }, false: { label: "неверно", tone: "danger" },
+  misleading: { label: "вводит в заблуждение", tone: "crown" }, unverified: { label: "не удалось проверить", tone: "crown" },
+};
+const hostOf = (u: string) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return u; } };
+function Sources({ list }: { list: FactSource[] }) {
+  if (!list.length) return null;
+  return <p className="text-xs text-muted-foreground">Источники: {list.map((x, i) => <span key={x.url}>{i > 0 && " · "}<a href={x.url} target="_blank" rel="noreferrer noopener" className="text-primary hover:underline">{x.title && !/^https?:/.test(x.title) ? x.title.slice(0, 80) : hostOf(x.url)}</a></span>)}</p>;
+}
+function Claims({ item }: { item: FactItem }) {
+  return <ul className="mt-1 space-y-1">{item.claims.map((c, k) => <li key={k} className="text-sm"><span dir="auto">{c.text}</span> — <b className={c.verdict === "true" ? "text-success" : c.verdict === "false" ? "text-accent" : "text-crown"}>{VERDICT[c.verdict].label}</b>{c.why ? <span className="text-muted-foreground">. {c.why}</span> : null}</li>)}</ul>;
+}
+
+/** Отчёт проверки фактов: вердикт по каждому утверждению, «было → стало», источники из поиска. */
+export function FactCheckView({ report, text, onRecheck, rechecking, onRestore, recheckLabel = "Проверить факты снова — платно" }: {
+  report: FactCheckReport | null | undefined; text?: string; onRecheck?: () => void; rechecking?: boolean; onRestore?: () => void; recheckLabel?: string;
+}) {
+  const actions = (onRecheck || onRestore) && <div className="flex flex-wrap gap-3">
+    {onRecheck && <Button className="min-h-11" variant={report ? "outline" : "primary"} loading={rechecking} loadingText="Проверяю факты…" onClick={onRecheck}><SearchCheck className="h-4 w-4" />{report ? recheckLabel : "Проверить факты — платно"}</Button>}
+    {onRestore && <Button className="min-h-11" variant="ghost" onClick={onRestore}>Вернуть текст до проверки фактов</Button>}
+  </div>;
+  if (!report) return <Card className="space-y-3 p-5" data-testid="fact-report">
+    <h3 className="flex items-center gap-2 text-lg font-bold"><AlertTriangle className="h-5 w-5 text-crown" />Факты не проверены</h3>
+    <p className="text-sm text-muted-foreground">YouTube может ограничить монетизацию ролика с недостоверными фактами. Проверка находит в тексте каждую цифру, дату, имя, причину и следствие, ищет их в Google и исправляет неточности. Дальше в работу идёт исправленный текст.</p>
+    {actions}
+  </Card>;
+  const st = text === undefined ? (report.passed ? "passed" : "issues") : factStatus(text, report);
+  const s = report.summary;
+  const bad = report.items.filter((x) => x.verdict !== "true"), good = report.items.filter((x) => x.verdict === "true");
+  const mode = report.mode === "web" ? "Поиск Google" : report.mode === "mixed" ? "Поиск Google и знания модели" : "Без поиска — по знаниям модели";
+  return <Card className="space-y-4 p-5" data-testid="fact-report">
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <h3 className="flex items-center gap-2 text-lg font-bold"><SearchCheck className="h-5 w-5" />Проверка фактов</h3>
+      <div className="flex flex-wrap gap-2">
+        <Badge tone="success">верно: {s.true}</Badge>
+        <Badge tone={s.false ? "danger" : "default"}>неверно: {s.false}</Badge>
+        <Badge tone={s.misleading ? "crown" : "default"}>вводит в заблуждение: {s.misleading}</Badge>
+        <Badge tone={s.unverified ? "crown" : "default"}>не удалось проверить: {s.unverified}</Badge>
+      </div>
+    </div>
+    <p className="text-sm text-muted-foreground">{mode}{report.models.length ? ` · ${report.models.join(", ")}` : ""} · утверждений: {s.total} в {report.checked} {plural(report.checked, ["предложении", "предложениях", "предложениях"])} · исправлено: {report.changed} · убрано: {report.removed} · {new Date(report.at).toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
+    {st === "stale" && <p role="status" className="flex items-center gap-2 text-sm font-semibold text-crown"><AlertTriangle className="h-4 w-4 shrink-0" />Текст изменён после проверки фактов — проверьте факты снова перед озвучкой.</p>}
+    {st === "passed" && <p className="flex items-center gap-2 text-sm text-success"><CheckCircle2 className="h-4 w-4 shrink-0" />{report.changed + report.removed ? "Неточности исправлены — дальше в работу идёт исправленный текст." : "Неточностей не найдено."}</p>}
+    {st === "issues" && <p className="flex items-center gap-2 text-sm font-semibold text-accent"><XCircle className="h-4 w-4 shrink-0" />{report.remaining ? `Осталось без исправления: ${report.remaining} — поправьте эти места вручную и проверьте снова.` : "Проверен не весь текст — см. заметки ниже."}</p>}
+    {report.mode !== "web" && <p className="text-sm text-crown">Поиск Google не использовался{report.mode === "mixed" ? " для части предложений" : ""}: такие вердикты менее надёжны. В Настройках проверьте: AnyModel включён, заполнено поле «Веб-ресёрч (Google Search)», на балансе есть деньги.</p>}
+    {report.notes.map((n, i) => <p key={i} className="text-sm text-crown">{n}</p>)}
+    {bad.length > 0 && <ul className="space-y-3">{bad.map((x) => <li key={x.id} className="space-y-1 rounded-lg border p-3 text-sm" data-testid="fact-item">
+      <p className="flex flex-wrap items-center gap-2"><Badge tone={VERDICT[x.verdict].tone}>{VERDICT[x.verdict].label}</Badge><span className="font-mono text-xs text-muted-foreground">абзац {x.paragraph} · {x.at}</span>{x.mode === "model" && <span className="text-xs text-muted-foreground">без поиска</span>}</p>
+      <p className="text-muted-foreground">Было: «<span dir="auto">{x.quote}</span>»</p>
+      {x.applied ? x.fix === "" ? <p className="font-medium">Убрано из текста.</p> : <p>Стало: «<span dir="auto" className="font-medium">{x.fix}</span>»</p> : <p className="font-medium text-accent">Не исправлено — поправьте вручную.{x.note ? ` ${x.note}` : ""}</p>}
+      <Claims item={x} />
+      <Sources list={x.sources} />
+    </li>)}</ul>}
+    {good.length > 0 && <details className="text-sm"><summary className="min-h-11 cursor-pointer py-2 text-muted-foreground">Подтверждено: {s.true} {plural(s.true, ["утверждение", "утверждения", "утверждений"])}</summary>
+      <ul className="space-y-2">{good.map((x) => <li key={x.id} className="rounded-lg border p-3"><p className="text-muted-foreground"><span className="font-mono text-xs">абзац {x.paragraph} · {x.at}</span> — «<span dir="auto">{x.quote}</span>»</p><Claims item={x} /><Sources list={x.sources} /></li>)}</ul>
+    </details>}
+    {report.sources.length > 0 && <details className="text-sm"><summary className="min-h-11 cursor-pointer py-2 text-muted-foreground">Найдено поиском: {report.sources.length} {plural(report.sources.length, ["ссылка", "ссылки", "ссылок"])}</summary>
+      <ul className="list-disc space-y-1 pl-5">{report.sources.map((x) => <li key={x.url}><a href={x.url} target="_blank" rel="noreferrer noopener" className="text-primary hover:underline">{x.title && !/^https?:/.test(x.title) ? x.title.slice(0, 100) : hostOf(x.url)}</a></li>)}</ul>
+    </details>}
+    {actions}
   </Card>;
 }
 

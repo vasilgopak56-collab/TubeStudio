@@ -2,13 +2,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Mic, Pause, Play } from "lucide-react";
+import { CheckCircle2, Mic, Pause, Play } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { useJob } from "@/lib/jobs";
-import type { ProjectSummary } from "@/lib/types";
+import type { Project, ProjectSummary } from "@/lib/types";
 import { Badge, Button, Card, ErrorAlert, Input, Label, SectionTitle, Select, ToolHeader } from "@/components/ui";
 import { ChannelPicker, JobBox, NeedChannel, num, useActiveChannel } from "@/features/studio/common";
-import type { LumeanAccount, OrderRec, VoiceEstimate, VoiceItem, VoiceResult, VoiceService } from "@/features/studio/types";
+import type { FactCheckReport, LumeanAccount, OrderRec, VoiceEstimate, VoiceItem, VoiceResult, VoiceService } from "@/features/studio/types";
+import { factStatus } from "@/features/studio/factHash";
 
 const SERVICES: { v: VoiceService; label: string }[] = [
   { v: "elevenlabs", label: "ElevenLabs" }, { v: "cartesia", label: "Cartesia" }, { v: "heygen", label: "HeyGen" }, { v: "fishaudio", label: "Fish Audio" },
@@ -101,6 +102,16 @@ export default function StudioVoice() {
   const job = useJob<VoiceResult>("/studio/voice");
   useEffect(() => { if (job.status === "done" || job.status === "error") { void qc.invalidateQueries({ queryKey: ["lumean-orders"] }); void qc.invalidateQueries({ queryKey: ["lumean-account"] }); } }, [job.status]);
   const run = (extra: { again?: boolean; topupMaxLmc?: number } = {}) => channel && job.start({ channelId: channel.id, projectId, ...extra });
+  // Проверка фактов до озвучки: после неё правка текста — это новый платный заказ.
+  const project = useQuery({ queryKey: ["project", projectId], queryFn: () => api<Project>(`/projects/${projectId}`), enabled: !!projectId, retry: false, refetchOnWindowFocus: false });
+  const sd = (project.data ? [...project.data.artifacts].reverse().find((a) => a.kind === "script")?.data : undefined) as { script?: string; studio?: { factCheck?: FactCheckReport | null } } | undefined;
+  const factReport = sd?.studio?.factCheck ?? null;
+  const facts = projectId && project.data ? factStatus(sd?.script, factReport) : null;
+  const factsTitle = facts === "none" ? "Факты в этом сценарии не проверены" : facts === "stale" ? "Сценарий меняли после проверки фактов" : facts === "issues" ? `После проверки фактов остались неисправленные места: ${factReport?.remaining ?? 0}` : "";
+  const voiceNow = () => {
+    if (facts && facts !== "passed" && !window.confirm(`${factsTitle}. YouTube может ограничить монетизацию ролика с недостоверными фактами. Всё равно озвучить? Это платно.`)) return;
+    void run();
+  };
 
   if (loading) return null;
   if (!list?.channels.length || !channel) return <div className="space-y-6"><ToolHeader icon={Mic} title="Озвучка" eyebrow="// ВЫПУСК 1" subtitle="Голос канала через Lumean" /><NeedChannel /></div>;
@@ -134,9 +145,15 @@ export default function StudioVoice() {
           {withScript.map((p) => <option key={p.id} value={p.id}>{p.title}{p.channelId === channel.id ? "" : " (другой канал)"}</option>)}
         </Select></label>
       {projects.data && withScript.length === 0 && <p className="text-sm text-muted-foreground">Проектов со сценарием нет. Напишите его в разделе <Link to="/studio/script" className="text-primary hover:underline">Сценарий</Link>.</p>}
+      {facts && facts !== "passed" && <div role="status" className="space-y-1 rounded-lg border border-crown/40 bg-crown/5 p-3 text-sm" data-testid="voice-facts">
+        <p className="font-semibold text-crown">{factsTitle}</p>
+        <p className="text-muted-foreground">YouTube может ограничить монетизацию ролика с недостоверными фактами. Проверьте факты до озвучки: после неё правка текста — это новый платный заказ.</p>
+        <Link to={`/studio/script?project=${projectId}`} className="text-primary hover:underline">Проверить факты в разделе «Сценарий» →</Link>
+      </div>}
+      {facts === "passed" && factReport && <p className="flex items-center gap-2 text-sm text-success" data-testid="voice-facts"><CheckCircle2 className="h-4 w-4 shrink-0" />Факты проверены {new Date(factReport.at).toLocaleDateString("ru-RU")}{factReport.changed + factReport.removed ? ` · исправлено мест: ${factReport.changed + factReport.removed}` : " · неточностей не найдено"}{factReport.mode !== "web" ? " · без поиска Google" : ""}</p>}
       <div className="flex flex-wrap gap-3">
         <Button variant="outline" className="min-h-11" disabled={!projectId || !v.voiceId || running} loading={estimate.isPending} loadingText="Считаю…" onClick={() => estimate.mutate()}>Оценить бесплатно</Button>
-        <Button className="min-h-11" disabled={!projectId || !v.voiceId || running} loading={running} loadingText="Озвучиваю…" onClick={() => void run()}>Озвучить</Button>
+        <Button className="min-h-11" disabled={!projectId || !v.voiceId || running} loading={running} loadingText="Озвучиваю…" onClick={voiceNow}>Озвучить</Button>
       </div>
       <p className="text-xs text-muted-foreground">Слова сценария не меняются: убираются только пометки в скобках, заголовки и разметка. Паузы {"{{pause=1s}}"} бесплатны. Повторное нажатие с тем же текстом и голосом не создаёт второй заказ.</p>
       {estimate.error && <ErrorAlert error={estimate.error} />}

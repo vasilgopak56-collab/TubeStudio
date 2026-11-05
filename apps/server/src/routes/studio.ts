@@ -6,7 +6,7 @@ import { ApiError, fail, ok } from "../lib/errors.js";
 import { startJob } from "../lib/jobs.js";
 import { activateChannel, archiveChannel, channelSpend, createChannel, getChannel, linkJobToChannel, listChannels, updateChannel } from "../services/studio/channels.js";
 import { IdeaPeriod, IdeaSort, listIdeas, radarRunning, runRadar, setIdeaStatus, takeIdea } from "../services/studio/radar.js";
-import { StudioScriptInput, lintForChannel, runStudioScript } from "../services/studio/scriptFlow.js";
+import { FactCheckJobInput, StudioScriptInput, lintForChannel, runFactCheck, runStudioScript } from "../services/studio/scriptFlow.js";
 import { lintScript } from "../services/studio/scriptLint.js";
 import { VoiceOrderInput, VoiceQuery, estimateVoice, listVoices, lumeanAccount, lumeanOrders, runVoice } from "../services/studio/lumean.js";
 
@@ -82,6 +82,17 @@ studioRoute.post("/studio/script/save", handle(async (c) => {
   const lint = ch ? lintForChannel(i.script, ch) : lintScript(i.script);
   await updateArtifactData(p.id, a.id, (d: Record<string, any> | undefined) => ({ ...(d ?? {}), script: i.script, studio: { ...(d?.studio ?? {}), lint, editedAt: new Date().toISOString() } }));
   return { lint };
+}));
+/** Проверка фактов (платно): сценарий проекта — исправленный текст сохраняется в проект; вставленный текст — возвращается. */
+studioRoute.post("/studio/script/factcheck", handle(async (c) => {
+  const i = FactCheckJobInput.parse(await body(c));
+  await getChannel(i.channelId);
+  if (i.projectId) {
+    const { getProject } = await import("../services/projects.js");
+    const p = await getProject(i.projectId);
+    if (!p.artifacts.some((a) => a.kind === "script" && (!i.artifactId || a.id === i.artifactId))) throw new ApiError("NOT_FOUND", "Сценарий в проекте не найден", 404);
+  }
+  return job(i.channelId, "factcheck", (ctx) => runFactCheck(i, ctx));
 }));
 studioRoute.post("/studio/script", handle(async (c) => {
   const i = StudioScriptInput.parse(await body(c));

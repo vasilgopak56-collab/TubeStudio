@@ -1,5 +1,5 @@
 // Сценарий канала (Выпуск 1): донор → план → черновик → автопроверка кодом →
-// критик другой семьи моделей → правка автором → повторная проверка.
+// критик другой семьи моделей → правка автором → повторная проверка → проверка фактов.
 // Черновик пишет существующий конвейер runScript (ресёрч, план по актам, объём, живой голос);
 // здесь — профиль канала, разбор донора, проверка, критик и правка. Всё сохраняется в проект.
 import { z } from "zod";
@@ -9,6 +9,7 @@ import type { JobCtx } from "../../lib/jobs.js";
 import { log } from "../../lib/logging.js";
 import { assertChannelBudget, getChannel, type Channel } from "./channels.js";
 import { lintScript, DEFAULT_WPM, type LintReport } from "./scriptLint.js";
+import { checkFacts, dossierBrief, type FactCheckReport } from "./factCheck.js";
 
 export const StudioScriptInput = z.object({
   channelId: z.string().uuid(),
@@ -21,6 +22,8 @@ export const StudioScriptInput = z.object({
   minutes: z.number().min(1).max(120).optional(),
   research: z.boolean().default(true),
   critic: z.boolean().default(true),
+  /** Проверка фактов готового текста: неверное исправляется, непроверяемое убирается. */
+  factCheck: z.boolean().default(true),
   notes: z.string().trim().max(8000).default(""),
 }).strict();
 export type StudioScriptInputT = z.infer<typeof StudioScriptInput>;
@@ -77,6 +80,7 @@ export type StudioScriptResult = {
   projectId: string; artifactId: string; title: string; script: string; draft: string;
   lint: LintReport; lintDraft: LintReport; critic: CriticReport | null; criticAfter: CriticReport | null;
   donor: DonorBrief | null; revised: boolean; notes: string[]; models: { author: string; critic: string | null };
+  factCheck: FactCheckReport | null; beforeFacts?: string;
 };
 
 export async function runStudioScript(raw: StudioScriptInputT, ctx: JobCtx): Promise<StudioScriptResult> {
@@ -129,13 +133,13 @@ export async function runStudioScript(raw: StudioScriptInputT, ctx: JobCtx): Pro
     research: input.research, humanize: true, cta: true, projectId: input.projectId, model: ch.models.author || undefined,
   }), {
     ...ctx,
-    progress: (stage, pct) => ctx.progress(stage, 5 + Math.round(pct * 0.6)),
+    progress: (stage, pct) => ctx.progress(stage, 5 + Math.round(pct * 0.55)),
   });
   const authorModel = draft.model || author;
   const authorFamily = modelFamily(authorModel);
 
   // 4. Автопроверка кодом.
-  ctx.progress("Проверяю сценарий: хук, вступление, оговорки, повторы, финал", 67);
+  ctx.progress("Проверяю сценарий: хук, вступление, оговорки, повторы, финал", 61);
   const lintDraft = lintScript(draft.script, { language: lang, targetMinutes: minutes, wpm });
   ctx.partial({ lintDraft });
 
@@ -151,7 +155,7 @@ export async function runStudioScript(raw: StudioScriptInputT, ctx: JobCtx): Pro
     return summarize(r.data, r.model, authorFamily);
   };
   if (criticModel) {
-    ctx.progress(`Критик (${criticModel}) читает сценарий`, 72);
+    ctx.progress(`Критик (${criticModel}) читает сценарий`, 64);
     try {
       await assertChannelBudget(ch.id);
       critic = await askCritic(draft.script, lintDraft, false);
@@ -168,7 +172,7 @@ export async function runStudioScript(raw: StudioScriptInputT, ctx: JobCtx): Pro
   let script = draft.script, revised = false, lint = lintDraft;
   const needsFix = lintDraft.errors > 0 || lintDraft.warnings > 0 || (critic && (!critic.passed || critic.problems.length > 0));
   if (needsFix) {
-    ctx.progress("Автор правит найденные места", 80);
+    ctx.progress("Автор правит найденные места", 70);
     try {
       await assertChannelBudget(ch.id);
       const fixes = critic?.problems.map((p) => `- [${p.paragraph}] ${p.problem}${p.before ? `\n  before: «${p.before}»` : ""}${p.after ? `\n  after: «${p.after}»` : ""}`).join("\n") || "- нет";
@@ -192,18 +196,80 @@ export async function runStudioScript(raw: StudioScriptInputT, ctx: JobCtx): Pro
   // 7. Повторная оценка критиком (только баллы).
   let criticAfter: CriticReport | null = null;
   if (critic && revised) {
-    ctx.progress("Критик оценивает правку", 92);
+    ctx.progress("Критик оценивает правку", 78);
     try { await assertChannelBudget(ch.id); criticAfter = await askCritic(script, lint, true); }
     catch (e) { rethrowCancelled(e); rethrowFinancial(e); notes.push(`Повторная оценка критика не получена: ${(e as Error).message.slice(0, 160)}.`); }
   }
 
-  // 8. Сохраняем: сценарий проекта получает отчёт, черновик и правку.
-  ctx.progress("Сохраняю в проект", 97);
+  // 8. Сохраняем: сценарий проекта получает отчёт, черновик и правку (до проверки фактов — чтобы её сбой ничего не потерял).
+  ctx.progress("Сохраняю в проект", 80);
   const { updateArtifactData, updateProject } = await import("../projects.js");
   await updateProject(draft.projectId, { channelId: ch.id }).catch(() => undefined);
-  const studio = { channelId: ch.id, minutes, words, lint, lintDraft, critic, criticAfter, donor, revised, notes, draft: revised ? draft.script : undefined, models: { author: authorModel, critic: critic?.model ?? null }, at: new Date().toISOString() };
+  const studio: Record<string, unknown> = { channelId: ch.id, minutes, words, lint, lintDraft, critic, criticAfter, donor, revised, notes, draft: revised ? draft.script : undefined, models: { author: authorModel, critic: critic?.model ?? null }, factCheck: null, at: new Date().toISOString() };
   await updateArtifactData(draft.projectId, draft.artifactId, (d: Record<string, unknown>) => ({ ...d, script, studio }));
-  return { projectId: draft.projectId, artifactId: draft.artifactId, title: draft.title, script, draft: draft.script, lint, lintDraft, critic, criticAfter, donor, revised, notes, models: studio.models };
+
+  // 9. Проверка фактов готового текста (мастер-промпт, шаг 03): дальше идёт исправленная версия.
+  let factCheck: FactCheckReport | null = null, beforeFacts: string | undefined;
+  if (input.factCheck) {
+    try {
+      const r = await checkFacts({
+        text: script, channel: ch, topic: input.topic, model: ch.models.critic || pickCritic(authorModel, s.anymodel),
+        hints: draft.plan?.claims_to_verify ?? [], reference: dossierBrief(draft.facts),
+      }, { ...ctx, progress: (stage, pct) => ctx.progress(stage, 81 + Math.round(pct * 0.16)) });
+      factCheck = r.report;
+      if (r.script !== script) { beforeFacts = script; script = r.script; lint = lintScript(script, { language: lang, targetMinutes: minutes, wpm }); }
+      ctx.partial({ factCheck });
+    } catch (e) {
+      rethrowCancelled(e);
+      notes.push(`Проверка фактов не выполнена: ${(e as Error).message.slice(0, 200)}. Запустите её кнопкой «Проверить факты» перед озвучкой.`);
+      log.warn({ event: "studio_factcheck_failed", code: e instanceof ApiError ? e.code : "?" });
+    }
+    ctx.progress("Сохраняю в проект", 98);
+    Object.assign(studio, { lint, notes, factCheck, beforeFacts });
+    await updateArtifactData(draft.projectId, draft.artifactId, (d: Record<string, unknown>) => ({ ...d, script, studio }));
+  }
+  return { projectId: draft.projectId, artifactId: draft.artifactId, title: draft.title, script, draft: draft.script, lint, lintDraft, critic, criticAfter, donor, revised, notes, models: studio.models as StudioScriptResult["models"], factCheck, beforeFacts };
+}
+
+export const FactCheckJobInput = z.object({
+  channelId: z.string().uuid(),
+  projectId: z.string().trim().min(1).max(80).optional(),
+  artifactId: z.string().trim().min(1).max(80).optional(),
+  text: z.string().max(200_000).optional(),
+}).strict().refine((x) => !!x.projectId !== !!x.text?.trim(), { message: "Выберите проект со сценарием или вставьте текст" });
+export type FactCheckJobResult = { report: FactCheckReport; script: string; lint: LintReport; beforeFacts?: string; projectId?: string; artifactId?: string };
+
+/** Отдельная проверка фактов: сценарий проекта (исправленный текст сохраняется) или вставленный текст. */
+export async function runFactCheck(raw: z.input<typeof FactCheckJobInput>, ctx: JobCtx): Promise<FactCheckJobResult> {
+  const input = FactCheckJobInput.parse(raw);
+  const ch = await getChannel(input.channelId);
+  const { getSettings } = await import("../settings.js");
+  const s = await getSettings();
+  if (input.text?.trim()) {
+    const author = ch.models.author || s.anymodel.script;
+    const r = await checkFacts({ text: input.text, channel: ch, topic: ch.niche || "YouTube video", model: ch.models.critic || pickCritic(author, s.anymodel) }, ctx);
+    return { report: r.report, script: r.script, lint: lintForChannel(r.script, ch) };
+  }
+  const { getProject, updateArtifactData } = await import("../projects.js");
+  const p = await getProject(input.projectId!);
+  const a = input.artifactId ? p.artifacts.find((x) => x.id === input.artifactId && x.kind === "script") : [...p.artifacts].reverse().find((x) => x.kind === "script");
+  if (!a) throw new ApiError("NOT_FOUND", "Сценарий в проекте не найден", 404);
+  type Data = { script?: string; model?: string; input?: { topic?: string }; plan?: { claims_to_verify?: string[] }; facts?: Parameters<typeof dossierBrief>[0]; studio?: { minutes?: number; models?: { author?: string } } };
+  const d = (a.data ?? {}) as Data;
+  const original = d.script ?? "";
+  if (!original.trim()) throw new ApiError("VALIDATION", "В проекте нет текста сценария", 400);
+  const author = d.studio?.models?.author || d.model || ch.models.author || s.anymodel.script;
+  const r = await checkFacts({
+    text: original, channel: ch, topic: d.input?.topic || p.title, model: ch.models.critic || pickCritic(author, s.anymodel),
+    hints: d.plan?.claims_to_verify ?? [], reference: dossierBrief(d.facts),
+  }, ctx);
+  const lint = lintForChannel(r.script, ch, d.studio?.minutes);
+  const beforeFacts = r.script !== original ? original : undefined;
+  await updateArtifactData(p.id, a.id, (cur: Record<string, any> | undefined) => {
+    if ((cur?.script ?? "") !== original) throw new ApiError("VALIDATION", "Сценарий изменили во время проверки фактов. Запустите проверку снова.", 409);
+    return { ...(cur ?? {}), script: r.script, studio: { ...(cur?.studio ?? {}), channelId: cur?.studio?.channelId ?? ch.id, lint, factCheck: r.report, beforeFacts } };
+  });
+  return { report: r.report, script: r.script, lint, beforeFacts, projectId: p.id, artifactId: a.id };
 }
 
 /** Проверка без ИИ — для кнопки «Проверить» и вставленного текста. */

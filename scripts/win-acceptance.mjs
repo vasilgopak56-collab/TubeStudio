@@ -392,6 +392,9 @@ await phase("L. Студия: канал, проверка сценария Shie
     check("Shields: описательное вступление, оговорки и повтор вывода найдены", lint.status === 200 && ["opening-descriptive", "hedges", "double-ending"].every((x) => rules.has(x)), `${lint.status} ${[...rules].join(", ")} ${lint.text.slice(0, 200)}`);
     const ideas = await api(r.link.port, "GET", `/api/studio/channels/${channelId}/ideas?limit=5`, { cookie });
     check("Идеи канала читаются", ideas.status === 200 && Array.isArray(ideas.json?.data?.ideas), ideas.text.slice(0, 300));
+    const fcBad = await api(r.link.port, "POST", "/api/studio/script/factcheck", { cookie, body: { channelId } });
+    const fcMissing = await api(r.link.port, "POST", "/api/studio/script/factcheck", { cookie, body: { channelId, projectId: "missing-project" } });
+    check("Проверка фактов: маршрут отвечает понятными ошибками без платных запросов", fcBad.status === 400 && fcMissing.status === 404, `${fcBad.status} ${fcBad.text.slice(0, 200)} | ${fcMissing.status} ${fcMissing.text.slice(0, 200)}`);
     const acc = await api(r.link.port, "GET", "/api/studio/voice/account", { cookie });
     check("Без ключа Lumean — понятная подсказка", acc.json?.error?.code === "KEY_MISSING", acc.text.slice(0, 300));
     await go("/");
@@ -404,6 +407,8 @@ await phase("L. Студия: канал, проверка сценария Shie
     check("Идеи для канала: кнопка «Найти идеи»", await seen(page.getByRole("button", { name: "Найти идеи" })));
     await shot("ideas");
     await go("/studio/script");
+    check("Сценарий: переключатель «Проверка фактов готового текста»", await seen(page.getByText("Проверка фактов готового текста")));
+    check("Сценарий: кнопка «Проверить факты — платно» для своего текста", await seen(page.getByRole("button", { name: "Проверить факты — платно" })));
     const own = page.getByLabel("Свой текст для проверки");
     if (check("Сценарий: поле «Свой текст для проверки»", await seen(own))) {
       await own.fill(shields);

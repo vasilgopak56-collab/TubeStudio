@@ -40,8 +40,11 @@ LIVE VOICE (Humanizer rules — write like a person from the first draft)
 - §25–§26 No text about the video ("В этом видео…") and no recaps ("Как мы уже говорили", "Таким образом", "В заключение").
 - TTS: no symbols (% № & → / + =) — write them as spoken; no brackets; no emoji; at most 1–2 "!" and "…" per video; questions only as re-hooks.
 
-FACT INTEGRITY
-- Use only facts you are confident are true, or facts from the research notes. Do not invent quotes, dates, names or statistics. If something is uncertain, phrase it honestly ("historians still argue…", "according to one account…").
+FACT INTEGRITY (YouTube limits monetisation of videos with false or misleading claims — accuracy beats drama)
+- State as fact only what you are sure is true or what the research notes support. Never invent facts, dates, names, numbers, quotes, studies, experiments, statistics or sources.
+- If you are not sure a detail is true, leave it out of the narration (put it into the list of claims to verify) or say it in a less precise form that is certainly true ("in the early 1900s" instead of an exact year). Do not hide doubt behind hedges: at most one honest caveat ("historians still argue…") per ~2 minutes, only for a famous but disputed point.
+- Do not present a correlation, a single study or a popular myth as an established cause or rule.
+- Fiction, hypotheticals and thought experiments must be clearly framed as such ("imagine…"); real-world facts inside them must still be true.
 - Explain complex mechanisms with one concrete analogy aimed at a smart 12-year-old.
 
 LENGTH

@@ -1,4 +1,4 @@
-// Выпуск 1: сценарий канала — донор → черновик → проверка кодом → второе мнение → правка автором.
+// Выпуск 1: сценарий канала — донор → черновик → проверка кодом → второе мнение → правка автором → проверка фактов.
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -7,11 +7,11 @@ import { api } from "@/lib/api";
 import { useJob } from "@/lib/jobs";
 import type { Project } from "@/lib/types";
 import { Button, Card, CopyButton, ErrorAlert, Input, Label, SectionTitle, Switch, Textarea, ToolHeader } from "@/components/ui";
-import { ChannelPicker, CriticView, JobBox, LintReportView, NeedChannel, useActiveChannel } from "@/features/studio/common";
-import type { LintReport, StudioScriptResult } from "@/features/studio/types";
+import { ChannelPicker, CriticView, FactCheckView, JobBox, LintReportView, NeedChannel, useActiveChannel } from "@/features/studio/common";
+import type { FactCheckJobResult, LintReport, StudioScriptResult } from "@/features/studio/types";
 
-type Form = { topic: string; angle: string; donorUrl: string; minutes: string; research: boolean; critic: boolean; notes: string };
-const EMPTY: Form = { topic: "", angle: "", donorUrl: "", minutes: "", research: true, critic: true, notes: "" };
+type Form = { topic: string; angle: string; donorUrl: string; minutes: string; research: boolean; critic: boolean; factCheck: boolean; notes: string };
+const EMPTY: Form = { topic: "", angle: "", donorUrl: "", minutes: "", research: true, critic: true, factCheck: true, notes: "" };
 
 /** Сохранённый результат из проекта (после перезагрузки страницы или со страницы идей). */
 function fromProject(p: Project): { form: Partial<Form>; result: StudioScriptResult | null } {
@@ -53,13 +53,28 @@ export default function StudioScript() {
     onSuccess: (r) => { setLint(r.lint); setResult((x) => x && { ...x, script: text, lint: r.lint }); void qc.invalidateQueries({ queryKey: ["project", result?.projectId] }); },
   });
   const check = useMutation({ mutationFn: () => api<LintReport>("/studio/script/lint", { method: "POST", json: { text: own, channelId: channel?.id } }), onSuccess: setOwnReport });
+  // Проверка фактов сценария проекта: исправленный текст сохраняется в проект и подставляется в редактор.
+  const fc = useJob<FactCheckJobResult>("/studio/script/factcheck");
+  useEffect(() => {
+    if (fc.status !== "done" || !fc.data?.projectId) return;
+    const d = fc.data;
+    setResult((x) => x && x.projectId === d.projectId ? { ...x, script: d.script, lint: d.lint, factCheck: d.report, beforeFacts: d.beforeFacts } : x);
+    setText(d.script); setLint(d.lint);
+    for (const k of [["project", d.projectId], ["usage"], ["studio-channels"]]) void qc.invalidateQueries({ queryKey: k });
+  }, [fc.status, fc.data]);
+  const ownFc = useJob<FactCheckJobResult>("/studio/script/factcheck");
   const minutes = Number(form.minutes) || channel?.lengthMin || 10;
   const dirty = !!result && text !== result.script;
-  const running = job.status === "running";
+  const running = job.status === "running", checking = fc.status === "running";
   const start = () => channel && job.start({
     channelId: channel.id, ...(projectId ? { projectId } : {}), topic: form.topic.trim(), angle: form.angle.trim(), donorUrl: form.donorUrl.trim(),
-    minutes, research: form.research, critic: form.critic, notes: form.notes.trim(),
+    minutes, research: form.research, critic: form.critic, factCheck: form.factCheck, notes: form.notes.trim(),
   }, undefined, { serverConsent: true });
+  const checkFacts = async () => {
+    if (!result || !channel) return;
+    if (dirty) { try { await save.mutateAsync(); } catch { return; } }
+    void fc.start({ channelId: channel.id, projectId: result.projectId, artifactId: result.artifactId }, undefined, { serverConsent: true });
+  };
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
   const words = useMemo(() => text.trim() ? text.trim().split(/\s+/).length : 0, [text]);
 
@@ -78,8 +93,9 @@ export default function StudioScript() {
       </div>
       <p className="text-xs text-muted-foreground">Из образца берутся структура, темп и приёмы — не текст. Слова пишутся заново под ваш канал «{channel.name}».</p>
       <div className="grid gap-2 md:grid-cols-2">
-        <Switch checked={form.research} onChange={(v) => set("research", v)} label="Проверка фактов (ресёрч)" description="Перед текстом модель собирает факты и спорные места." />
+        <Switch checked={form.research} onChange={(v) => set("research", v)} label="Сбор фактов перед текстом (ресёрч)" description="Перед текстом модель ищет факты по теме и спорные места." />
         <Switch checked={form.critic} onChange={(v) => set("critic", v)} label="Второе мнение" description="Модель другой семьи оценивает текст по 10 вопросам, автор правит." />
+        <Switch checked={form.factCheck} onChange={(v) => set("factCheck", v)} label="Проверка фактов готового текста" description="Каждая цифра, дата, имя, причина и следствие проверяются поиском Google; неверное исправляется, непроверяемое убирается." />
       </div>
       <Textarea label="Заметки для сценариста" value={form.notes} maxLength={8000} onChange={(e) => set("notes", e.target.value)} className="min-h-[64px]" />
       <div className="flex flex-wrap items-center gap-3">
@@ -100,13 +116,17 @@ export default function StudioScript() {
         </div>
         <p className="text-sm text-muted-foreground">Автор: {result.models.author}{result.models.critic ? ` · критик: ${result.models.critic}` : ""}{result.revised ? " · текст исправлен по замечаниям" : ""} · {words.toLocaleString("ru-RU")} слов</p>
         {result.notes.map((n, i) => <p key={i} className="text-sm text-crown">{n}</p>)}
-        <textarea aria-label="Текст сценария" className="field min-h-[420px] w-full resize-y leading-relaxed" value={text} onChange={(e) => setText(e.target.value)} dir="auto" />
+        <textarea aria-label="Текст сценария" className="field min-h-[420px] w-full resize-y leading-relaxed" value={text} onChange={(e) => setText(e.target.value)} dir="auto" readOnly={checking} />
+        {dirty && !!result.beforeFacts && text === result.beforeFacts && <p className="text-sm text-crown">В редакторе текст до проверки фактов. Нажмите «Сохранить правку и проверить», чтобы оставить его.</p>}
         {save.error && <ErrorAlert error={save.error} />}
         <div className="flex flex-wrap gap-3">
-          <Button className="min-h-11" disabled={!dirty} loading={save.isPending} loadingText="Сохраняю…" onClick={() => save.mutate()}>Сохранить правку и проверить</Button>
-          {dirty && <Button className="min-h-11" variant="ghost" onClick={() => setText(result.script)}>Отменить правку</Button>}
+          <Button className="min-h-11" disabled={!dirty || checking} loading={save.isPending} loadingText="Сохраняю…" onClick={() => save.mutate()}>Сохранить правку и проверить</Button>
+          {dirty && <Button className="min-h-11" variant="ghost" disabled={checking} onClick={() => setText(result.script)}>Отменить правку</Button>}
         </div>
       </Card>
+      <JobBox job={fc} onCancel={() => void fc.cancel()} note="Проверка фактов 10-минутного сценария занимает 1–3 минуты." />
+      <FactCheckView report={result.factCheck} text={text} rechecking={checking} onRecheck={running ? undefined : () => void checkFacts()}
+        onRestore={result.beforeFacts && text !== result.beforeFacts && !checking ? () => setText(result.beforeFacts!) : undefined} />
       {lint && <LintReportView report={lint} />}
       {result.critic && <CriticView critic={result.critic} after={result.criticAfter} />}
       {result.donor && <Card className="space-y-2 p-5 text-sm"><details><summary className="min-h-11 cursor-pointer py-2 font-semibold">Разбор образца: {result.donor.title} · {result.donor.channel}</summary>
@@ -124,8 +144,21 @@ export default function StudioScript() {
       <p className="text-sm text-muted-foreground">Проверка кодом, без ИИ: вступление, оговорки, повторы, ложные финалы, длина фраз и время озвучки — с номером абзаца.</p>
       <textarea aria-label="Свой текст для проверки" className="field min-h-[160px] w-full resize-y" value={own} onChange={(e) => setOwn(e.target.value)} placeholder="Вставьте сценарий. Абзацы разделяйте пустой строкой." dir="auto" />
       {check.error && <ErrorAlert error={check.error} />}
-      <Button className="min-h-11" variant="outline" disabled={!own.trim()} loading={check.isPending} loadingText="Проверяю…" onClick={() => check.mutate()}>Проверить</Button>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button className="min-h-11" variant="outline" disabled={!own.trim()} loading={check.isPending} loadingText="Проверяю…" onClick={() => check.mutate()}>Проверить</Button>
+        <Button className="min-h-11" variant="outline" disabled={own.trim().split(/\s+/).length < 5 || ownFc.status === "running"} loading={ownFc.status === "running"} loadingText="Проверяю факты…" onClick={() => void ownFc.start({ channelId: channel.id, text: own }, undefined, { serverConsent: true })}>Проверить факты — платно</Button>
+      </div>
+      <p className="text-xs text-muted-foreground">Проверка фактов ищет каждое утверждение в Google через AnyModel и возвращает исправленный текст; тратит баланс AnyModel.</p>
     </Card>
     {ownReport && <LintReportView report={ownReport} title="Проверка вашего текста" />}
+    <JobBox job={ownFc} onCancel={() => void ownFc.cancel()} />
+    {ownFc.status === "done" && ownFc.data && <>
+      <FactCheckView report={ownFc.data.report} />
+      <Card className="space-y-3 p-5" data-testid="fact-fixed-text">
+        <SectionTitle right={<CopyButton text={ownFc.data.script} />}>Исправленный текст</SectionTitle>
+        <textarea aria-label="Исправленный текст" readOnly className="field min-h-[220px] w-full resize-y" value={ownFc.data.script} dir="auto" />
+        {ownFc.data.script !== own && <Button className="min-h-11" variant="outline" onClick={() => setOwn(ownFc.data!.script)}>Заменить мой текст исправленным</Button>}
+      </Card>
+    </>}
   </div>;
 }

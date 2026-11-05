@@ -38,10 +38,24 @@ export type CriticReport = {
   average: number; min: number; passed: boolean; problems: { paragraph: number; problem: string; before: string; after: string }[];
 };
 export type DonorBrief = { url: string; title: string; channel: string; words: number; hook: string; structure: string[]; devices: string[]; pacing: string; ending: string; avoid: string[]; model?: string };
+export type FactVerdict = "true" | "false" | "misleading" | "unverified";
+export type FactSource = { title: string; url: string };
+export type FactItem = {
+  id: string; paragraph: number; at: string; quote: string; claims: { text: string; kind: string; verdict: FactVerdict; why: string }[]; verdict: FactVerdict;
+  fix: string | null; applied: boolean; sources: FactSource[]; mode: "web" | "model"; note?: string;
+};
+export type FactCheckReport = {
+  mode: "web" | "model" | "mixed"; models: string[]; at: string; items: FactItem[];
+  summary: { total: number; true: number; false: number; misleading: number; unverified: number };
+  changed: number; removed: number; remaining: number; passed: boolean; checked: number; skipped: number;
+  sources: FactSource[]; notes: string[]; hash: string; words: number;
+};
+export type FactCheckJobResult = { report: FactCheckReport; script: string; lint: LintReport; beforeFacts?: string; projectId?: string; artifactId?: string };
 export type StudioScriptResult = {
   projectId: string; artifactId: string; title: string; script: string; draft: string;
   lint: LintReport; lintDraft: LintReport; critic: CriticReport | null; criticAfter: CriticReport | null;
   donor: DonorBrief | null; revised: boolean; notes: string[]; models: { author: string; critic: string | null };
+  factCheck?: FactCheckReport | null; beforeFacts?: string;
 };
 
 export type VoiceItem = { service: VoiceService; voiceId: string; name: string; language?: string; gender?: string; accent?: string; description?: string; previewUrl?: string; clone?: boolean };
