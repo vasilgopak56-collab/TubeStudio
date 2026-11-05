@@ -5,6 +5,11 @@ import { config, type Provider } from "../config.js";
 import { resetKeyCache } from "./keycheck.js";
 import { resetYtPool } from "./ytKeys.js";
 import { ApiError } from "../lib/errors.js";
+import { setSecrets } from "../lib/secrets.js";
+
+/** Портативная версия (Выпуск 1) хранит ключи в защищённом хранилище, а не в .env. */
+export const usesSecretStore = () => process.env.TUBESTUDIO_PORTABLE === "1";
+export const PROVIDER_ENV_NAMES = () => ({ ...NAMES });
 
 export const envPath = () => process.env.ENV_FILE || path.resolve(process.cwd(), "../../.env");
 const NAMES: Record<Provider, string> = {
@@ -54,6 +59,16 @@ export async function saveKeys(patch: Partial<Record<Provider, string>>) {
   if (!entries.length) throw new ApiError("VALIDATION", "Нет ключей для сохранения", 400);
   if (entries.some(([, v]) => !validValue(v))) throw new ApiError("VALIDATION", "Ключ содержит недопустимые символы (пробелы, кавычки, переносы)", 400);
   const values = entries.map(([p, v]) => [p, v.trim()] as const);
+  const apply = () => {
+    for (const [p, v] of values) { config.keys[p] = v; if (v) process.env[NAMES[p]] = v; else delete process.env[NAMES[p]]; }
+    resetKeyCache();
+    if (values.some(([p]) => p.startsWith("youtube"))) resetYtPool();
+  };
+  if (usesSecretStore()) {
+    await commitSecrets(Object.fromEntries(values.map(([p, v]) => [NAMES[p], v])));
+    apply();
+    return { saved: values.map(([p]) => p), file: "защищённое хранилище ключей" };
+  }
   const file = envPath();
   await commitEnv(values.map(([p, v]) => [NAMES[p], v]), () => {
     for (const [p, v] of values) { config.keys[p] = v; if (v) process.env[NAMES[p]] = v; else delete process.env[NAMES[p]]; }
@@ -68,5 +83,15 @@ export async function saveEnvVars(vars: Record<string, string>) {
   const entries = Object.entries(vars);
   if (entries.some(([k, v]) => !/^[A-Z][A-Z0-9_]*$/.test(k) || !validValue(v))) throw new ApiError("VALIDATION", "Имя или значение переменной недопустимо", 400);
   const values = entries.map(([k, v]) => [k, v.trim()] as [string, string]);
+  if (usesSecretStore()) {
+    await commitSecrets(Object.fromEntries(values));
+    for (const [k, v] of values) { if (v) process.env[k] = v; else delete process.env[k]; }
+    return;
+  }
   await commitEnv(values, () => { for (const [k, v] of values) { if (v) process.env[k] = v; else delete process.env[k]; } });
+}
+
+async function commitSecrets(patch: Record<string, string>) {
+  try { await setSecrets(patch); }
+  catch { throw new ApiError("INTERNAL", "Не удалось сохранить ключи в защищённое хранилище. Изменения не применены. Проверьте доступ к папке данных.", 500); }
 }

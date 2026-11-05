@@ -34,7 +34,7 @@ test("backup: round trip every current data folder, binary audio, OAuth and curr
   assert.deepEqual(new Uint8Array(await fs.readFile(path.join(dest.dataDir, "audio-storyboards/sample.pcm"))), binary);
   assert.equal(await fs.readFile(path.join(dest.promptsDir, "script/custom.md"), "utf8"), "User edited {{topic}} prompt text");
   assert.equal(await fs.readFile(path.join(dest.dataDir, "oauth.json"), "utf8"), '{"refresh_token":"fake-test-token"}');
-  assert.equal((await fs.stat(path.join(dest.dataDir, "oauth.json"))).mode & 0o777, 0o600);
+  if(process.platform!=='win32')assert.equal((await fs.stat(path.join(dest.dataDir, "oauth.json"))).mode & 0o777, 0o600);
 }));
 
 test("backup: v1 stays compatible; merge overwrites matching files but preserves unrelated ones", async () => fixture(async (_base, roots) => {

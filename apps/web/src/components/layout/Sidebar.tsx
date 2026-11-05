@@ -8,6 +8,7 @@ import { NAV } from "@/lib/nav";
 import { cn } from "@/lib/cn";
 import { useHealth } from "@/lib/queries";
 import { StatusDot } from "@/components/ui";
+import { ExitButton } from "./ExitButton";
 
 export function Sidebar({ collapsed, onToggle, onNavigate, showLogout, onLogout }:
   { collapsed: boolean; onToggle?: () => void; onNavigate?: () => void; showLogout?: boolean; onLogout?: () => void }) {
@@ -80,9 +81,10 @@ export function Sidebar({ collapsed, onToggle, onNavigate, showLogout, onLogout 
             <NavLink to="/settings" onClick={onNavigate} className="flex items-center gap-2 hover:text-foreground">
               <StatusDot ok={allOk} muted={!data || pendingKeys} />{!data ? "Читаем статус ключей…" : pendingKeys ? "Ключи требуют проверки" : allOk ? "Проверка API пройдена" : "Проверьте ключи API"}
             </NavLink>
-            {showLogout && <button onClick={onLogout} aria-label="Выйти" className="rounded p-1 hover:bg-muted hover:text-foreground"><LogOut className="h-3.5 w-3.5" /></button>}
+            {showLogout && <button onClick={onLogout} aria-label="Выйти из сеанса" title="Выйти из сеанса" className="rounded p-1 hover:bg-muted hover:text-foreground"><LogOut className="h-3.5 w-3.5" /></button>}
           </div>
         )}
+        <ExitButton collapsed={collapsed} />
       </div>
     </aside>
   );

@@ -4,7 +4,8 @@ import { queueStatus } from "../lib/queue.js";
 import { cacheStats, clearCache } from "../lib/cache.js";
 import { activeJobCount } from "../lib/jobs.js";
 import { resetKeyCache } from "../services/keycheck.js";
-import { resetAmCatalog } from "../services/anymodel.js";
+import { refreshAmCatalogSoon, resetAmCatalog } from "../services/anymodel.js";
+import { secretsStatus } from "../lib/secrets.js";
 import { log } from "../lib/logging.js";
 import { Hono } from "hono";
 import { ok, fail } from "../lib/errors.js";
@@ -25,7 +26,9 @@ system.get("/health", async (c) => {
   try {
     const settings = await getSettings();
     const keys = await checkKeys(); // GET, including legacy force=1, is always local.
-    return ok(c, { version: APP_VERSION, node: process.version, dataDir: config.dataDir, llm: activeLlm(settings.llmProvider, settings.anymodel.enabled && settings.anymodel.priority === "first"), keys });
+    // Installed program: where keys live and how they are protected (names only, never values).
+    const secrets = process.env.TUBESTUDIO_PORTABLE === "1" ? (({ protection, protectedByWindows, names, error }) => ({ protection, protectedByWindows, names, error }))(secretsStatus()) : undefined;
+    return ok(c, { version: APP_VERSION, node: process.version, dataDir: config.dataDir, llm: activeLlm(settings.llmProvider, settings.anymodel.enabled && settings.anymodel.priority === "first"), keys, secrets });
   } catch (e) { return fail(c, e); }
 });
 
@@ -49,7 +52,12 @@ system.put("/settings", async (c) => {
 
 /** Ключи из интерфейса: пишутся в .env и применяются сразу */
 system.put("/settings/keys", async (c) => {
-  try { return ok(c, await saveKeys(await c.req.json())); } catch (e) { return fail(c, e); }
+  try {
+    const body = await c.req.json();
+    const saved = await saveKeys(body);
+    if (process.env.TUBESTUDIO_PORTABLE === "1" && body && typeof body === "object" && "anymodel" in body) { resetAmCatalog(); refreshAmCatalogSoon(); }
+    return ok(c, saved);
+  } catch (e) { return fail(c, e); }
 });
 
 system.get("/system/runtime", async (c) => {

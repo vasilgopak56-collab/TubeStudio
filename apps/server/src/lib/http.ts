@@ -20,9 +20,23 @@ export function retryDelay(value: string | null, attempt: number, now = Date.now
   return 1000 * 3 ** attempt;
 }
 
+/** Connection-phase failures: the request never reached the provider, so a retry cannot double-charge. */
+const NOT_SENT = new Set(["ECONNREFUSED", "ENOTFOUND", "EAI_AGAIN", "ENETUNREACH", "EHOSTUNREACH", "UND_ERR_CONNECT_TIMEOUT"]);
+function neverReachedServer(e: unknown): boolean {
+  const cause = (e as { cause?: { code?: string; errors?: { code?: string }[] } })?.cause;
+  const code = cause?.code ?? cause?.errors?.[0]?.code;
+  return !!code && NOT_SENT.has(code);
+}
+
 /** Caller/job signal is combined with timeout, never replaced. Cancellation is not retried. */
-export async function fetchRetry(url: string, init: RequestInit = {}, opts: { timeoutMs?: number; retries?: number; beforeAttempt?: () => Promise<void> | void } = {}) {
+/**
+ * Paid requests (those with beforeAttempt) are NOT repeated after a timeout or a
+ * broken connection: the provider may already have done the work and charged for
+ * it. Only explicit "not processed" answers (429 / 5xx) are retried.
+ */
+export async function fetchRetry(url: string, init: RequestInit = {}, opts: { timeoutMs?: number; retries?: number; beforeAttempt?: () => Promise<void> | void; retryTransport?: boolean } = {}) {
   const { timeoutMs = 30_000, retries = 3 } = opts;
+  const retryTransport = opts.retryTransport ?? !opts.beforeAttempt;
   const signal = taskSignal(init.signal);
   let lastErr: unknown;
   for (let i = 0; i <= retries; i++) {
@@ -45,6 +59,7 @@ export async function fetchRetry(url: string, init: RequestInit = {}, opts: { ti
       rethrowCancelled(e, signal);
       rethrowFinancial(e);
       lastErr = e;
+      if (!retryTransport && !neverReachedServer(e)) throw new ApiError("UPSTREAM", "Ответ сервиса не получен (сеть или время ожидания). Запрос мог выполниться и списать деньги, поэтому он не повторён автоматически. Проверьте результат и при необходимости повторите вручную.", 502, false, { uncertain: true });
       if (i < retries) await sleep(1000 * 3 ** i, signal);
     }
   }

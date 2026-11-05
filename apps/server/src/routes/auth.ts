@@ -1,20 +1,37 @@
 import { Hono, type MiddlewareHandler } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
-import crypto from "node:crypto";
-import { config } from "../config.js";
+import {
+  authRequired, checkLegacyPassword, consumeLaunchToken, extensionToken, legacyPasswordLogin,
+  newSessionValue, SESSION_MAX_AGE, validSession,
+} from "../lib/session.js";
 
 const COOKIE = "ts_session";
-const token = () => crypto.createHash("sha256").update(`tubestudio:${config.password}`).digest("hex");
-
 export const auth = new Hono();
 
-auth.get("/auth/status", (c) =>
-  c.json({ ok: true, data: { required: !!config.password, authed: !config.password || getCookie(c, COOKIE) === token() } }));
+const startSession = (c: Parameters<MiddlewareHandler>[0]) =>
+  setCookie(c, COOKIE, newSessionValue(), { httpOnly: true, sameSite: "Lax", path: "/", maxAge: SESSION_MAX_AGE });
 
+auth.get("/auth/status", (c) => c.json({ ok: true, data: {
+  required: authRequired(),
+  authed: !authRequired() || validSession(getCookie(c, COOKIE)),
+  passwordLogin: legacyPasswordLogin(),
+} }));
+
+/** Exchanges the one-time key from the launch link for a session cookie. */
+auth.post("/auth/launch", async (c) => {
+  const { token } = await c.req.json().catch(() => ({ token: "" }));
+  if (!authRequired() || consumeLaunchToken(token)) {
+    startSession(c);
+    return c.json({ ok: true, data: { authed: true } });
+  }
+  return c.json({ ok: false, error: { code: "UNAUTHORIZED", message: "Ссылка входа устарела или уже использована. Запустите TubeStudio ярлыком ещё раз." } }, 401);
+});
+
+/** Developer/test harness only (APP_PASSWORD set explicitly); the portable program never uses it. */
 auth.post("/auth/login", async (c) => {
   const { password } = await c.req.json().catch(() => ({ password: "" }));
-  if (!config.password || password === config.password) {
-    setCookie(c, COOKIE, token(), { httpOnly: true, sameSite: "Lax", path: "/", maxAge: 60 * 60 * 24 * 30 });
+  if (!authRequired() || checkLegacyPassword(password)) {
+    startSession(c);
     return c.json({ ok: true, data: { authed: true } });
   }
   return c.json({ ok: false, error: { code: "UNAUTHORIZED", message: "Неверный пароль" } }, 401);
@@ -22,17 +39,20 @@ auth.post("/auth/login", async (c) => {
 
 auth.post("/auth/logout", (c) => { deleteCookie(c, COOKIE, { path: "/" }); return c.json({ ok: true, data: {} }); });
 
-/** Токен для расширения Chrome (заголовок X-TS-Token) — когда задан APP_PASSWORD */
-export const extToken = () => (config.password ? crypto.createHash("sha256").update(`tubestudio-ext:${config.password}`).digest("hex").slice(0, 32) : "");
+/** Токен для расширения Chrome (заголовок X-TS-Token). */
+export const extToken = extensionToken;
+
+const OPEN_PATHS = new Set(["/api/yt-oauth/callback"]); // callback защищён одноразовым state
 
 export const requireAuth: MiddlewareHandler = async (c, next) => {
-  if (!config.password || c.req.path.startsWith("/api/auth/") || c.req.path === "/api/yt-oauth/callback") return next(); // callback защищён одноразовым state
-  if (c.req.header("x-ts-token") && c.req.header("x-ts-token") === extToken()) {
-    const allowed=c.req.method==="GET" && ["/api/ext/ping","/api/ext/videos"].includes(c.req.path) || c.req.method==="POST" && c.req.path==="/api/saved-topics";
-    if(allowed)return next();
-    return c.json({ok:false,error:{code:"UNAUTHORIZED",message:"Токен расширения не разрешает это действие"}},403);
+  if (!authRequired() || c.req.path.startsWith("/api/auth/") || OPEN_PATHS.has(c.req.path)) return next();
+  const ext = c.req.header("x-ts-token");
+  if (ext && ext === extToken()) {
+    const allowed = c.req.method === "GET" && ["/api/ext/ping", "/api/ext/videos"].includes(c.req.path) || c.req.method === "POST" && c.req.path === "/api/saved-topics";
+    if (allowed) return next();
+    return c.json({ ok: false, error: { code: "UNAUTHORIZED", message: "Токен расширения не разрешает это действие" } }, 403);
   }
-  if (getCookie(c, COOKIE) !== token())
-    return c.json({ ok: false, error: { code: "UNAUTHORIZED", message: "Требуется вход" } }, 401);
+  if (!validSession(getCookie(c, COOKIE)))
+    return c.json({ ok: false, error: { code: "UNAUTHORIZED", message: "Требуется вход: запустите TubeStudio ярлыком на рабочем столе" } }, 401);
   return next();
 };

@@ -49,7 +49,7 @@ export function redactLog(value: unknown, secrets: string[] = [], depth = 0): un
   if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).slice(0, 30).map(([k, v]) => [k, privateKey.test(k) ? "[redacted]" : redactLog(v, secrets, depth + 1)]));
   return value;
 }
-const runtimeSecrets = () => [...Object.values(config.keys), config.password, process.env.GOOGLE_CLIENT_SECRET ?? ""];
+const runtimeSecrets = () => [...Object.values(config.keys), config.password, process.env.GOOGLE_CLIENT_SECRET ?? "", process.env.TUBESTUDIO_LAUNCH_TOKEN ?? ""];
 export function createLogger(destination: { write: (s: string) => void }, secrets: () => string[] = runtimeSecrets) {
   return pino({ level: "info", base: undefined, timestamp: pino.stdTimeFunctions.isoTime,
     hooks: { logMethod(args, method) {

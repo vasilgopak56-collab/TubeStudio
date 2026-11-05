@@ -72,12 +72,12 @@ test("native styles: root JSON included in backup and deleted selection stops be
  try {await assert.rejects(()=>runStoryboard(StoryboardInput.parse({script:"A soldier is trying to lift his shield while his opponent approaches. ".repeat(4),visualStyleId:"missing"}),ctx),{status:404});await assert.rejects(()=>createPipeline(PipelineInput.parse({topic:"Test",visualStyleId:"missing",stages:["storyboard"]})),{status:404});assert.equal(calls,0);}finally{globalThis.fetch=old;}
 });
 test("native styles: selected rendering overrides conflicting niche/preset, action instructions and frozen snapshot",async()=>{
- const old=globalThis.fetch,keys={...config.keys};let bodies:any[]=[];const own=await svc.createVisualStyle(fields);
+ const old=globalThis.fetch,keys={...config.keys};let bodies:any[]=[],changed=false;const own=await svc.createVisualStyle(fields);
  config.keys.anthropic="test-only";config.keys.anymodel="";config.keys.gemini="";config.keys.openai="";
  const script="A worried soldier tries to lift the shield while his opponent waits at the gate. ".repeat(4);
  globalThis.fetch=async(url:any,init:any)=>{assert.match(String(url),/api.anthropic.com/);const body=JSON.parse(init.body);bodies.push(body);
   let data:any;
-  if(body.messages[0].content.startsWith("Create a concise")) {data={medium:"comic",palette:"purple",lighting:"flat",camera:"locked",mood:"fear",negative:"3d",characters:[],locations:[]};if(bodies.length===1)await svc.updateVisualStyle(own.id,{...fields,anchor:"changed rendering anchor different",revision:1});}
+  if(body.messages[0].content.startsWith("Create a concise")) {data={medium:"comic",palette:"purple",lighting:"flat",camera:"locked",mood:"fear",negative:"3d",characters:[],locations:[]};if(!changed){changed=true;await svc.updateVisualStyle(own.id,{...fields,anchor:"changed rendering anchor different",revision:1});}}
   else {const lines=body.messages[0].content.split("LINES:\n")[1].split("\n\nReturn JSON")[0].split("\n");data={scenes:lines.map((line:string)=>({n:Number(line.match(/^\d+/)![0]),concept:"Воин хватает щит",image:"A frightened soldier reaches for his wooden shield beside the gate in a flat purple hand drawn comic illustration, 16:9 landscape frame.",video:"Start: hand near shield. Action: he grips and drops it. Result: shield hits dirt. Reaction: eyes widen. Camera locked, no morphing."}))};}
   return new Response(JSON.stringify({content:[{type:"text",text:JSON.stringify(data)}],usage:{input_tokens:1,output_tokens:1}}),{headers:{"content-type":"application/json"}});
  };

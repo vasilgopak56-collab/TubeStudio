@@ -88,7 +88,7 @@ test("analytics: OAuth — ссылка входа, обмен кода, обн�
     assert.ok(calls.filter((c) => c.includes("/token")).length === 2, "просроченный токен обновлён перед запросом канала");
     const st = await A.oauthStatus();
     assert.ok(st.connected && st.channel?.id === "UC" + "1".repeat(22));
-    assert.equal((fs.statSync(path.join(process.env.DATA_DIR!, "oauth.json")).mode & 0o777).toString(8), "600");
+    if(process.platform!=='win32')assert.equal((fs.statSync(path.join(process.env.DATA_DIR!, "oauth.json")).mode & 0o777).toString(8), "600");
     assert.match(fs.readFileSync(process.env.ENV_FILE!, "utf8"), /GOOGLE_CLIENT_ID=123-abc/);
   } finally { globalThis.fetch = orig; }
 });

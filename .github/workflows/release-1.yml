@@ -1,0 +1,105 @@
+name: release-1
+# Windows check of every Release 1 build: unit tests, the portable package,
+# and an acceptance run that installs it next to an old 0.12.x version like the user does.
+on:
+  push:
+    branches: [release-1]
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: release-1-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: prepare
+        run: |
+          New-Item -ItemType Directory -Force ci-out | Out-Null
+          "sha=$env:GITHUB_SHA run=$env:GITHUB_RUN_NUMBER node=$(node -v) npm=$(npm -v)" | Set-Content -Encoding utf8 ci-out/info.txt
+      - name: ffmpeg
+        run: |
+          choco install ffmpeg -y --no-progress *> ci-out/ffmpeg-install.log
+          (ffmpeg -version | Select-Object -First 1) | Add-Content -Encoding utf8 ci-out/info.txt
+      - name: npm ci
+        run: |
+          npm ci --no-audit --no-fund *> ci-out/npm-ci.log
+          if ($LASTEXITCODE) { throw "npm ci failed" }
+      - name: build
+        run: |
+          npm run build *> ci-out/build.log
+          if ($LASTEXITCODE) { throw "build failed" }
+      - name: unit tests (Windows)
+        id: unit
+        continue-on-error: true
+        run: |
+          npm run test:unit *> ci-out/unit.log
+          $code = $LASTEXITCODE
+          "unit exit=$code" | Add-Content -Encoding utf8 ci-out/info.txt
+          Select-String -Path ci-out/unit.log -Pattern '^# (tests|pass|fail) ' | ForEach-Object { $_.Line } | Add-Content -Encoding utf8 ci-out/info.txt
+          if ($code) { throw "unit tests failed" }
+      - name: portable package
+        run: |
+          $v = node -v
+          $u = "https://nodejs.org/dist/$v"
+          Invoke-WebRequest "$u/win-x64/node.exe" -OutFile "$env:RUNNER_TEMP\node.exe"
+          Invoke-WebRequest "$u/SHASUMS256.txt" -OutFile "$env:RUNNER_TEMP\SHASUMS256.txt"
+          $want = ((Select-String -Path "$env:RUNNER_TEMP\SHASUMS256.txt" -Pattern ' win-x64/node.exe$').Line -split '\s+')[0]
+          $got = (Get-FileHash "$env:RUNNER_TEMP\node.exe" -Algorithm SHA256).Hash.ToLower()
+          if (-not $want -or $want -ne $got) { throw "node.exe checksum mismatch: $want vs $got" }
+          "bundled node $v sha256=$got" | Add-Content -Encoding utf8 ci-out/info.txt
+          node scripts/build-portable.mjs --node "$env:RUNNER_TEMP\node.exe" --out release --zip *> ci-out/portable.log
+          if ($LASTEXITCODE) { throw "portable build failed" }
+          Get-ChildItem release -Filter *.zip | ForEach-Object { "zip $($_.Name) $([math]::Round($_.Length/1MB,1)) MB" } | Add-Content -Encoding utf8 ci-out/info.txt
+      - name: old version 0.12.x on the desktop
+        run: |
+          $base = Join-Path ([Environment]::GetFolderPath('DesktopDirectory')) 'Программы\TubeStudio'
+          git worktree add --detach "$base" origin/main *> ci-out/legacy-worktree.log
+          Push-Location $base
+          npm ci --no-audit --no-fund *> "$env:GITHUB_WORKSPACE\ci-out\legacy-npm.log"
+          npm run build *> "$env:GITHUB_WORKSPACE\ci-out\legacy-build.log"
+          if ($LASTEXITCODE) { throw "old version build failed" }
+          Pop-Location
+          "TS_BASE=$base" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+      - name: acceptance (install like the user)
+        id: acceptance
+        continue-on-error: true
+        run: |
+          $zip = (Get-ChildItem release -Filter '*-windows.zip' | Select-Object -First 1).FullName
+          node scripts/win-acceptance.mjs --zip "$zip" --base "$env:TS_BASE" --out ci-out/acceptance *> ci-out/acceptance.log
+          $code = $LASTEXITCODE
+          "acceptance exit=$code" | Add-Content -Encoding utf8 ci-out/info.txt
+          if ($code) { throw "acceptance failed" }
+      - name: publish report
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          OUT="$GITHUB_WORKSPACE/ci-out"; mkdir -p "$OUT"
+          echo "unit=${{ steps.unit.outcome }} acceptance=${{ steps.acceptance.outcome }}" >> "$OUT/info.txt"
+          D="$RUNNER_TEMP/rep"; rm -rf "$D"; mkdir -p "$D"; cp -r "$OUT/." "$D/"
+          if [ "${{ steps.acceptance.outcome }}" = "success" ]; then
+            for z in "$GITHUB_WORKSPACE"/release/*-windows.zip; do
+              if [ -f "$z" ] && [ "$(stat -c %s "$z")" -lt 95000000 ]; then cp "$z" "$D/"; fi
+            done
+          fi
+          cd "$D"; git init -q; git checkout -q -b r; git add -A
+          git -c user.name="TubeStudio CI" -c user.email="ci@tubestudio.local" commit -qm "release-1 run $GITHUB_RUN_NUMBER ($GITHUB_SHA)"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ci/r1-${GITHUB_RUN_NUMBER}
+      - name: result
+        if: steps.unit.outcome != 'success' || steps.acceptance.outcome != 'success'
+        run: throw "unit=${{ steps.unit.outcome }} acceptance=${{ steps.acceptance.outcome }}"

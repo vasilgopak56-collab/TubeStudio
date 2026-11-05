@@ -47,6 +47,27 @@ export async function amCatalog(force = false): Promise<AmModel[]> {
 /** Синхронный доступ к кэшу (для расчёта стоимости) */
 export const amCached = (id: string) => catalog?.models.find((m) => m.id === id);
 export const amCatalogFresh = () => !!catalog && Date.now()-catalog.at<30*60_000;
+/** Age of the in-memory price catalog (Infinity when not loaded). */
+export const amCatalogAge = () => catalog ? Date.now() - catalog.at : Infinity;
+
+/**
+ * Installed program only (not tests): keeps the price catalog warm with a free
+ * metadata request, so the spending limit can check AnyModel tariffs instead of
+ * stopping the first request after a launch, a key change or a sleep.
+ * The paid dispatch itself still never fetches metadata.
+ */
+let warmTimer: NodeJS.Timeout | undefined, warming: Promise<unknown> | undefined;
+export function refreshAmCatalogSoon() {
+  if (!hasAnymodel() || warming) return;
+  warming = amCatalog(true).catch(() => []).finally(() => { warming = undefined; });
+}
+export function startAmCatalogWarmup(checkEveryMs = 60_000, refreshAfterMs = 10 * 60_000) {
+  if (warmTimer) return;
+  const tick = () => { if (amCatalogAge() > refreshAfterMs) refreshAmCatalogSoon(); };
+  setTimeout(tick, 1500).unref();
+  warmTimer = setInterval(tick, checkEveryMs);
+  warmTimer.unref();
+}
 const priceBefore=(model:string,kind:"text"|"image"|"tts"|"audio",o:{size?:string;quality?:string}={})=>capturePrice("anymodel",model,kind,amCached(model)?.billing,{...o,catalogFresh:amCatalogFresh()});
 
 export async function amBalance(): Promise<{ balance: number; unlimited: boolean; status: string }> {

@@ -36,7 +36,7 @@ test('seo thresholds and small wording dictionary are observations not publicati
  assert.equal(seoChecklist({...input,title:'Обычный текст',description:'',tags:[]}).checks[2].state,'observed');
 });
 test('seo local immutable snapshots require no provider; private file and derived read roundtrip',async()=>local(async()=>{
- const r=await createSeoAudit(input);assert.equal(r.search,null);assert.equal(r.searchPosition,null);assert.deepEqual(await loadSeoAudit(r.id),r);assert.equal((await fs.stat(path.join(dir,'seo-audit-runs',r.id+'.json'))).mode&0o777,0o600);
+ const r=await createSeoAudit(input);assert.equal(r.search,null);assert.equal(r.searchPosition,null);assert.deepEqual(await loadSeoAudit(r.id),r);if(process.platform!=='win32')assert.equal((await fs.stat(path.join(dir,'seo-audit-runs',r.id+'.json'))).mode&0o777,0o600);
  input.title='Изменение объекта';assert.notEqual((await loadSeoAudit(r.id))?.input.title,input.title);input.title=r.input.title;assert.ok((await listSeoAudits()).items.some(x=>x.id===r.id));
 }));
 test('seo search makes one fresh page per click, exact API params, raw order and 100 units',async()=>{

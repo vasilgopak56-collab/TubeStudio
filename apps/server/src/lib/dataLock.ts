@@ -9,11 +9,29 @@ export const DATA_LOCK_NAME = '.tubestudio-server.lock';
 const ownerName = 'owner.json';
 const refuse = () => new Error('Папка данных уже занята или осталась блокировка после остановки. Вторая копия не запущена. Не удаляйте блокировку, пока работает хотя бы одна копия TubeStudio или её дочерние процессы. См. RELEASE-v0.12.148-preview.1.md.');
 
+/** True only when the recorded owner process is gone (or the marker is old and unreadable). */
+export async function staleLock(dir:string,owner:string,now=Date.now()):Promise<boolean>{
+  let pid:number|undefined;
+  try { const o=JSON.parse(await fs.readFile(owner,'utf8')); if(Number.isInteger(o?.pid)&&o.pid>0)pid=o.pid; } catch { /* unreadable marker */ }
+  if (pid===undefined) {
+    try { return now-(await fs.stat(dir)).mtimeMs>2*60_000; } catch { return false; }
+  }
+  if (pid===process.pid) return false;
+  try { process.kill(pid,0); return false; }
+  catch (e) { return (e as NodeJS.ErrnoException).code==='ESRCH'; }
+}
+
 export async function acquireDataLock(dataDir: string) {
   const root=path.resolve(dataDir),dir=path.join(root,DATA_LOCK_NAME),owner=path.join(dir,ownerName);
   await fs.mkdir(root,{recursive:true});
   try { await fs.mkdir(dir,{mode:0o700}); }
-  catch (e) { if ((e as NodeJS.ErrnoException).code==='EEXIST') throw refuse(); throw e; }
+  catch (e) {
+    if ((e as NodeJS.ErrnoException).code!=='EEXIST') throw e;
+    // A lock whose owner process no longer exists is left over from a crash or power loss.
+    if (!(await staleLock(dir,owner))) throw refuse();
+    await fs.rename(dir,`${dir}.stale-${Date.now()}`);
+    try { await fs.mkdir(dir,{mode:0o700}); } catch { throw refuse(); }
+  }
   // A failed or interrupted creation intentionally leaves a marker: no automatic takeover.
   const body=JSON.stringify({schema:1,id:crypto.randomUUID(),pid:process.pid,startedAt:new Date().toISOString(),version:APP_VERSION})+'\n';
   const h=await fs.open(owner,'wx',0o600);

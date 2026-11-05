@@ -58,7 +58,7 @@ test('daily preview is local deterministic exact payload; stale form/source/prom
 }));
 test('daily one explicit model request uses exact shown system/user and pins immutable snapshot',async()=>network(async bodies=>{
  const p=await previewDaily(selection),r=await generateDaily({selection,previewHash:p.hash},ctx());assert.equal(bodies.length,1);assert.equal(bodies[0].system[0].text,p.system);assert.equal(bodies[0].messages[0].content,p.user);assert.equal(bodies[0].max_tokens,4000);assert.equal(r.ideas.length,5);assert.ok(r.model);assert.equal(r.dayUTC,r.createdAt.slice(0,10));assert.deepEqual(await loadDaily(r.id),r);
- await writeJson(`reports/${id}.json`,{...report,channel:{title:'CHANGED'}});assert.deepEqual(await loadDaily(r.id),r);await writeJson(`reports/${id}.json`,report);assert.equal((await latestDaily())?.id,r.id);assert.equal((await fs.stat(path.join(dir,'daily-idea-runs',r.id+'.json'))).mode&0o777,0o600);
+ await writeJson(`reports/${id}.json`,{...report,channel:{title:'CHANGED'}});assert.deepEqual(await loadDaily(r.id),r);await writeJson(`reports/${id}.json`,report);assert.equal((await latestDaily())?.id,r.id);if(process.platform!=='win32')assert.equal((await fs.stat(path.join(dir,'daily-idea-runs',r.id+'.json'))).mode&0o777,0o600);
 }));
 test('daily invalid JSON, duplicates, unknown/duplicate refs and oversize answers never retry or save',async()=>{
  const before=await files();for(const answer of ['{}',JSON.stringify({ideas:Array(5).fill(output.ideas[0])}),JSON.stringify({ideas:output.ideas.map(x=>({...x,evidenceRefs:['E10']}))}).replaceAll('E10','E9'),JSON.stringify({ideas:output.ideas.map(x=>({...x,evidenceRefs:['E1','E1']}))}),'x'.repeat(25001)]){
@@ -98,6 +98,6 @@ test('daily saved projection roundtrip keeps literal fields and bytes independen
 }));
 test('daily source opened-file size is rechecked and no over-limit projection is read',async()=>local(async()=>{
  await writeJson(`reports/${id}.json`,report);const open=fs.open;let reached=false;
- fs.open=(async(...args:any[])=>{const handle=await (open as any)(...args);if(String(args[0]).endsWith(`/reports/${id}.json`)){const stat=handle.stat.bind(handle);handle.stat=(async()=>{reached=true;return {...await stat(),isFile:()=>true,size:2*1024*1024+1};}) as any;}return handle;}) as typeof fs.open;
+ fs.open=(async(...args:any[])=>{const handle=await (open as any)(...args);if(String(args[0]).replace(/\\/g,'/').endsWith(`/reports/${id}.json`)){const stat=handle.stat.bind(handle);handle.stat=(async()=>{reached=true;return {...await stat(),isFile:()=>true,size:2*1024*1024+1};}) as any;}return handle;}) as typeof fs.open;
  try{await assert.rejects(dailyContext(selection),/не найден/);assert.equal(reached,true);}finally{fs.open=open;}
 }));

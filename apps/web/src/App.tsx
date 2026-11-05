@@ -63,7 +63,7 @@ export default function App() {
       {(s) => (
         <Suspense fallback={<div className="grid min-h-[50vh] place-items-center text-muted-foreground"><Spinner className="h-6 w-6" /></div>}>
           <Routes>
-            <Route element={<AppLayout authRequired={s.required} />}>
+            <Route element={<AppLayout authRequired={s.required && !!s.passwordLogin} />}>
               {ALL_ITEMS.map((it) => {
                 const C = READY[it.to] ?? Placeholder;
                 return <Route key={it.to} path={it.to} element={<C />} />;

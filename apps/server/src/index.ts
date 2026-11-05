@@ -36,6 +36,10 @@ import { ensureDataDirs } from "./lib/storage.js";
 import { acquireDataLock } from "./lib/dataLock.js";
 import { activeJobCount } from "./lib/jobs.js";
 import { openSoftControl } from "./lib/softControl.js";
+import { initPortableSecrets } from "./lib/startup.js";
+import { issueLaunchToken } from "./lib/session.js";
+import { startAmCatalogWarmup } from "./services/anymodel.js";
+import { APP_VERSION } from "./lib/version.js";
 import type { Socket } from "node:net";
 import type { ServerResponse } from "node:http";
 import { system } from "./routes/system.js";
@@ -57,7 +61,7 @@ const lease=await acquireDataLock(config.dataDir).catch((error:unknown)=>{
   console.error(`TubeStudio: ${error instanceof Error?error.message:'Не удалось занять папку данных.'} DATA_DIR: ${config.dataDir}`);
   process.exit(1);
 });
-try { await ensureDataDirs(); }
+try { await ensureDataDirs(); await initPortableSecrets(); }
 catch (error) { await lease.release().catch(()=>{}); throw error; }
 
 const app = new Hono();
@@ -73,6 +77,15 @@ app.use("*", async (c, next) => {
 app.use("/api/*", requireAuth);
 app.use("/api/*", priceConsentScope);
 app.use("/files/*", requireAuth);
+// Кнопка «Выход»: мягкая остановка из интерфейса. Занятый сервер не останавливается без явного force.
+app.post("/api/system/exit", async (c) => {
+  const body = await c.req.json().catch(() => ({})) as { force?: unknown };
+  const busy = busyReasons(1);
+  if (busy.length && body.force !== true)
+    return c.json({ ok: false, error: { code: "BUSY", message: `Сейчас выполняется: ${busy.join(", ")}. Дождитесь окончания или закройте принудительно.`, details: { busy } } }, 409);
+  setTimeout(() => { void exitFromUi(body.force === true); }, 150);
+  return c.json({ ok: true, data: { stopping: true } });
+});
 app.route("/api", researchEvidenceRoute);
 app.route("/api", researchWorkflowRoute);
 app.route("/api", researchComparisonRoute);
@@ -137,14 +150,34 @@ const trackedFetch: typeof app.fetch = async (...args) => {
   finally { activeHandlers--; }
 };
 const server = serve({ fetch: trackedFetch, port: config.port, hostname: config.host }, (i) => {
-  started=true;startCompetitorScheduler();log.info({ event: "server_started", host: config.host, port: i.port }, "TubeStudio server started");
-  void openSoftControl(i.port,softStop).then(async c=>{if(stopping)await c.close();else control=c;}).catch(()=>console.error("TubeStudio: мягкая остановка недоступна; не используйте принудительное завершение без проверки. См. инструкцию."));
+  started=true;startCompetitorScheduler();if(process.env.TUBESTUDIO_PORTABLE==="1"&&process.env.TS_NO_SCHEDULER!=="1")startAmCatalogWarmup();log.info({ event: "server_started", host: config.host, port: i.port }, "TubeStudio server started");
+  void openSoftControl(i.port,softStop,{version:APP_VERSION,link:()=>`http://127.0.0.1:${i.port}/?launch=${issueLaunchToken()}`}).then(async c=>{if(stopping)await c.close();else control=c;}).catch(()=>console.error("TubeStudio: мягкая остановка недоступна; не используйте принудительное завершение без проверки. См. инструкцию."));
 });
 server.prependListener("request",(_req,res)=>{activeResponses.add(res);const done=()=>activeResponses.delete(res);res.once("finish",done);res.once("close",done);});
 server.on("error", (error) => {
   console.error(`TubeStudio: ошибка сервера (${(error as NodeJS.ErrnoException).code??"неизвестная"}).`);
   void (started?Promise.resolve():lease.release().catch(()=>{})).finally(()=>process.exit(1));
 });
+/** What keeps the server busy, excluding `self` requests (the exit request itself). */
+function busyReasons(self=0):string[] {
+  const out:string[]=[];
+  const jobs=activeJobCount();if(jobs)out.push(`задачи: ${jobs}`);
+  if(activeCompetitorRefreshes())out.push("обновление конкурентов");
+  if(Math.max(0,activeHandlers-self)>0||Math.max(0,activeResponses.size-self)>0)out.push("запросы");
+  return out;
+}
+async function exitFromUi(force:boolean){
+  if(stopping)return;
+  if(!force&&busyReasons().length)return; // something started in the meantime: keep running
+  stopping=true;
+  const scheduler=stopCompetitorScheduler();
+  server.close();if("closeIdleConnections" in server)server.closeIdleConnections();
+  await Promise.race([scheduler,new Promise(r=>setTimeout(r,3000))]).catch(()=>{});
+  await flushLogs().catch(()=>{});
+  try{await control?.close();}catch{/* descriptor already gone */}
+  try{await lease.release();}catch{console.error("TubeStudio: блокировку папки данных снять не удалось; следующий запуск проверит её сам.");}
+  process.exit(0);
+}
 function softStop(socket:Socket):boolean {
   if(stopping||!control||activeResponses.size||activeHandlers||activeJobCount()||activeCompetitorRefreshes())return false;
   stopping=true;

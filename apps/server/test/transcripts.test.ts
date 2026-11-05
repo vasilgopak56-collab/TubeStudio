@@ -151,7 +151,7 @@ test("transcripts: routes validate before enqueue, body limit and missing histor
 });
 test("transcripts: cancellation during commit rolls back only the new snapshot", async () => {
   const before = (await fs.readdir(path.join(dir, "transcript-runs"))).sort(); const c = new AbortController(); const rename = fs.rename;
-  fs.rename = (async (from: any, to: any) => { await rename(from, to); if (String(to).includes(path.sep + "transcript-runs" + path.sep)) c.abort(); }) as typeof fs.rename;
+  fs.rename = (async (from: any, to: any) => { await rename(from, to); if (String(to).replace(/\\/g, "/").includes("/transcript-runs/")) c.abort(); }) as typeof fs.rename;
   try { await assert.rejects(importTranscript(TranscriptInput.parse({ kind: "text", text: sourceText }), ctx(c)), (e: any) => e.code === "CANCELLED"); }
   finally { fs.rename = rename; }
   assert.deepEqual((await fs.readdir(path.join(dir, "transcript-runs"))).sort(), before);

@@ -88,6 +88,8 @@ async function raw(c: LlmCall, json: boolean): Promise<Raw> {
     catch (e) { rethrowCancelled(e); rethrowFinancial(e);
       last = e;
       if (!(e instanceof ApiError) || !["KEY_MISSING", "LLM_RATE_LIMIT", "UPSTREAM"].includes(e.code)) throw e;
+      // A request that may already have been charged is never re-sent to another model.
+      if ((e.details as { uncertain?: boolean } | undefined)?.uncertain) throw e;
       const k = `${step.p}:${step.m}`;
       if (e.code === "KEY_MISSING") skipUntil.set(k, Date.now() + 10 * 60_000);
       else if (/бесплатном тарифе/.test(e.message)) skipUntil.set(k, Date.now() + 60 * 60_000);

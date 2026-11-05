@@ -119,12 +119,15 @@ export const SettingsSchema = z.object({
     usdPerMillion: z.number().min(0).max(100).default(0.05),
   }).prefault({}),
   budget: z.object({
-    monthlyUsd: z.number().min(0).max(100000).default(0), // 0 — без лимита
+    /** 0 — без лимита. Портативная версия (Выпуск 1) ставит $20 и «блокировать» — см. migrate(). */
+    monthlyUsd: z.number().min(0).max(100000).default(0),
     mode: z.enum(["warn", "block"]).default("warn"),
     warnPct: z.number().min(10).max(99).default(80),
     /** $ за 1 млн токенов (input/output) и $ за картинку; совпадение по подстроке имени модели, сверху вниз */
     prices: z.array(PriceRow).default(DEFAULT_PRICES),
   }).prefault({}),
+  /** Выполненные однократные миграции настроек (не редактируется пользователем). */
+  migrations: z.array(z.string().max(100)).max(100).default([]),
   rpm: z.array(RpmRow).default([
     { niche: "По умолчанию", min: 3.5, max: 8.5 },
     { niche: "Финансы", min: 8, max: 20 },
@@ -136,13 +139,44 @@ export type Settings = z.infer<typeof SettingsSchema>;
 
 const FILE = "settings.json";
 
+/**
+ * Выпуск 1 (портативная версия): лимит $20 и режим «блокировать» включаются
+ * один раз — и для новых, и для старых настроек, где лимит был выключен (0)
+ * или стоял режим «только предупреждать».
+ * Потом пользователь может изменить лимит сам — повторно миграция не срабатывает.
+ */
+export const BUDGET_MIGRATION = "release1-budget-20";
+function migrate(raw: unknown): { value: unknown; changed: boolean } {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { value: raw, changed: false };
+  const obj = raw as Record<string, unknown>;
+  const done = Array.isArray(obj.migrations) ? (obj.migrations as unknown[]) : [];
+  if (done.includes(BUDGET_MIGRATION)) return { value: raw, changed: false };
+  const budget = (obj.budget && typeof obj.budget === "object" ? obj.budget : {}) as Record<string, unknown>;
+  const limit = typeof budget.monthlyUsd === "number" ? budget.monthlyUsd : 0;
+  const next = { ...budget, monthlyUsd: limit > 0 ? limit : 20, mode: "block" };
+  return { value: { ...obj, budget: next, migrations: [...done, BUDGET_MIGRATION] }, changed: true };
+}
+
+const portable = () => process.env.TUBESTUDIO_PORTABLE === "1";
+
 export async function getSettings(): Promise<Settings> {
-  return SettingsSchema.parse(await readJson(FILE, {}));
+  const raw = await readJson<unknown>(FILE, null);
+  if (raw === null) {
+    const base = SettingsSchema.parse({});
+    if (!portable()) return base;
+    return SettingsSchema.parse({ ...base, budget: { ...base.budget, monthlyUsd: 20, mode: "block" }, migrations: [BUDGET_MIGRATION] });
+  }
+  if (!portable()) return SettingsSchema.parse(raw);
+  const { value, changed } = migrate(raw);
+  const parsed = SettingsSchema.parse(value);
+  if (changed) await writeJson(FILE, parsed, { backup: true });
+  return parsed;
 }
 
 export async function updateSettings(patch: unknown): Promise<Settings> {
   const cur = await getSettings();
   const next = SettingsSchema.parse({ ...cur, ...(patch as object), models: { ...cur.models, ...((patch as any)?.models ?? {}) }, budget: { ...cur.budget, ...((patch as any)?.budget ?? {}) }, anymodel: { ...cur.anymodel, ...((patch as any)?.anymodel ?? {}) }, research: { ...cur.research, ...((patch as any)?.research ?? {}) } });
-  await writeJson(FILE, next);
+  next.migrations = cur.migrations; // служебное поле: клиент его не меняет
+  await writeJson(FILE, next, { backup: true });
   return next;
 }

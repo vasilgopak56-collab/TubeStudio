@@ -94,7 +94,7 @@ test("logging: rotation retains only configured history, bounded files and 0600 
   const file = path.join(tmp, "rotation", "app.log"), destination = new RotatingLog(file, 256, 5), log = createLogger(destination, () => []);
   for (let i = 0; i < 30; i++) log.info({ event: "test", i }, "rotation message"); log.info("x".repeat(1000)); await destination.flush();
   const files = await fs.readdir(path.dirname(file)); assert.equal(files.length, 6);
-  for (const f of files) { const stat = await fs.stat(path.join(path.dirname(file), f)); assert.ok(stat.size <= 256); assert.equal(stat.mode & 0o777, 0o600); for (const line of (await fs.readFile(path.join(path.dirname(file), f), "utf8")).trim().split("\n")) JSON.parse(line); }
+  for (const f of files) { const stat = await fs.stat(path.join(path.dirname(file), f)); assert.ok(stat.size <= 256); if(process.platform!=='win32')assert.equal(stat.mode & 0o777, 0o600); for (const line of (await fs.readFile(path.join(path.dirname(file), f), "utf8")).trim().split("\n")) JSON.parse(line); }
   assert.match(await fs.readFile(file, "utf8"), /log_record_oversize/);
 });
 
