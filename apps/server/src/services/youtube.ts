@@ -306,3 +306,10 @@ export async function assistantChannelUploads(channel:{kind:'id'|'handle';value:
  const byId=new Map(videos.map(v=>[v.id,v]));
  return {channel:{id,title},hasMore:!!page.nextPageToken,nextPageToken:page.nextPageToken??null,observedAt:new Date().toISOString(),videos:ids.map(videoId=>{const v=byId.get(videoId);return v?{id:videoId,status:'available' as const,title:v.title,publishedAt:v.publishedAt,views:v.viewsKnown===false?null:v.views,durationSec:v.durationKnown===false?null:v.durationSec}:{id:videoId,status:'unavailable' as const,title:'Метаданные недоступны',publishedAt:'',views:null,durationSec:null};})};
 }
+
+// Internal 2.1 adapter. Not exposed to clients: callers must first obtain
+// explicit approval for the bounded API quota and reserve the attempt.
+export async function brainstormUploadsAdapter() {
+  const {createBrainstormUploadsAdapter} = await import('./studio/brainstormUploadsAdapter.js');
+  return createBrainstormUploadsAdapter((path, params, units) => yt(path, params, units));
+}
