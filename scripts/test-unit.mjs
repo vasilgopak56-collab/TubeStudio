@@ -21,6 +21,6 @@ async function execute(index){
 try{
  const workers=Array.from({length:Math.min(4,files.length)},async()=>{for(;;){const index=next++;if(index>=files.length)return;try{results[index]=await execute(index);}catch(e){results[index]={file:files[index],exit:1,tests:0,pass:0,fail:1,skipped:0,cancelled:0,text:String(e)};}}});
  await Promise.all(workers);for(const r of results)if(r.exit!==0){console.error(`\nFAILED: ${r.file}\n${r.text}`);}
- const sum=k=>results.reduce((n,r)=>n+r[k],0);console.log(`Unit files: ${results.length}; tests: ${sum('tests')}; passed: ${sum('pass')}; failed: ${sum('fail')}; skipped: ${sum('skipped')}; cancelled: ${sum('cancelled')}`);
+ const sum=k=>results.reduce((n,r)=>n+r[k],0);console.log(`Unit files: ${results.length}\n# tests ${sum('tests')}\n# pass ${sum('pass')}\n# fail ${sum('fail')}\n# skipped ${sum('skipped')}\n# cancelled ${sum('cancelled')}`);
  if(results.some(r=>r.exit!==0)||sum('fail')||sum('cancelled'))process.exitCode=1;
 }finally{await fs.rm(tmp,{recursive:true,force:true});}
