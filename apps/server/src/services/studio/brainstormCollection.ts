@@ -1,11 +1,13 @@
 // Internal research-stage coordinator. Not exposed as a route until the complete
-// release has durable launch reservation, paid preview and UI approval.
-import {createHash} from 'node:crypto';
+// release has paid preview and UI approval.
+import {createHash,randomUUID} from 'node:crypto';
+import fs from 'node:fs/promises';
 import {z} from 'zod';
 import {ApiError} from '../../lib/errors.js';
 import {checkCancelled,withTaskSignal} from '../../lib/taskContext.js';
 import type {JobCtx} from '../../lib/jobs.js';
-import {assistantProjectSnapshot} from '../assistant.js';
+import {assistantProjectSnapshot,assistantSafeDir} from '../assistant.js';
+import {dataPath} from '../../lib/storage.js';
 import {ScanPlan,scanBrainstorm} from './brainstormScan.js';
 import {TopicPlan,scanTopics,type TopicResult} from './brainstormTopics.js';
 import {saveBrainstormEvidence} from './brainstormEvidence.js';
@@ -20,12 +22,24 @@ export async function previewBrainstormCollection(input:AskInput){
  const hash=digest({version:1,plan:p,projectSnapshot:snap.snapshot});
  return {plan:p,project:{id:snap.project.id,title:snap.project.title},hash,counts:{searches:p.scan.queries.length*2,topics:p.topics.queries.length,maxChannelReads:400},notice:'Будут запрошены публичные страницы YouTube, а собранные данные добавлены отдельным материалом в выбранный проект. Модель, G-Labs, профиль и календарь не запускаются и не изменяются на этом этапе. Полученная выборка может быть неполной.'};
 }
+// Immutable claim is made before any external request. A crash leaves an unknown
+// attempt, never an automatic replay. A fresh deliberate run needs a new UUID.
+async function reserveAttempt(runId:string,projectId:string,hash:string){
+ const dir=dataPath('assistant-attempts');await assistantSafeDir(dir,true);checkCancelled();
+ const names=await fs.readdir(dir);if(names.filter(n=>/^[0-9a-f-]{36}\.json$/i.test(n)).length>=500)throw new ApiError('VALIDATION','Лимит записей попыток достигнут. Новый сбор не начат.',409);
+ const target=dataPath('assistant-attempts',runId+'.json'),tmp=target+'.'+randomUUID()+'.tmp';
+ try{await fs.writeFile(tmp,JSON.stringify({id:runId,projectId,kind:'brainstorm-collection',hash,createdAt:new Date().toISOString(),status:'started-or-unknown'}),{flag:'wx',mode:0o600});checkCancelled();await fs.link(tmp,target);}
+ catch(e){if((e as NodeJS.ErrnoException).code==='EEXIST')throw new ApiError('VALIDATION','Этот запуск уже начат или его состояние неизвестно. Проверьте проект; для нового запуска нужен новый план.',409);throw e;}
+ finally{await fs.rm(tmp,{force:true}).catch(()=>{});}
+}
 type IO={scan:typeof scanBrainstorm;topics:typeof scanTopics;save:typeof saveBrainstormEvidence};
 const defaults:IO={scan:scanBrainstorm,topics:scanTopics,save:saveBrainstormEvidence};
 export async function runBrainstormCollection(input:z.input<typeof Send>,ctx:JobCtx,io:IO=defaults){
  const {previewHash,confirmed,...ask}=Send.parse(input);
  return withTaskSignal(ctx.signal,async()=>{
   checkCancelled();const p=await previewBrainstormCollection(ask);if(p.hash!==previewHash)throw stale();checkCancelled();
+  await reserveAttempt(p.plan.runId,p.plan.projectId,p.hash);checkCancelled();
+  if((await previewBrainstormCollection(ask)).hash!==p.hash)throw stale();checkCancelled();
   const scan=await io.scan(p.plan.scan,{signal:ctx.signal,progress:(s,n)=>ctx.progress(s,Math.floor(n*.8)),partial:ctx.partial});checkCancelled();
   let topics:TopicResult[];
   if(scan.coverage.stoppedByYoutube){topics=p.plan.topics.queries.map(query=>({query,status:'not-requested',sample:null}));}
