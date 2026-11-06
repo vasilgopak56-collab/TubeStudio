@@ -1,0 +1,16 @@
+// Immutable local staging, separately backed up. Never invokes the model.
+import {constants} from 'node:fs';import fs from 'node:fs/promises';import {createHash,randomUUID} from 'node:crypto';import {z} from 'zod';
+import {ApiError} from '../../lib/errors.js';import {dataPath} from '../../lib/storage.js';import {checkCancelled} from '../../lib/taskContext.js';import {assistantSafeDir} from '../assistant.js';import {BrandRecovery,saveBrainstormBrandPlan} from './brainstormBrandSave.js';
+const hash=z.string().regex(/^[a-f0-9]{64}$/),uuid=z.string().uuid(),dir=()=>dataPath('assistant-brainstorm-brand-results');
+const Stored=z.object({version:z.literal(1),createdAt:z.string().datetime(),model:z.string().min(1).max(180),recovery:BrandRecovery,hash}).strict();const digest=(x:unknown)=>createHash('sha256').update(JSON.stringify(x)).digest('hex');const problem=(m:string)=>new ApiError('VALIDATION',m,409);
+export async function stageBrainstormBrandResult(raw:z.infer<typeof BrandRecovery>,model:string){
+ const recovery=BrandRecovery.parse(raw),base={version:1 as const,createdAt:new Date().toISOString(),model:z.string().min(1).max(180).parse(model),recovery},record={...base,hash:digest(base)},bytes=JSON.stringify(record);if(Buffer.byteLength(bytes)>256*1024)throw problem('Черновик слишком большой для временного сохранения.');
+ await assistantSafeDir(dir(),true);checkCancelled();if((await fs.readdir(dir())).filter(n=>/^[0-9a-f-]{36}\.json$/i.test(n)).length>=500)throw problem('Хранилище результатов заполнено. Черновик пока только в задаче.');
+ const full=dataPath('assistant-brainstorm-brand-results',recovery.attemptId+'.json'),tmp=full+'.'+randomUUID()+'.tmp';try{await fs.writeFile(tmp,bytes,{flag:'wx',mode:0o600});checkCancelled();await fs.link(tmp,full);}catch(e){if((e as NodeJS.ErrnoException).code==='EEXIST')throw problem('Результат этой попытки уже существует.');throw e;}finally{await fs.rm(tmp,{force:true}).catch(()=>{});}return {attemptId:recovery.attemptId};
+}
+export async function loadBrainstormBrandResult(attemptId:string){
+ uuid.parse(attemptId);if(!await assistantSafeDir(dir()))throw problem('Сохранённый черновик не найден.');const file=dataPath('assistant-brainstorm-brand-results',attemptId+'.json'),st=await fs.lstat(file).catch(()=>null);
+ if(!st||!st.isFile()||st.isSymbolicLink()||st.nlink!==1||st.size>256*1024)throw problem('Черновик недоступен или повреждён.');const h=await fs.open(file,constants.O_RDONLY|constants.O_NOFOLLOW);let raw:Buffer;try{const s=await h.stat();if(!s.isFile()||s.nlink!==1||s.size>256*1024)throw problem('Небезопасный файл черновика.');raw=await h.readFile();if(raw.length>256*1024)throw problem('Слишком большой черновик.');}finally{await h.close();}
+ let r:z.infer<typeof Stored>;try{r=Stored.parse(JSON.parse(raw.toString('utf8')));}catch{throw problem('Черновик повреждён; файл не изменён.');}const {hash:stored,...base}=r;if(r.recovery.attemptId!==attemptId||digest(base)!==stored)throw problem('Черновик изменился или повреждён; файл не изменён.');return r;
+}
+export async function recoverBrainstormBrandResult(attemptId:string){checkCancelled();const r=await loadBrainstormBrandResult(attemptId);checkCancelled();return saveBrainstormBrandPlan(r.recovery);}
