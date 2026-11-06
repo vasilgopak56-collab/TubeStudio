@@ -39,7 +39,7 @@ export async function runBrainstormIdeas(raw:AskT & {previewHash:string;confirme
   const response=await withStoryboardGuard(guard,()=>io.send({system:p.context.system,user:p.context.user,maxTokens:outputLimit,temperature:.2},{provider:'anymodel',model:input.model}));checkCancelled();
   let rawOutput:unknown;try{rawOutput=extractJson(response.text);}catch{throw new ApiError('LLM_INVALID_JSON','Модель вернула некорректный ответ. Автоматического повтора нет; запрос мог быть оплачен.',502);}
   let report;try{report=composeBrainstormReport(frozenScan,frozenTopics,rawOutput);}catch{throw new ApiError('LLM_INVALID_JSON','Идеи не прошли проверку формата или источников. Автоматического повтора нет; запрос мог быть оплачен.',502);}
-  ctx.partial({unsavedReport:report,attemptId:input.attemptId});ctx.progress('Идеи подготовлены, ещё не сохранены',100);
+  ctx.partial({unsavedReport:report,attemptId:input.attemptId});ctx.progress('Идеи подготовлены, ещё не сохранены',90);
   return {report,proposal:BrainstormProposal.parse(rawOutput),evidenceHash:p.evidenceHash,attemptId:input.attemptId,model:input.model,notice:'Черновик в задаче, ещё не сохранён в проект. Данные — ограниченная выборка; оценки и объяснения требуют проверки.'};
  });
 }
