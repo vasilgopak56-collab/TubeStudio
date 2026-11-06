@@ -6,7 +6,7 @@ import { strToU8, unzipSync, zipSync } from "fflate";
 import { ApiError } from "../lib/errors.js";
 
 export const DATA_FOLDERS = new Set([
-  "assistant-voice", "assistant-workflows", "assistant-brainstorm-results", "assistant-brainstorm-brand-results",
+  "assistant-voice", "assistant-workflows", "assistant-brainstorm-results", "assistant-brainstorm-brand-results", "assistant-brainstorm-images",
   "assistant-runs", "assistant-skills", "assistant-skill-visibility", "assistant-attempts",
   "director-packages", "director-assets", "projects", "files", "reports", "topic-runs", "audio-storyboards", "pipelines",
   "yt-reach-runs", "yt-channel-runs", "yt-revenue-runs", "ab-test-runs", "yt-geography-runs", "ad-break-runs", "profit-runs", "coach-runs", "transcript-runs", "niche-runs", "keyword-runs", "research-runs", "comment-runs", "scorecards", "video-score-runs", "daily-idea-runs", "seo-audit-runs", "comment-samples", "comment-reviews", "keyword-evidence-runs", "research-evidence-runs", "research-comparisons", "prompt-versions",
