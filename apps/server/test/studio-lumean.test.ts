@@ -23,6 +23,7 @@ const json = (status: number, body: unknown) => new Response(JSON.stringify(body
 function lumean(world: World) {
   return async (url: string, init?: RequestInit) => {
     const u = new URL(url);
+    if (u.hostname !== "files.example") assert.equal(u.origin, "https://api.lumean.net");
     const method = init?.method ?? "GET";
     const body = init?.body ? JSON.parse(String(init.body)) : undefined;
     if (u.hostname === "files.example") return new Response(Buffer.from(`file:${u.pathname}`), { status: 200 });

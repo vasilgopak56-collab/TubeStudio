@@ -1,5 +1,6 @@
 import { config, type Provider } from "../config.js";
 import { fetchRetry } from "../lib/http.js";
+import { LUMEAN_BASE } from "../lib/lumeanBase.js";
 import { addYoutubeUnits } from "./usage.js";
 
 export type KeyStatus = {
@@ -65,7 +66,7 @@ async function probe(p: Provider, key: string): Promise<Omit<KeyStatus, "provide
       };
     }
     case "lumean": {
-      const r = await fetchRetry("https://api.lumean.app/api/public/usage", { headers: { "X-API-KEY": key } }, opts);
+      const r = await fetchRetry(`${LUMEAN_BASE}/usage`, { headers: { "X-API-KEY": key } }, opts);
       const j: any = await r.json().catch(() => ({}));
       if (r.status === 401 || r.status === 403) return { ok: false, message: "Ключ недействителен или нет прав (нужен billing.read)" };
       if (!r.ok) return { ok: false, message: j?.message ?? j?.detail ?? `HTTP ${r.status}` };

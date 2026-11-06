@@ -16,7 +16,8 @@ import type { JobCtx } from "../../lib/jobs.js";
 import { log } from "../../lib/logging.js";
 import { getChannel, updateChannel, type Channel } from "./channels.js";
 
-export const LUMEAN_BASE = "https://api.lumean.app/api/public";
+import { LUMEAN_BASE } from "../../lib/lumeanBase.js";
+export { LUMEAN_BASE };
 type Fetcher = (url: string, init?: RequestInit) => Promise<Response>;
 let fetcher: Fetcher = (url, init) => fetch(url, init);
 /** Только для тестов. */

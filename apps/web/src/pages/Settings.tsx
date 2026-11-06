@@ -18,7 +18,7 @@ const KEY_LINKS: Record<string, string> = {
   gemini: "https://aistudio.google.com/apikey",
   anthropic: "https://console.anthropic.com/settings/keys",
   openai: "https://platform.openai.com/api-keys",
-  lumean: "https://lumean.app",
+  lumean: "https://lumean.net",
 };
 
 /** Проверка связи с G-Labs по сохранённому адресу и ключу. */

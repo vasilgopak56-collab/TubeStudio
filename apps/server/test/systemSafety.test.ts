@@ -36,3 +36,9 @@ test('OAuth variable write failure leaves memory and file untouched',async()=>{p
 test('empty values remove every duplicate definition; unrelated lines are retained',async()=>{await fs.appendFile(file,'export ANYMODEL_API_KEY=OTHER_OLD\n');await saveKeys({anymodel:''});assert.ok(!(await fs.readFile(file,'utf8')).includes('ANYMODEL_API_KEY='));assert.equal(config.keys.anymodel,'');assert.equal(process.env.ANYMODEL_API_KEY,undefined);await saveEnvVars({GOOGLE_CLIENT_SECRET:'SYNTHETIC'});await saveEnvVars({GOOGLE_CLIENT_SECRET:''});assert.equal(process.env.GOOGLE_CLIENT_SECRET,undefined);assert.ok(!(await fs.readFile(file,'utf8')).includes('GOOGLE_CLIENT_SECRET'));});
 test('invalid inputs do not mutate file or trigger network',async()=>{const before=await fs.readFile(file,'utf8');for(const patch of [null,[],{anymodel:'a\nb'},{anymodel:12},{anymodel:'a b'}])await assert.rejects(saveKeys(patch as any));for(const vars of [null,{'BAD=NAME':'value'},{GOOGLE_CLIENT_ID:'a\nb'}])await assert.rejects(saveEnvVars(vars as any));assert.equal(await fs.readFile(file,'utf8'),before);assert.equal(calls.length,0);});
 test('server warning threshold remains 10–99 after budget reporting changes',()=>{assert.equal(SettingsSchema.safeParse({budget:{warnPct:99}}).success,true);assert.equal(SettingsSchema.safeParse({budget:{warnPct:100}}).success,false);});
+
+test('Lumean key check uses current speech API without generating',async()=>{
+ config.keys.lumean='SYNTHETIC'; let seen='';
+ globalThis.fetch=async(input,init={})=>{seen=String(input); assert.equal(init.method??'GET','GET'); assert.equal(new Headers(init.headers).get('X-API-KEY'),'SYNTHETIC'); return Response.json({success:true,data:[]});};
+ const r=await checkKeys(true); assert.equal(seen,'https://api.lumean.net/api/public/usage'); assert.equal(r.find(k=>k.provider==='lumean')!.ok,true);
+});
