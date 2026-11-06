@@ -1,5 +1,4 @@
-// Internal quota-consuming phase; deliberately not routed until its persistence,
-// recovery, and explicit approval UI are complete.
+// Internal quota-consuming phase; deliberately not routed until the explicit approval UI is complete.
 import {createHash} from 'node:crypto';
 import {z} from 'zod';
 import {ApiError} from '../../lib/errors.js';
@@ -10,12 +9,13 @@ import {reserveBrainstormAttempt} from './brainstormCollection.js';
 import {loadBrainstormProjectEvidence} from './brainstormProjectEvidence.js';
 import {inspectFirstVisibleUploads,type UploadObservation} from './brainstormFirstUploads.js';
 import {uploadsQuotaBound} from './brainstormUploadsAdapter.js';
+import {stageBrainstormUploads,saveBrainstormUploads} from './brainstormUploadsStore.js';
 const cid=z.string().regex(/^UC[A-Za-z0-9_-]{22}$/);
 const Ask=z.object({projectId:z.string().uuid(),evidenceArtifactId:z.string().uuid(),attemptId:z.string().uuid(),channelIds:z.array(cid).min(1).max(50),maxPages:z.number().int().min(1).max(3)}).strict().refine(x=>new Set(x.channelIds).size===x.channelIds.length,'Каналы повторяются');
 const Send=Ask.extend({previewHash:z.string().regex(/^[a-f0-9]{64}$/),confirmed:z.literal(true)}).strict();
 type AskT=z.infer<typeof Ask>;
 type Adapter=Awaited<ReturnType<typeof brainstormUploadsAdapter>>;
-type IO={adapter:()=>Promise<Adapter>;now:()=>Date};
+type IO={adapter:()=>Promise<Adapter>;now:()=>Date;stage?:typeof stageBrainstormUploads;save?:typeof saveBrainstormUploads};
 const defaults:IO={adapter:brainstormUploadsAdapter,now:()=>new Date()};
 const digest=(x:unknown)=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
 const stale=()=>new ApiError('VALIDATION','Проект или выбор каналов изменился. Обновите просмотр; проверка не начата.',409);
@@ -56,8 +56,11 @@ export async function runBrainstormUploads(raw:z.infer<typeof Send>,ctx:JobCtx,i
     rows[i]={channelId:id,status:'ok',observation};partial();
    }catch(e){rethrowCancelled(e,ctx.signal);rows[i]={channelId:id,status:'error',observation:null};partial();break;}
   }
-  ctx.progress('Проверка загрузок завершена',100);
-  return {projectId:p.input.projectId,evidenceArtifactId:p.input.evidenceArtifactId,evidenceHash:p.loaded.evidenceHash,attemptId:p.input.attemptId,observedAt,quota:p.quota,logicalRequestsStarted,results:rows,notice:'Это промежуточный результат: в проект он пока не сохранён. Локальный счётчик запросов не учитывает все повторы; фактическую квоту проверяйте в Google Cloud. Удалённые и скрытые публикации недоступны.'};
+  const recovery={projectId:p.input.projectId,evidenceArtifactId:p.input.evidenceArtifactId,evidenceHash:p.loaded.evidenceHash,attemptId:p.input.attemptId,observedAt,maxPages:p.input.maxPages,logicalRequestsStarted,results:rows};
+  ctx.partial({stage:'uploads-save',recovery});
+  try{checkCancelled();await (io.stage??stageBrainstormUploads)(recovery);}catch(e){rethrowCancelled(e,ctx.signal);return {status:'unsaved' as const,recovery,notice:'Результат пока только в памяти и исчезнет после закрытия программы. Не повторяйте запрос ради сохранения.'};}
+  try{checkCancelled();ctx.progress('Сохраняю проверку загрузок в проект',98);const saved=await (io.save??saveBrainstormUploads)(recovery);ctx.progress('Проверка загрузок сохранена',100);return {status:'saved' as const,projectId:saved.projectId,artifactId:saved.artifact.id,attemptId:p.input.attemptId,notice:'Сохранены только доступные публичные загрузки. Счётчик запросов не учитывает все повторы; фактическую квоту проверяйте в Google Cloud.'};}
+  catch(e){rethrowCancelled(e,ctx.signal);return {status:'recoverable' as const,attemptId:p.input.attemptId,notice:'Результат сохранён на диске, но не добавлен в проект. Его можно восстановить без повторного запроса к YouTube.'};}
  });
 }
 export {Ask as BrainstormUploadsAsk,Send as BrainstormUploadsSend};
