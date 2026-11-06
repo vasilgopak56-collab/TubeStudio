@@ -7,6 +7,7 @@ import {BrainstormProjectIdeasAsk,BrainstormProjectIdeasSend,previewBrainstormPr
 import {BrainstormProjectBrandAsk,BrainstormProjectBrandSend,previewBrainstormProjectBrand,runBrainstormProjectBrand} from '../services/studio/brainstormBrandProject.js';import {recoverBrainstormBrandResult} from '../services/studio/brainstormBrandRecovery.js';
 import {BrainstormProjectApplyAsk,BrainstormProjectApplySend,previewBrainstormProjectProfile,applyBrainstormProjectProfile,previewBrainstormProjectCalendar,applyBrainstormProjectCalendar} from '../services/studio/brainstormApplyProject.js';
 import {BrainstormImagesAsk,BrainstormImagesSend,previewBrainstormImages,runBrainstormImages,inspectBrainstormImageRun,collectBrainstormImages} from '../services/studio/brainstormImages.js';import {brainstormProjectState} from '../services/studio/brainstormState.js';
+import {BrainstormUploadsAsk,BrainstormUploadsSend,previewBrainstormUploads,runBrainstormUploads} from '../services/studio/brainstormUploadsProject.js';import {recoverBrainstormUploads} from '../services/studio/brainstormUploadsStore.js';
 export const brainstormRoute=new Hono();const base='/assistant/brainstorm',id=z.string().uuid();
 const body=async(c:Context):Promise<unknown>=>{try{return await c.req.json();}catch{throw new ApiError('VALIDATION','Нужен корректный JSON.');}};const handle=(fn:(c:Context)=>Promise<unknown>)=>async(c:Context)=>{try{return ok(c,await fn(c));}catch(e){return fail(c,e);}};
 brainstormRoute.post(`${base}/projects`,handle(async c=>createBrainstormProject(BrainstormProjectCreate.parse(await body(c)))));
@@ -16,6 +17,9 @@ brainstormRoute.post(`${base}/planning`,handle(async c=>{const d=BrainstormPlann
 brainstormRoute.post(`${base}/planning-recover`,handle(async c=>recoverBrainstormSearchPlan(z.object({attemptId:id}).strict().parse(await body(c)).attemptId)));
 brainstormRoute.post(`${base}/collection-preview`,handle(async c=>previewBrainstormProjectCollection(BrainstormProjectCollectionAsk.parse(await body(c)))));
 brainstormRoute.post(`${base}/collection`,handle(async c=>{const d=BrainstormProjectCollectionSend.parse(await body(c));return {jobId:startJob(ctx=>runBrainstormProjectCollection(d,ctx))};}));
+brainstormRoute.post(`${base}/uploads-preview`,handle(async c=>previewBrainstormUploads(BrainstormUploadsAsk.parse(await body(c)))));
+brainstormRoute.post(`${base}/uploads`,handle(async c=>{const d=BrainstormUploadsSend.parse(await body(c));return {jobId:startJob(ctx=>runBrainstormUploads(d,ctx))};}));
+brainstormRoute.post(`${base}/uploads-recover`,handle(async c=>recoverBrainstormUploads(z.object({attemptId:id}).strict().parse(await body(c)).attemptId)));
 brainstormRoute.post(`${base}/ideas-preview`,handle(async c=>previewBrainstormProjectIdeas(BrainstormProjectIdeasAsk.parse(await body(c)))));
 brainstormRoute.post(`${base}/ideas`,handle(async c=>{const d=BrainstormProjectIdeasSend.parse(await body(c));return {jobId:startJob(ctx=>runBrainstormProjectIdeas(d,ctx))};}));
 brainstormRoute.post(`${base}/ideas-recover`,handle(async c=>recoverBrainstormResult(z.object({attemptId:id}).strict().parse(await body(c)).attemptId)));

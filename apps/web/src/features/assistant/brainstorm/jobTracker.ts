@@ -1,6 +1,6 @@
 /** Tracks a single brainstorm job without cancelling it when the panel closes.
  * A missing response is deliberately unresolved: never launch it again automatically. */
-export type BrainstormJobKind='planning'|'collection'|'ideas'|'brand'|'images'|'images-collect';
+export type BrainstormJobKind='planning'|'collection'|'uploads'|'ideas'|'brand'|'images'|'images-collect';
 export type BrainstormJobRecord={version:1;projectId:string;kind:BrainstormJobKind;attemptId:string;jobId?:string};
 type Store=Pick<Storage,'getItem'|'setItem'|'removeItem'>;
 type Start=(path:string,init:{method:'POST';json:unknown})=>Promise<{jobId:string}>;
@@ -8,7 +8,7 @@ type Stream={addEventListener(type:string,listener:(event:Event)=>void):void;clo
 export type StreamEvent={type:'progress'|'partial'|'done'|'error'|'disconnected';data?:unknown};
 const KEY='tubestudio.brainstorm.active.v1';
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const kinds:BrainstormJobKind[]=['planning','collection','ideas','brand','images','images-collect'];
+const kinds:BrainstormJobKind[]=['planning','collection','uploads','ideas','brand','images','images-collect'];
 function validate(v:unknown):BrainstormJobRecord{
  if(!v||typeof v!=='object')throw Error('Данные задачи повреждены. Проверьте проект до повторного запуска.');
  const r=v as Record<string,unknown>;
