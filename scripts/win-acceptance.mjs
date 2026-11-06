@@ -395,6 +395,9 @@ await phase("J. Браузер: вход по ссылке и кнопка «В�
     await page.screenshot({ path: path.join(out, "browser-app.png") });
     await page.reload();
     check("После обновления страницы вход сохраняется", await exitBtn.waitFor({ timeout: 20_000 }).then(() => true, () => false));
+    // Finish the dashboard’s initial reads before testing an idle exit. Otherwise the
+    // intended busy-work confirmation can appear while /api/projects is still loading.
+    await page.waitForLoadState("networkidle", { timeout: 30_000 });
     await exitBtn.click();
     await page.getByTestId("exit-confirm").click();
     check("Экран «TubeStudio закрыта»", await page.getByText("TubeStudio закрыта").waitFor({ timeout: 30_000 }).then(() => true, () => false));
