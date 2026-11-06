@@ -24,7 +24,7 @@ export async function previewBrainstormCollection(input:AskInput){
 }
 // Immutable claim is made before any external request. A crash leaves an unknown
 // attempt, never an automatic replay. A fresh deliberate run needs a new UUID.
-export async function reserveBrainstormAttempt(runId:string,projectId:string,hash:string,kind:'brainstorm-collection'|'brainstorm-ideas'|'brainstorm-brand-plan'='brainstorm-collection'){
+export async function reserveBrainstormAttempt(runId:string,projectId:string,hash:string,kind:'brainstorm-collection'|'brainstorm-ideas'|'brainstorm-brand-plan'|'brainstorm-planning'='brainstorm-collection'){
  const dir=dataPath('assistant-attempts');await assistantSafeDir(dir,true);checkCancelled();
  const names=await fs.readdir(dir);if(names.filter(n=>/^[0-9a-f-]{36}\.json$/i.test(n)).length>=500)throw new ApiError('VALIDATION','Лимит записей попыток достигнут. Новый сбор не начат.',409);
  const target=dataPath('assistant-attempts',runId+'.json'),tmp=target+'.'+randomUUID()+'.tmp';
