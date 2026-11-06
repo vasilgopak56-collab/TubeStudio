@@ -4,6 +4,7 @@ import {createHash} from 'node:crypto';
 import {z} from 'zod';
 import {ApiError} from '../../lib/errors.js';
 import {PriceSnapshotSchema,operationCost,type PriceSnapshot} from '../usagePricing.js';
+export const BRAINSTORM_IDEAS_OUTPUT_LIMIT=8000;
 const Ask=z.object({model:z.string().trim().min(1).max(180).regex(/^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$/),contextHash:z.string().regex(/^[a-f0-9]{64}$/),characters:z.number().int().min(1).max(100000),outputLimit:z.number().int().min(1).max(12000),purpose:z.enum(['brainstorm-ideas-one-call','brainstorm-brand-plan-one-call','brainstorm-planning-one-call']).default('brainstorm-ideas-one-call')}).strict();
 /** Use the precise captured tariff's version; capturedAt alone doesn't bind prices. */
 export function estimateBrainstormModelCall(raw:z.input<typeof Ask>,price:PriceSnapshot){

@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto';import {z} from 'zod';import {ApiError} f
 import {checkCancelled,taskContext,withStoryboardGuard,withTaskSignal} from '../../lib/taskContext.js';import type {JobCtx} from '../../lib/jobs.js';
 import {assistantProjectSnapshot} from '../assistant.js';import {getChannel} from './channels.js';import {amCached,amCatalogFresh} from '../anymodel.js';import {capturePrice,type PriceSnapshot} from '../usagePricing.js';import {generatePinnedText,extractJson} from '../llm.js';
 import {registerBrainstormSpend} from './brainstormChannelBudget.js';import {assertChannelBudget} from './channels.js';
-import {reserveBrainstormAttempt} from './brainstormCollection.js';import {estimateBrainstormModelCall} from './brainstormCost.js';import {ScanPlan} from './brainstormScan.js';import {TopicPlan} from './brainstormTopics.js';
+import {reserveBrainstormAttempt} from './brainstormCollection.js';import {estimateBrainstormModelCall,BRAINSTORM_IDEAS_OUTPUT_LIMIT} from './brainstormCost.js';import {ScanPlan} from './brainstormScan.js';import {TopicPlan} from './brainstormTopics.js';
 const uuid=z.string().uuid(),hash=z.string().regex(/^[a-f0-9]{64}$/),digest=(x:unknown)=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
 const Ask=z.object({projectId:uuid,attemptId:uuid,scanRunId:uuid,task:z.string().trim().min(10).max(10000),model:z.string().trim().min(1).max(180).regex(/^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$/),region:z.string().regex(/^[A-Za-z]{2}$/).optional()}).strict();
 const Send=Ask.extend({previewHash:hash,confirmed:z.literal(true)}).strict();
@@ -20,7 +20,7 @@ async function prepare(raw:AskT,io:IO){
  const planning=estimateBrainstormModelCall({model:input.model,contextHash:context.hash,characters:context.characters,outputLimit:10000,purpose:'brainstorm-planning-one-call'},price);
  // Later contexts are not known yet. A deliberately broad, disclosed assumption,
  // not a spending limit or a promise of the eventual bill.
- const ideas=estimateBrainstormModelCall({model:input.model,contextHash:digest('future-ideas'),characters:100000,outputLimit:4000,purpose:'brainstorm-ideas-one-call'},price),brand=estimateBrainstormModelCall({model:input.model,contextHash:digest('future-brand'),characters:100000,outputLimit:10000,purpose:'brainstorm-brand-plan-one-call'},price);
+ const ideas=estimateBrainstormModelCall({model:input.model,contextHash:digest('future-ideas'),characters:100000,outputLimit:BRAINSTORM_IDEAS_OUTPUT_LIMIT,purpose:'brainstorm-ideas-one-call'},price),brand=estimateBrainstormModelCall({model:input.model,contextHash:digest('future-brand'),characters:100000,outputLimit:10000,purpose:'brainstorm-brand-plan-one-call'},price);
  const estimate={currency:'USD' as const,planning:planning.estimate,ideas:ideas.estimate,brand:brand.estimate,totalUsd:planning.estimate.usd!+ideas.estimate.usd!+brand.estimate.usd!,notice:'Ориентир для трёх текстовых запросов AnyModel при текущем тарифе. Для двух будущих запросов заранее принято по 100 000 символов контекста; фактические токены, рассуждения, тариф и списания могут отличаться. Это не предел расходов. Повторы не включены. Поиск YouTube бесплатный; расход G-Labs на 4 картинки здесь неизвестен и не входит в сумму. Каждый следующий платный этап потребует отдельного подтверждения.'};
  const previewHash=digest({input,projectSnapshot:snap.snapshot,channel,region,planningHash:planning.previewHash,ideasHash:ideas.previewHash,brandHash:brand.previewHash});return {input,snap,channelId:cid,channel,region,context,planning,estimate,previewHash};
 }

@@ -10,7 +10,7 @@ import {capturePrice,type PriceSnapshot} from '../usagePricing.js';
 import {generatePinnedText,extractJson} from '../llm.js';
 import {reserveBrainstormAttempt} from './brainstormCollection.js';
 import {buildBrainstormModelContext} from './brainstormModelContext.js';
-import {estimateBrainstormModelCall} from './brainstormCost.js';
+import {estimateBrainstormModelCall,BRAINSTORM_IDEAS_OUTPUT_LIMIT} from './brainstormCost.js';
 import {BrainstormProposal,composeBrainstormReport} from './brainstormReport.js';
 import type {ScanResult} from './brainstormScan.js';
 import type {TopicResult} from './brainstormTopics.js';
@@ -19,7 +19,7 @@ type AskT=z.infer<typeof Ask>;
 type IO={price:(model:string)=>Promise<PriceSnapshot>;send:typeof generatePinnedText;reserve:typeof reserveBrainstormAttempt};
 const defaults:IO={price:model=>capturePrice('anymodel',model,'text',amCached(model)?.billing,{catalogFresh:amCatalogFresh()}),send:generatePinnedText,reserve:reserveBrainstormAttempt};
 const hash=(x:unknown)=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
-const outputLimit=4000;
+const outputLimit=BRAINSTORM_IDEAS_OUTPUT_LIMIT;
 export async function previewBrainstormIdeas(raw:AskT,scan:ScanResult,topics:TopicResult[],io:Pick<IO,'price'>=defaults){
  const input=Ask.parse(raw),context=buildBrainstormModelContext({task:input.task,channel:input.channel},scan,topics),price=await io.price(input.model);
  const cost=estimateBrainstormModelCall({model:input.model,contextHash:context.hash,characters:context.characters,outputLimit},price);
