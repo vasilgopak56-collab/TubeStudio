@@ -3,7 +3,7 @@ import {constants} from 'node:fs';import fs from 'node:fs/promises';import {rand
 import {ApiError} from '../../lib/errors.js';import {dataPath} from '../../lib/storage.js';import {checkCancelled} from '../../lib/taskContext.js';import {assistantSafeDir} from '../assistant.js';
 import {BrainstormProposal} from './brainstormReport.js';import {saveBrainstormIdeaReport} from './brainstormReportSave.js';
 const uuid=z.string().uuid(),hash=z.string().regex(/^[a-f0-9]{64}$/),dir=()=>dataPath('assistant-brainstorm-results');
-const Recovery=z.object({projectId:uuid,attemptId:uuid,evidenceArtifactId:uuid,evidenceHash:hash,proposal:BrainstormProposal}).strict();
+const Recovery=z.object({projectId:uuid,attemptId:uuid,evidenceArtifactId:uuid,evidenceHash:hash,uploadsArtifactId:uuid.optional(),uploadsHash:hash.optional(),proposal:BrainstormProposal}).strict().refine(x=>!!x.uploadsArtifactId===!!x.uploadsHash);
 const Stored=z.object({version:z.literal(1),createdAt:z.string().datetime(),model:z.string().min(1).max(180),recovery:Recovery,hash}).strict();
 const digest=(x:unknown)=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
 const problem=(message:string)=>new ApiError('VALIDATION',message,409);
