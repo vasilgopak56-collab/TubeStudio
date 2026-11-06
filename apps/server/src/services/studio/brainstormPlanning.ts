@@ -3,6 +3,7 @@
 import {createHash} from 'node:crypto';import {z} from 'zod';import {ApiError} from '../../lib/errors.js';
 import {checkCancelled,taskContext,withStoryboardGuard,withTaskSignal} from '../../lib/taskContext.js';import type {JobCtx} from '../../lib/jobs.js';
 import {assistantProjectSnapshot} from '../assistant.js';import {getChannel} from './channels.js';import {amCached,amCatalogFresh} from '../anymodel.js';import {capturePrice,type PriceSnapshot} from '../usagePricing.js';import {generatePinnedText,extractJson} from '../llm.js';
+import {registerBrainstormSpend} from './brainstormChannelBudget.js';import {assertChannelBudget} from './channels.js';
 import {reserveBrainstormAttempt} from './brainstormCollection.js';import {estimateBrainstormModelCall} from './brainstormCost.js';import {ScanPlan} from './brainstormScan.js';import {TopicPlan} from './brainstormTopics.js';
 const uuid=z.string().uuid(),hash=z.string().regex(/^[a-f0-9]{64}$/),digest=(x:unknown)=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
 const Ask=z.object({projectId:uuid,attemptId:uuid,scanRunId:uuid,task:z.string().trim().min(10).max(10000),model:z.string().trim().min(1).max(180).regex(/^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$/),region:z.string().regex(/^[A-Za-z]{2}$/).optional()}).strict();
@@ -21,7 +22,7 @@ async function prepare(raw:AskT,io:IO){
  // not a spending limit or a promise of the eventual bill.
  const ideas=estimateBrainstormModelCall({model:input.model,contextHash:digest('future-ideas'),characters:100000,outputLimit:4000,purpose:'brainstorm-ideas-one-call'},price),brand=estimateBrainstormModelCall({model:input.model,contextHash:digest('future-brand'),characters:100000,outputLimit:10000,purpose:'brainstorm-brand-plan-one-call'},price);
  const estimate={currency:'USD' as const,planning:planning.estimate,ideas:ideas.estimate,brand:brand.estimate,totalUsd:planning.estimate.usd!+ideas.estimate.usd!+brand.estimate.usd!,notice:'Ориентир для трёх текстовых запросов AnyModel при текущем тарифе. Для двух будущих запросов заранее принято по 100 000 символов контекста; фактические токены, рассуждения, тариф и списания могут отличаться. Это не предел расходов. Повторы не включены. Поиск YouTube бесплатный; расход G-Labs на 4 картинки здесь неизвестен и не входит в сумму. Каждый следующий платный этап потребует отдельного подтверждения.'};
- const previewHash=digest({input,projectSnapshot:snap.snapshot,channel,region,planningHash:planning.previewHash,ideasHash:ideas.previewHash,brandHash:brand.previewHash});return {input,snap,channel,region,context,planning,estimate,previewHash};
+ const previewHash=digest({input,projectSnapshot:snap.snapshot,channel,region,planningHash:planning.previewHash,ideasHash:ideas.previewHash,brandHash:brand.previewHash});return {input,snap,channelId:cid,channel,region,context,planning,estimate,previewHash};
 }
 export async function previewBrainstormPlanning(raw:AskT,io:IO=defaults){const p=await prepare(raw,io);return {project:{id:p.snap.project.id,title:p.snap.project.title},channel:p.channel,region:p.region,task:p.input.task,steps:['Подготовить поисковые запросы','Изучить публичный YouTube','Предложить 8 идей','После выбора — подготовить оформление и план','По отдельному подтверждению — профиль, календарь и 4 картинки G-Labs'],estimate:p.estimate,firstRequest:p.planning,previewHash:p.previewHash,notice:'Сейчас подтверждается только первый платный запрос для плана поиска. Наблюдения ещё не собраны; другие действия не запускаются.'};}
 export function validateBrainstormSearchProposal(raw:unknown,region:string){
@@ -31,8 +32,9 @@ export function validateBrainstormSearchProposal(raw:unknown,region:string){
 export async function runBrainstormPlanning(raw:z.infer<typeof Send>,ctx:JobCtx,io:IO=defaults){
  const {previewHash,confirmed,...ask}=Send.parse(raw);return withTaskSignal(ctx.signal,async()=>{
   checkCancelled();const p=await prepare(ask,io);if(p.previewHash!==previewHash)throw new ApiError('VALIDATION','Задание, канал, проект или тариф изменились. Обновите просмотр; модель не запускалась.',409);
+  await registerBrainstormSpend(p.channelId,'brainstorm-planning');
   await io.reserve(ask.attemptId,ask.projectId,p.previewHash,'brainstorm-planning');checkCancelled();const previous=taskContext()?.verifyStoryboard;
-  const guard=async()=>{checkCancelled();await previous?.();if((await prepare(ask,io)).previewHash!==p.previewHash)throw new ApiError('VALIDATION','Задание, канал, проект или тариф изменились во время ожидания. Модель не запускалась.',409);};
+  const guard=async()=>{checkCancelled();await previous?.();if((await prepare(ask,io)).previewHash!==p.previewHash)throw new ApiError('VALIDATION','Задание, канал, проект или тариф изменились во время ожидания. Модель не запускалась.',409);await assertChannelBudget(p.channelId);};
   ctx.progress('Проверяю тариф и готовлю план исследования',20);const answer=await withStoryboardGuard(guard,()=>io.send({system:p.context.system,user:p.context.user,maxTokens:10000,temperature:.2},{provider:'anymodel',model:ask.model}));
   if(answer.text.length>256*1024)throw new ApiError('LLM_INVALID_JSON','Ответ модели слишком большой. Автоматического повтора нет; запрос мог быть оплачен.',502);ctx.partial({stage:'planning-answer',attemptId:ask.attemptId,rawResponse:answer.text,notice:'Ответ получен, но пока не сохранён на диск.'});checkCancelled();
   let plan;try{plan=validateBrainstormSearchProposal(extractJson(answer.text),p.region);}catch{throw new ApiError('LLM_INVALID_JSON','План поиска не прошёл проверку формата или содержит повторы. Автоматического повтора нет; запрос мог быть оплачен.',502);}
@@ -40,3 +42,4 @@ export async function runBrainstormPlanning(raw:z.infer<typeof Send>,ctx:JobCtx,
   return {attemptId:ask.attemptId,model:ask.model,plan:result,notice:'Это предложенные запросы, а не результаты YouTube. План пока только в задаче; поиск и остальные этапы не запускались.'};
  });
 }
+export {Ask as BrainstormPlanningAsk,Send as BrainstormPlanningSend};

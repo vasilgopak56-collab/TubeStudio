@@ -1,3 +1,4 @@
+import {brainstormRoute} from './brainstorm.js';
 import {AssistantSkillBranchAsk,AssistantSkillBranchSend,previewAssistantSkillBranch,createAssistantSkillBranch} from '../services/assistant.js';
 import {ManualSkillAsk,ManualSkillSend,previewManualSkill,saveManualSkill} from '../services/assistant.js';
 import {SkillArchiveAsk,SkillArchiveSend,previewSkillArchive,setSkillArchive} from '../services/assistant.js';
@@ -41,6 +42,7 @@ import {AssistantRebindAsk,AssistantRebindSend,previewAssistantRebind,rebindAssi
 export const assistantRoute=new Hono();
 assistantRoute.use('/assistant/*',bodyLimit({maxSize:320000,onError:c=>fail(c,new ApiError('VALIDATION','Материалы помощника слишком велики.',413))}));
 assistantRoute.use('/assistant/*',async(c,next)=>{const origin=c.req.header('origin');if(origin&&origin!==new URL(c.req.url).origin)return fail(c,new ApiError('UNAUTHORIZED','Запрос помощника разрешён только из исходного приложения.',403));return next();});
+assistantRoute.route('/',brainstormRoute);
 async function body(c:{req:{json:()=>Promise<unknown>}}){try{return await c.req.json();}catch{throw new ApiError('VALIDATION','Нужен корректный JSON.');}}
 assistantRoute.get('/assistant/state',async c=>{try{return ok(c,await assistantState());}catch(e){return fail(c,e);}});
 assistantRoute.post('/assistant/conversations',async c=>{try{return ok(c,await createAssistant(AssistantCreate.parse(await body(c))));}catch(e){return fail(c,e);}});

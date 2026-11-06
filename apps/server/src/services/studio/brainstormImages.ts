@@ -71,3 +71,9 @@ export async function collectBrainstormImages(runId:string,ctx:JobCtx,io:Collect
  }
  ctx.progress('Проверка картинок завершена',100);return {runId,projectId:run.projectId,results,notice:'Готовые исходники и подготовленные PNG сохраняются в папке проекта. Аватар обрезается по центру; проверьте композицию, читаемость и безопасную область баннера. Повторной генерации нет.'};
  }));}
+export {Ask as BrainstormImagesAsk,Send as BrainstormImagesSend};
+export async function listBrainstormImageRuns(projectId:string){
+ uuid.parse(projectId);if(!await assistantSafeDir(dir()))return {runs:[],warnings:[]};const names=(await fs.readdir(dir())).filter(n=>/^[0-9a-f-]{36}\.json$/i.test(n)).slice(0,500),runs:Awaited<ReturnType<typeof inspectBrainstormImageRun>>[]=[],warnings:string[]=[];
+ for(const name of names){try{const m=await read(name.slice(0,-5),Manifest);if(!m||m.runId!==name.slice(0,-5))throw Error();if(m.projectId===projectId)runs.push(await inspectBrainstormImageRun(m.runId));}catch{warnings.push('Запись запуска картинок недоступна или повреждена; исходные файлы не изменены.');}}
+ return {runs,warnings};
+}

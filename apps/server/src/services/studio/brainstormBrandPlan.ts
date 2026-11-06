@@ -18,7 +18,7 @@ export function buildBrandPlan(raw:unknown,startDate:string){
  if(b.videos.some(v=>!keys.includes(norm(v.pillar))))throw new ApiError('VALIDATION','Ролик ссылается на неизвестную рубрику. Ничего не изменено.',400);
  const all=[...b.videos.map(v=>v.title),...b.backupTopics].map(norm);if(new Set(all).size!==all.length)throw new ApiError('VALIDATION','Темы плана и запасные темы повторяются. Ничего не изменено.',400);
  const offsets=[0,2,4,7,9,11,14,16,18,21,23,25];
- const videos=b.videos.map((v,i)=>({...v,number:i+1,date:dates(start.data,offsets[i]),slot:i<3?'pilot':i===8||i===11?'flexible':'planned'}));
+ const videos=b.videos.map((v,i)=>({...v,number:i+1,date:dates(start.data,offsets[i]),slot:(i<3?'pilot':i===8||i===11?'flexible':'planned') as 'pilot'|'flexible'|'planned'}));
  const {imageBriefs,...brand}=b.brand;
  return {version:1 as const,brand:{...brand,handleCandidate:brand.handleCandidate.replace(/^@/,''),handleAvailability:'not-checked' as const},pillars:b.pillars,profile:b.profile,videos,backupTopics:b.backupTopics,pilotReview:{date:dates(start.data,6),instructions:b.pilotReview},youtubeChecklist:b.youtubeChecklist,
   images:[{kind:'avatar' as const,target:'800×800',brief:imageBriefs.avatar},{kind:'banner' as const,target:'2560×1440',brief:imageBriefs.banner},{kind:'preview1' as const,target:'16:9',brief:imageBriefs.preview1},{kind:'preview2' as const,target:'16:9',brief:imageBriefs.preview2}],

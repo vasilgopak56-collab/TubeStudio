@@ -12,5 +12,5 @@ export async function loadBrainstormSelectedIdea(projectId:string,ideasArtifactI
  const p=BrainstormProposal.safeParse(d.proposal);if(!p.success)throw fail();
  const reportHash=digest({evidenceArtifactId:d.evidenceArtifactId,evidenceHash:d.evidenceHash,proposal:p.data});if(reportHash!==d.reportHash)throw fail();
  let report;try{report=composeBrainstormReport(loaded.scan,loaded.topics,p.data);}catch{throw fail();}if(digest(report)!==digest(d.report))throw fail();
- const idea=report.ideas[selectedIndex];return {project:loaded.project,projectSnapshot:loaded.projectSnapshot,task:loaded.task,selectedIdea:{title:idea.title,direction:idea.direction,reason:idea.reason},ideasHash:reportHash,ideasArtifactId,selectedIndex};
+ const idea=report.ideas[selectedIndex];return {project:loaded.project,projectSnapshot:loaded.projectSnapshot,task:loaded.task,selectedIdea:{title:idea.title,direction:idea.direction,reason:idea.reason},ideasHash:reportHash,ideasArtifactId,selectedIndex,report};
 }
