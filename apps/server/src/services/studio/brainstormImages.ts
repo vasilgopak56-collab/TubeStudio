@@ -34,3 +34,40 @@ export async function runBrainstormImages(raw:z.infer<typeof Send>,ctx:JobCtx,io
  }
  ctx.progress('Четыре задания отправлены',100);return {status:'submitted' as const,runId:ask.runId,notice:'Задания отправлены и их номера сохранены. Картинки ещё не скачаны и размеры не подготовлены.'};
  });}
+
+// Read-only retrieval and local image preparation. Never submits new tasks.
+const Output=z.object({version:z.literal(1),runId:uuid,kind,previewHash:hash,taskId,originalExt:z.enum(['png','jpg','webp']),originalHash:hash,outputHash:hash,width:z.number().int(),height:z.number().int(),createdAt:z.string().datetime()}).strict();
+type CollectIO={base:typeof G.glabsBase;status:typeof G.getTask;download:typeof G.downloadBrandImage};const collectDefaults:CollectIO={base:G.glabsBase,status:G.getTask,download:G.downloadBrandImage};
+const queues=new Map<string,Promise<unknown>>();
+async function locked<T>(id:string,fn:()=>Promise<T>):Promise<T>{const prev=queues.get(id)??Promise.resolve(),p=prev.catch(()=>{}).then(fn);queues.set(id,p);try{return await p;}finally{if(queues.get(id)===p)queues.delete(id);}}
+async function writeImageOnce(path:string,bytes:Buffer){
+ const tmp=path+'.'+randomUUID()+'.tmp';try{const f=await fs.open(tmp,'wx',0o600);try{await f.writeFile(bytes);await f.sync();}finally{await f.close();}try{await fs.link(tmp,path);}catch(e){if((e as NodeJS.ErrnoException).code!=='EEXIST')throw e;await verifyImageFile(path,digestBytes(bytes));}}finally{await fs.rm(tmp,{force:true}).catch(()=>{});}
+}
+const digestBytes=(b:Buffer)=>createHash('sha256').update(b).digest('hex');
+async function verifyImageFile(file:string,expected:string){const st=await fs.lstat(file).catch(()=>null);if(!st||!st.isFile()||st.isSymbolicLink()||st.nlink!==1||st.size>32*1024*1024)throw problem('Сохранённая картинка отсутствует или повреждена.');const f=await fs.open(file,constants.O_RDONLY|constants.O_NOFOLLOW);try{const s=await f.stat();if(!s.isFile()||s.nlink!==1||s.size>32*1024*1024||digestBytes(await f.readFile())!==expected)throw problem('Сохранённая картинка изменилась или повреждена.');}finally{await f.close();}}
+export async function collectBrainstormImages(runId:string,ctx:JobCtx,io:CollectIO=collectDefaults){uuid.parse(runId);return locked(runId,()=>withTaskSignal(ctx.signal,async()=>{
+ checkCancelled();const run=await inspectBrainstormImageRun(runId);if(await io.base()!==run.base)throw problem('Адрес G-Labs изменился. Для получения результатов верните адрес, использованный при отправке.');
+ const m=await read(runId,Manifest);if(!m)throw problem('Запуск картинок не найден.');const folder=dataPath('files',run.projectId,'brainstorm',runId);await assistantSafeDir(folder,true);const sharp=(await import('sharp')).default;const results=[];
+ for(const [index,item] of run.images.entries()){
+  checkCancelled();ctx.progress(`Проверяю картинку ${index+1} из 4`,10+index*20);if(item.state!=='submitted'||!item.taskId){results.push({kind:item.kind,status:item.state});continue;}
+  const existing=await read(runId+'-'+item.kind+'-output',Output);if(existing){
+   if(existing.runId!==runId||existing.kind!==item.kind||existing.taskId!==item.taskId||existing.previewHash!==m.previewHash)throw problem('Запись картинки не соответствует заданию.');
+   const original=`${item.kind}-original.${existing.originalExt}`,output=`${item.kind}.png`;await verifyImageFile(dataPath('files',run.projectId,'brainstorm',runId,original),existing.originalHash);await verifyImageFile(dataPath('files',run.projectId,'brainstorm',runId,output),existing.outputHash);
+   results.push({kind:item.kind,status:'ready' as const,original:`brainstorm/${runId}/${original}`,file:`brainstorm/${runId}/${output}`,width:existing.width,height:existing.height});continue;
+  }
+  try{
+   const status=await io.status(item.taskId,run.base);checkCancelled();if(status.task_id!==item.taskId)throw problem('Номер ответа G-Labs не совпадает с заданием.');
+   if(status.status==='pending'||status.status==='running'){results.push({kind:item.kind,status:status.status});continue;}
+   if(status.status==='failed'){results.push({kind:item.kind,status:'failed' as const,message:G.failText(status)});continue;}
+   if(status.status!=='completed'||!status.results?.[0]){results.push({kind:item.kind,status:'unavailable' as const,message:'G-Labs не вернул готовый файл. Повторной генерации нет.'});continue;}
+   const bytes=await io.download(status.results[0],run.base);checkCancelled();if(bytes.length<100||bytes.length>25*1024*1024)throw problem('Исходная картинка пустая или слишком большая.');
+   const metadata=await sharp(bytes,{failOn:'error',limitInputPixels:40_000_000}).metadata(),ext=metadata.format==='jpeg'?'jpg':metadata.format;if(ext!=='png'&&ext!=='jpg'&&ext!=='webp')throw problem('G-Labs вернул неподдерживаемый формат картинки.');if(!metadata.width||!metadata.height||metadata.width*metadata.height>40_000_000)throw problem('Размер исходной картинки недопустим.');
+   const width=item.kind==='avatar'?800:item.kind==='banner'?2560:1280,height=item.kind==='avatar'?800:item.kind==='banner'?1440:720;
+   const output=await sharp(bytes,{failOn:'error',limitInputPixels:40_000_000}).rotate().resize(width,height,{fit:'cover',position:'centre'}).png().toBuffer();if(output.length>32*1024*1024)throw problem('Подготовленный файл слишком большой.');checkCancelled();
+   const original=`${item.kind}-original.${ext}`,out=`${item.kind}.png`;await writeImageOnce(dataPath('files',run.projectId,'brainstorm',runId,original),bytes);await writeImageOnce(dataPath('files',run.projectId,'brainstorm',runId,out),output);
+   const record=Output.parse({version:1,runId,kind:item.kind,previewHash:m.previewHash,taskId:item.taskId,originalExt:ext,originalHash:digestBytes(bytes),outputHash:digestBytes(output),width,height,createdAt:new Date().toISOString()});await publish(runId+'-'+item.kind+'-output',record);
+   const ready={kind:item.kind,status:'ready' as const,original:`brainstorm/${runId}/${original}`,file:`brainstorm/${runId}/${out}`,width,height};results.push(ready);ctx.partial(ready);
+  }catch(e){if(taskSignal(ctx.signal)?.aborted)throw e;results.push({kind:item.kind,status:'unavailable' as const,message:'Не удалось получить или подготовить файл. Повторите получение; новая генерация не запускается.'});}
+ }
+ ctx.progress('Проверка картинок завершена',100);return {runId,projectId:run.projectId,results,notice:'Готовые исходники и подготовленные PNG сохраняются в папке проекта. Аватар обрезается по центру; проверьте композицию, читаемость и безопасную область баннера. Повторной генерации нет.'};
+ }));}

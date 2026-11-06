@@ -179,3 +179,18 @@ export async function upsertCharacter(name: string, image: GlabsRef, notes: stri
     return "updated";
   }
 }
+
+/** Download a generated image only from G-Labs' file route, without redirects.
+ * This read-only operation can be retried; generation is never repeated here. */
+export async function downloadBrandImage(url:string,base:string):Promise<Buffer>{
+  let u:URL,b:URL;try{b=new URL(base);u=new URL(url,b);}catch{throw new ApiError('UPSTREAM','G-Labs вернул некорректный адрес картинки.',502);}
+  if(!/^https?:$/.test(b.protocol)||b.username||b.password||!u.pathname.startsWith('/api/files/')||u.username||u.password||u.hash)throw new ApiError('UPSTREAM','G-Labs вернул неподдерживаемый адрес картинки.',502);
+  // Some G-Labs installations return a different LAN host; only its file path is used.
+  const target=new URL(u.pathname+u.search,b.origin),signal=taskSignal(),limit=25*1024*1024;checkCancelled(signal);
+  let res:Response;try{res=await fetcher(target.toString(),{headers:config.keys.glabs?{'X-API-Key':config.keys.glabs}:{},redirect:'error',signal:AbortSignal.any([AbortSignal.timeout(120_000),...(signal?[signal]:[])])});}catch(e){rethrowCancelled(e,signal);throw offline(base);}
+  if(!res.ok)throw new ApiError('UPSTREAM',`Не удалось скачать картинку G-Labs (HTTP ${res.status}). Можно повторить скачивание без повторной генерации.`,502,true);
+  const announced=Number(res.headers.get('content-length'));if(Number.isFinite(announced)&&announced>limit){await res.body?.cancel().catch(()=>{});throw new ApiError('VALIDATION','Картинка превышает 25 МиБ; она не сохранена.',413);}
+  if(!res.body)throw new ApiError('UPSTREAM','G-Labs вернул пустую картинку.',502);const reader=res.body.getReader(),chunks:Buffer[]=[];let size=0;
+  try{for(;;){checkCancelled(signal);const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>limit){await reader.cancel().catch(()=>{});throw new ApiError('VALIDATION','Картинка превышает 25 МиБ; она не сохранена.',413);}chunks.push(Buffer.from(value));}}finally{reader.releaseLock();}
+  if(size<100)throw new ApiError('UPSTREAM','G-Labs вернул пустую картинку.',502);return Buffer.concat(chunks,size);
+}
