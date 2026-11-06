@@ -1,3 +1,4 @@
+import {AssistantBrainstorm} from './brainstorm/AssistantBrainstorm';
 import {AssistantTextExcerpt} from './AssistantTextExcerpt';
 import {AssistantSkillBranch} from './AssistantSkillBranch';
 import {AssistantManualSkill} from './AssistantManualSkill';
@@ -63,6 +64,7 @@ export function AssistantPanel({onClose}:{onClose:()=>void}){
  const [voiceBusy,setVoiceBusy]=useState(false),[workflowBusy,setWorkflowBusy]=useState(false),[libraryBusy,setLibraryBusy]=useState(false),[archiveBusy,setArchiveBusy]=useState(false);
  const [appendTarget,setAppendTarget]=useState(''),[appendTitle,setAppendTitle]=useState('Авторский результат'),[appendPreview,setAppendPreview]=useState<{input:{runId:string;projectId:string;title:string};hash:string;project:{id:string;title:string};artifact:unknown;notice:string}|null>(null),[appended,setAppended]=useState('');
  const location=useLocation(),[state,setState]=useState<State|null>(null),[current,setCurrent]=useState<Run|null>(null),[error,setError]=useState<unknown>(null),[busy,setBusy]=useState(false),[notice,setNotice]=useState('');
+ const [brainstormOpen,setBrainstormOpen]=useState(false);
  const [setup,setSetup]=useState(true),[models,setModels]=useState(initialModels),[title,setTitle]=useState('Новая задача'),[project,setProject]=useState(()=>/^\/projects\/[a-f0-9-]{36}$/i.test(location.pathname)?location.pathname.split('/')[2]:''),[skillId,setSkillId]=useState(''),[docs,setDocs]=useState<{name:string;text:string}[]>([]);
  const documentAbort=useRef<AbortController|null>(null),documentEpoch=useRef(0);
  const [documentLoading,setDocumentLoading]=useState(false),[excerptBusy,setExcerptBusy]=useState(false),[excerptPending,setExcerptPending]=useState(false);
@@ -127,6 +129,7 @@ export function AssistantPanel({onClose}:{onClose:()=>void}){
    <Button variant="outline" size="sm" className="shrink-0" onClick={()=>goTo(historyAnchor.current)}>История</Button>
   </nav></div>
   <div ref={scrollArea} className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5">
+   <div><Button size="sm" variant="outline" onClick={()=>setBrainstormOpen(v=>!v)}>{brainstormOpen?'Скрыть мозговой штурм':'Мозговой штурм канала'}</Button>{brainstormOpen&&<div className="mt-3"><AssistantBrainstorm projects={state?.projects??[]} onProjectsChanged={()=>void perform(refresh)}/></div>}</div>
    <p className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">Сначала уточняем задание. Сценарии и промпты — авторской модели, организация — рутинной. Ролик и комментарии получаем отдельной кнопкой с подтверждением. Озвучка — по одной отдельно подтверждённой части из сохранённой подготовки. Полного автономного цикла пока нет.</p>
    {error!=null&&<ErrorAlert error={error}/>}{job.error&&<ErrorAlert error={job.error}/>} {sourceJob.error&&<ErrorAlert error={sourceJob.error}/>} {notice&&<p role="status" className="rounded border p-3 text-sm">{notice}</p>}
    {!!state?.warnings.length&&<p className="text-sm text-accent">{state.warnings.join(' ')}</p>}
@@ -212,7 +215,7 @@ export function AssistantPanel({onClose}:{onClose:()=>void}){
    {current&&<AssistantVoiceExecution key={'voice-execute:'+current.rootId} projects={state?.projects??[]} disabled={busy||running||sourceRunning||workflowBusy||libraryBusy||archiveBusy||manualSkillBusy} onBusy={setVoiceBusy}/> }
    {current&&<div ref={processAnchor} tabIndex={-1} aria-label="Процесс помощника"><AssistantWorkflowPanel key={current.rootId} run={current} projects={state?.projects??[]} currentPath={location.pathname} disabled={busy||running||sourceRunning||voiceBusy||manualSkillBusy} onRun={r=>{const draft=question,needsScopeReview=!!evidenceScope||scopeDirty;activate(r);setQuestion(draft);setScopeDirty(needsScopeReview);}} onBusy={setWorkflowBusy} onSkillSaved={()=>void perform(refresh)}/></div>}
    <details className="rounded-lg border p-3"><summary ref={historyAnchor} className="cursor-pointer text-sm font-semibold">История · последние 80 снимков</summary><div className="mt-3 space-y-2">{state?.runs.map(r=><button key={r.id} disabled={locked} className="block w-full rounded border p-2 text-left text-xs hover:bg-muted disabled:opacity-50" onClick={()=>void perform(async()=>{const v=await local<Run>('/assistant/conversations/'+r.id);if(v)activate(v);})}>{r.title} · {r.turns}/10 · {new Date(r.createdAt).toLocaleString('ru-RU')}</button>)}</div></details>
-   <p className="text-xs text-muted-foreground">Закрытие панели отменяет активную задачу, но не отзывает уже отправленный запрос. При обрыве проверьте историю: автоматического повтора нет. Диалоги, файлы процесса и подходы входят в приватную резервную копию.</p>
+   <p className="text-xs text-muted-foreground">Закрытие панели отменяет активную задачу обычного диалога, но не останавливает мозговой штурм и не отзывает уже отправленные запросы. При обрыве проверьте историю: автоматического повтора нет. Диалоги, файлы процесса и подходы входят в приватную резервную копию.</p>
   </div>
  </aside>;
 }

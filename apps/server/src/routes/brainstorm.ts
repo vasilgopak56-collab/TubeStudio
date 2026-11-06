@@ -1,4 +1,5 @@
 // Brainstorm routes are mounted under assistant's auth, origin and body guards.
+import {BrainstormProjectCreate,createBrainstormProject} from '../services/studio/brainstormProjectCreate.js';
 import {Hono,type Context} from 'hono';import {z} from 'zod';import {ApiError,fail,ok} from '../lib/errors.js';import {startJob} from '../lib/jobs.js';
 import {BrainstormPlanningAsk,BrainstormPlanningSend,previewBrainstormPlanning} from '../services/studio/brainstormPlanning.js';import {runBrainstormProjectPlanning} from '../services/studio/brainstormPlanningProject.js';import {recoverBrainstormSearchPlan} from '../services/studio/brainstormPlanningRecovery.js';
 import {BrainstormProjectCollectionAsk,BrainstormProjectCollectionSend,previewBrainstormProjectCollection,runBrainstormProjectCollection} from '../services/studio/brainstormCollectionProject.js';
@@ -8,6 +9,7 @@ import {BrainstormProjectApplyAsk,BrainstormProjectApplySend,previewBrainstormPr
 import {BrainstormImagesAsk,BrainstormImagesSend,previewBrainstormImages,runBrainstormImages,inspectBrainstormImageRun,collectBrainstormImages} from '../services/studio/brainstormImages.js';import {brainstormProjectState} from '../services/studio/brainstormState.js';
 export const brainstormRoute=new Hono();const base='/assistant/brainstorm',id=z.string().uuid();
 const body=async(c:Context):Promise<unknown>=>{try{return await c.req.json();}catch{throw new ApiError('VALIDATION','Нужен корректный JSON.');}};const handle=(fn:(c:Context)=>Promise<unknown>)=>async(c:Context)=>{try{return ok(c,await fn(c));}catch(e){return fail(c,e);}};
+brainstormRoute.post(`${base}/projects`,handle(async c=>createBrainstormProject(BrainstormProjectCreate.parse(await body(c)))));
 brainstormRoute.get(`${base}/projects/:id`,handle(async c=>brainstormProjectState(id.parse(c.req.param('id')))));
 brainstormRoute.post(`${base}/planning-preview`,handle(async c=>previewBrainstormPlanning(BrainstormPlanningAsk.parse(await body(c)))));
 brainstormRoute.post(`${base}/planning`,handle(async c=>{const d=BrainstormPlanningSend.parse(await body(c));return {jobId:startJob(ctx=>runBrainstormProjectPlanning(d,ctx))};}));
