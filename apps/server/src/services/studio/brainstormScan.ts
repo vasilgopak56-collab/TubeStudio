@@ -19,7 +19,7 @@ const candidateAge=(video:WebVideo,now:number):number|null=>{if(video.publishedA
 const limitError=(e:unknown)=>e instanceof ApiError && (e.status===429 || !!(e.details as {ytLimited?:boolean}|undefined)?.ytLimited);
 export type ScanResult = {
  observedAt:string; region:string; plan:ReturnType<typeof ScanPlan.parse>['queries'];
- coverage:{ plannedSearches:number; completedSearches:number; searchErrors:number; truncatedSearches:number; foundRows:number; candidates:number; channelsRequested:number; channelsRead:number; channelErrors:number; channelLimitReached:boolean; stoppedByYoutube:boolean; onePagePerQuery:true };
+ coverage:{ plannedSearches:number; completedSearches:number; searchErrors:number; truncatedSearches:number; foundRows:number; candidates:number; channelsRequested:number; channelsRead:number; channelErrors:number; channelLimitReached:boolean; stoppedByYoutube:boolean; onePagePerQuery:true; storageTruncated?:boolean; storedSources?:number; omittedSources?:number; storedChannels?:number; omittedChannels?:number };
  directions:ReturnType<typeof summarizeDirections>; channels:WebChannel[];
 };
 export async function scanBrainstorm(raw:ScanPlanT,ctx:Pick<JobCtx,'progress'|'partial'|'signal'>,io:IO=defaults):Promise<ScanResult> {
