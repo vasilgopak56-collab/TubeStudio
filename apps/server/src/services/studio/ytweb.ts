@@ -170,6 +170,18 @@ export function findContinuation(root: any, within?: string): string | undefined
   return found;
 }
 
+/** Ищем именно сетку видео, а не токен из заголовка или боковой панели. */
+function findChannelGrid(contents: any): any {
+  let grid: any = null;
+  const walk = (o: any, depth: number) => {
+    if (grid || !o || typeof o !== "object" || depth > 40) return;
+    if (Array.isArray(o)) { for (const x of o) walk(x, depth + 1); return; }
+    if (o.richGridRenderer) { grid = o.richGridRenderer; return; }
+    for (const v of Object.values(o)) walk(v, depth + 1);
+  };
+  walk(contents, 0); return grid;
+}
+
 /** Шапка канала: название, подписчики, число видео. */
 export function parseChannelPage(data: any): Omit<WebChannel, "longVideos" | "hasMoreLong"> & { longVideos: WebVideo[]; hasMoreLong: boolean } | null {
   const meta = data?.metadata?.channelMetadataRenderer;
@@ -189,21 +201,14 @@ export function parseChannelPage(data: any): Omit<WebChannel, "longVideos" | "ha
   const subsText = headerTexts.find((t) => /subscriber/i.test(t)) ?? text(data?.header?.c4TabbedHeaderRenderer?.subscriberCountText);
   const countText = headerTexts.find((t) => /\bvideos?\b/i.test(t));
   // Видео только из сетки вкладки «Видео» (без полок и «популярного»)
-  let grid: any = null;
-  const findGrid = (o: any, depth: number) => {
-    if (grid || !o || typeof o !== "object" || depth > 40) return;
-    if (Array.isArray(o)) { for (const x of o) findGrid(x, depth + 1); return; }
-    if (o.richGridRenderer) { grid = o.richGridRenderer; return; }
-    for (const v of Object.values(o)) findGrid(v, depth + 1);
-  };
-  findGrid(data?.contents, 0);
+  const grid = findChannelGrid(data?.contents);
   const longVideos = grid ? collectVideos(grid.contents ?? []).filter((v) => !v.short) : [];
   for (const v of longVideos) { v.channelId ??= id; v.channelName ??= meta?.title; }
   return {
     id, name: meta?.title ?? "", handle: (meta?.vanityChannelUrl ?? "").match(/@[\w.\-]+/)?.[0],
     subs: subsText === undefined ? undefined : /no subscribers/i.test(subsText) ? 0 : parseCount(subsText),
     videoCount: parseCount(countText),
-    longVideos, hasMoreLong: !!grid && !!findContinuation(grid.contents ?? []),
+    longVideos, hasMoreLong: !grid || !Array.isArray(grid.contents) || !!findContinuation(grid.contents),
   };
 }
 
@@ -285,22 +290,68 @@ export async function webSearch(q: string, o: { period?: SearchPeriod; pages?: n
 const VIDEOS_TAB = "EgZ2aWRlb3PyBgQKAjoA";
 /** Канал по ID (UC…) или @handle: подписчики и длинные видео со вкладки «Видео».
  *  По ID — лёгкий JSON-запрос (≈240 КБ вместо 1 МБ страницы); если он не сработал — обычная страница. */
-export async function webChannel(idOrHandle: string): Promise<WebChannel> {
+export async function webChannel(idOrHandle: string, options: { pages?: number; maxVideos?: number } = {}): Promise<WebChannel> {
+  // Defaults preserve Radar's one-page behaviour. Brainstorm explicitly asks for
+  // a bounded sample; limits apply even if callers pass abnormal values.
+  const pages = Math.max(1, Math.min(3, Math.floor(options.pages ?? 1) || 1));
+  const maxVideos = Math.max(1, Math.min(60, Math.floor(options.maxVideos ?? 60) || 60));
+  async function finish(parsed: WebChannel, data: any, version: string): Promise<WebChannel> {
+    if (pages === 1 && options.maxVideos === undefined) return parsed;
+    const grid = findChannelGrid(data?.contents);
+    if (!grid || !Array.isArray(grid.contents)) return { ...parsed, hasMoreLong: true };
+    let token = findContinuation(grid.contents);
+    const ids = new Set<string>(), videos: WebVideo[] = [];
+    let truncated = false;
+    const append = (rows: WebVideo[]) => {
+      for (const v of rows) {
+        if (!/^[A-Za-z0-9_-]{11}$/.test(v.id) || (v.channelId && v.channelId !== parsed.id)) { truncated = true; continue; }
+        if (ids.has(v.id) || v.short || v.live) continue;
+        ids.add(v.id);
+        if (videos.length >= maxVideos) { truncated = true; continue; }
+        v.channelId ??= parsed.id; v.channelName ??= parsed.name;
+        videos.push(v);
+      }
+    };
+    append(parsed.longVideos);
+    const seenTokens = new Set<string>();
+    let failed = false;
+    for (let page = 1; page < pages && token && videos.length < maxVideos; page++) {
+      checkCancelled();
+      if (seenTokens.has(token)) { failed = true; break; }
+      seenTokens.add(token);
+      const body = JSON.stringify({ context: { client: { clientName: "WEB", clientVersion: version, hl: "en", gl: "US" } }, continuation: token });
+      try {
+        const next = JSON.parse(await get("https://www.youtube.com/youtubei/v1/browse?prettyPrint=false", { method: "POST", body, headers: { "content-type": "application/json" } }));
+        const actions = [...(Array.isArray(next?.onResponseReceivedActions) ? next.onResponseReceivedActions : []), ...(Array.isArray(next?.onResponseReceivedCommands) ? next.onResponseReceivedCommands : [])];
+        const lists = actions.map((a: any) => a?.appendContinuationItemsAction?.continuationItems).filter(Array.isArray);
+        if (lists.length !== 1) { failed = true; break; }
+        const items = lists[0];
+        append(collectVideos(items));
+        token = findContinuation(items);
+      } catch (e) {
+        rethrowCancelled(e);
+        if ((e as ApiError)?.status === 429 || ((e as ApiError)?.details as { ytLimited?: boolean } | undefined)?.ytLimited) throw e;
+        failed = true; break;
+      }
+    }
+    return { ...parsed, longVideos: videos, hasMoreLong: truncated || failed || !!token };
+  }
   const key = idOrHandle.trim();
   if (/^UC[\w-]{22}$/.test(key)) {
     try {
       const body = JSON.stringify({ context: { client: { clientName: "WEB", clientVersion: lastClientVersion, hl: "en", gl: "US" } }, browseId: key, params: VIDEOS_TAB });
-      const parsed = parseChannelPage(JSON.parse(await get("https://www.youtube.com/youtubei/v1/browse?prettyPrint=false", { method: "POST", body, headers: { "content-type": "application/json" } })));
-      if (parsed && parsed.id === key) return parsed;
-    } catch (e) { rethrowCancelled(e); if ((e as ApiError)?.details && ((e as ApiError).details as { ytLimited?: boolean }).ytLimited) throw e; }
+      const data = JSON.parse(await get("https://www.youtube.com/youtubei/v1/browse?prettyPrint=false", { method: "POST", body, headers: { "content-type": "application/json" } }));
+      const parsed = parseChannelPage(data);
+      if (parsed && parsed.id === key) return await finish(parsed, data, lastClientVersion);
+    } catch (e) { rethrowCancelled(e); if ((e as ApiError)?.status === 429 || ((e as ApiError)?.details as { ytLimited?: boolean } | undefined)?.ytLimited) throw e; }
   }
   const path = /^UC[\w-]{22}$/.test(key) ? `channel/${key}` : key.startsWith("@") ? encodeURI(key) : `@${encodeURIComponent(key)}`;
   const html = await get(`https://www.youtube.com/${path}/videos?hl=en&gl=US`);
-  rememberVersion(html);
+  const version = rememberVersion(html);
   const data = extractInitialData(html);
   const parsed = data ? parseChannelPage(data) : null;
   if (!parsed) throw new ApiError("UPSTREAM", "Не удалось прочитать страницу канала YouTube", 502, true);
-  return parsed;
+  return finish(parsed, data, version);
 }
 
 /** Последние 15 загрузок канала из RSS: точные даты и просмотры, бесплатно. */

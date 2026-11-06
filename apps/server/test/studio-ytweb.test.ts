@@ -94,3 +94,47 @@ test("сеть: ограничение YouTube (429) — понятная оши
   assert.equal(w.log.length, 1);
   assert.deepEqual(await ytSuggest("anything"), []);
 });
+
+const continuation = (token:string)=>({continuationItemRenderer:{continuationEndpoint:{continuationCommand:{token}}}});
+const nextPage=(items:unknown[],token?:string)=>({onResponseReceivedActions:[{appendContinuationItemsAction:{continuationItems:[...items,...(token?[continuation(token)]:[])]}}]});
+function pagedFetcher(initial:unknown,pages:Record<string,{status?:number;body:unknown}>,seen:string[]){
+ return async (_url:string,init?:RequestInit)=>{
+  const request=JSON.parse(String(init?.body??'{}'));const token=request.continuation as string|undefined;seen.push(token??'initial');
+  const response=token?pages[token]:{body:initial};return {status:response?.status??(response?200:404),text:async()=>JSON.stringify(response?.body??{})};
+ };
+}
+test('channel sample reads bounded continuations in order, deduplicates, and leaves Radar default unchanged',async()=>{
+ const id=uc('pages'),base={id,name:'Pages',handle:'Pages',subs:1000,videos:[v('one',{ch:id})],more:true};const seen:string[]=[];
+ setYtFetcher(pagedFetcher(channelJson(base),{'next-page':{body:nextPage([videoRenderer(v('one',{ch:id})),videoRenderer(v('two',{ch:id}))],'second')},second:{body:nextPage([videoRenderer(v('three',{ch:id}))])}},seen));
+ const one=await webChannel(id);assert.equal(one.longVideos.length,1);assert.deepEqual(seen,['initial']);seen.length=0;
+ const all=await webChannel(id,{pages:3,maxVideos:60});assert.deepEqual(all.longVideos.map(x=>x.id),[vid('one'),vid('two'),vid('three')]);assert.equal(all.hasMoreLong,false);assert.deepEqual(seen,['initial','next-page','second']);
+});
+test('channel pages stop at 60 and mark truncated sample',async()=>{
+ const id=uc('many'),base={id,name:'Many',handle:'Many',subs:1000,videos:Array.from({length:35},(_,i)=>v(`a${i}`,{ch:id})),more:true};const seen:string[]=[];
+ setYtFetcher(pagedFetcher(channelJson(base),{'next-page':{body:nextPage(Array.from({length:35},(_,i)=>videoRenderer(v(`b${i}`,{ch:id}))), 'unused')}},seen));
+ const result=await webChannel(id,{pages:100,maxVideos:100});assert.equal(result.longVideos.length,60);assert.equal(result.hasMoreLong,true);assert.deepEqual(seen,['initial','next-page']);
+});
+test('malformed, repeated, or failed continuation never claims a complete list',async()=>{
+ const id=uc('partial'),base={id,name:'Partial',handle:'Partial',subs:1000,videos:[v('first',{ch:id})],more:true};
+ for(const next of [{status:404,body:{}},{body:{unexpected:true}},{body:nextPage([videoRenderer(v('second',{ch:id}))],'next-page')}]){
+  const seen:string[]=[];setYtFetcher(pagedFetcher(channelJson(base),{'next-page':next},seen));const r=await webChannel(id,{pages:3});assert.equal(r.hasMoreLong,true);assert.ok(seen.length<=2);
+ }
+ const noGrid={metadata:{channelMetadataRenderer:{externalId:id,title:'No grid'}},contents:{}};assert.equal(parseChannelPage(noGrid)?.hasMoreLong,true);
+});
+test('continuation throttling propagates without further requests',async()=>{
+ const id=uc('limitpage'),base={id,name:'Limit',handle:'Limit',subs:1000,videos:[v('first',{ch:id})],more:true},seen:string[]=[];
+ setYtFetcher(pagedFetcher(channelJson(base),{'next-page':{status:429,body:{}}},seen));
+ await assert.rejects(webChannel(id,{pages:3}),(e:any)=>e.status===429&&e.details?.ytLimited);assert.deepEqual(seen,['initial','next-page']);
+});
+
+test('foreign or malformed video cards are excluded and make coverage uncertain',async()=>{
+ const id=uc('own'),other=uc('other'),base={id,name:'Own',handle:'Own',subs:1000,videos:[v('mine',{ch:id})],more:true},seen:string[]=[];
+ const foreign=videoRenderer(v('foreign',{ch:other}));const malformed=videoRenderer({...v('valid',{ch:id}),id:'bad'});
+ setYtFetcher(pagedFetcher(channelJson(base),{'next-page':{body:nextPage([foreign,malformed])}},seen));
+ const r=await webChannel(id,{pages:3});assert.deepEqual(r.longVideos.map(x=>x.id),[vid('mine')]);assert.equal(r.hasMoreLong,true);
+});
+
+test('explicit one-page video cap is honored without making another request',async()=>{
+ const id=uc('onepage'),base={id,name:'One',handle:'One',subs:1000,videos:[v('a',{ch:id}),v('b',{ch:id}),v('c',{ch:id})]},seen:string[]=[];
+ setYtFetcher(pagedFetcher(channelJson(base),{},seen));const r=await webChannel(id,{pages:1,maxVideos:2});assert.equal(r.longVideos.length,2);assert.equal(r.hasMoreLong,true);assert.deepEqual(seen,['initial']);
+});

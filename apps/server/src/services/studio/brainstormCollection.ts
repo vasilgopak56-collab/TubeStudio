@@ -20,7 +20,7 @@ export async function previewBrainstormCollection(input:AskInput){
  const p=Ask.parse(input),snap=await assistantProjectSnapshot(p.projectId);
  if(snap.project.artifacts.some(a=>(a.data as any)?.source==='brainstorm-evidence'&&(a.data as any)?.runId===p.runId))throw new ApiError('VALIDATION','Для этого запуска данные уже сохранены. Новый поиск не начат.',409);
  const hash=digest({version:1,plan:p,projectSnapshot:snap.snapshot});
- return {plan:p,project:{id:snap.project.id,title:snap.project.title},hash,counts:{searches:p.scan.queries.length*2,topics:p.topics.queries.length,maxChannelReads:400},notice:'Будут запрошены публичные страницы YouTube, а собранные данные добавлены отдельным материалом в выбранный проект. Модель, G-Labs, профиль и календарь не запускаются и не изменяются на этом этапе. Полученная выборка может быть неполной.'};
+ return {plan:p,project:{id:snap.project.id,title:snap.project.title},hash,counts:{searches:p.scan.queries.length*2,topics:p.topics.queries.length,maxChannelReads:400,maxPagesPerChannel:3,maxVideosPerChannel:60},notice:'Будут запрошены публичные страницы YouTube, а собранные данные добавлены отдельным материалом в выбранный проект. Модель, G-Labs, профиль и календарь не запускаются и не изменяются на этом этапе. Для каждого канала — до трёх страниц вкладки «Видео» и 60 роликов без явных Shorts и эфиров; при ошибках возможны повторы запросов. Это не проверка самой первой публикации. Полученная выборка может быть неполной.'};
 }
 // Immutable claim is made before any external request. A crash leaves an unknown
 // attempt, never an automatic replay. A fresh deliberate run needs a new UUID.

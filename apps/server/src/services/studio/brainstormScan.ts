@@ -50,7 +50,7 @@ export async function scanBrainstorm(raw:ScanPlanT,ctx:Pick<JobCtx,'progress'|'p
   const selected=all.slice(0,400);
   if(!coverage.stoppedByYoutube)for(const [id] of selected){
    checkCancelled(ctx.signal);coverage.channelsRequested++;ctx.progress(`YouTube: канал ${coverage.channelsRequested} из ${selected.length}`,50+Math.floor(45*(coverage.channelsRequested-1)/Math.max(1,selected.length)));
-   try{const ch=await io.channel(id);checkCancelled(ctx.signal);if(ch.id!==id)throw new Error('Mismatched channel');channels.push(ch);coverage.channelsRead++;}
+   try{const ch=await io.channel(id,{pages:3,maxVideos:60});checkCancelled(ctx.signal);if(ch.id!==id)throw new Error('Mismatched channel');channels.push(ch);coverage.channelsRead++;}
    catch(e){rethrowCancelled(e,ctx.signal);coverage.channelErrors++;if(limitError(e)){coverage.stoppedByYoutube=true;break;}}
    ctx.partial({stage:'channels',completed:coverage.channelsRequested,planned:selected.length});
   }

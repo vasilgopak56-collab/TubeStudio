@@ -26,5 +26,5 @@ export function channelSample(channel:WebChannel,observedAt:string){
  return {id:channel.id,name:channel.name,subscribers:numeric(channel.subs)?channel.subs:null,sampleSize:videos.length,knownViews:views.length,medianViews:median(views),oldestObservedVideoDays:oldest,
   oldestCoversVisibleList:!channel.hasMoreLong&&videos.length===channel.longVideos.length&&dated.length===videos.length&&videos.length>0,
   incomplete:channel.hasMoreLong||videos.length!==channel.longVideos.length||views.length!==videos.length||dated.length!==videos.length||!numeric(channel.subs),
-  bestRecent:top?{title:top.title,url:`https://www.youtube.com/watch?v=${top.id}`,views:top.views!,ageDays:age(top,now)}:null};
+  bestRecent:top?{title:top.title,url:`https://www.youtube.com/watch?v=${top.id}`,views:top.views!,ageDays:age(top,now),viewSubscriberRatio:numeric(channel.subs)&&channel.subs>0?top.views!/channel.subs:null}:null};
 }

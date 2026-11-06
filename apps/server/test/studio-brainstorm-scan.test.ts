@@ -10,7 +10,7 @@ const ctx=()=>({signal:new AbortController().signal,progress:()=>{},partial:()=>
 const plan={queries:[{direction:'Winter',query:'snow'}],region:'US'};
 const clock=()=>new Date('2026-11-06T12:00:00.000Z');
 test('two free searches, candidates deduplicated, coverage and samples retained',async()=>{
- const calls:string[]=[];const r=await scanBrainstorm(plan,ctx(),{now:clock,search:async(q,o)=>{calls.push(`${q}:${o?.period}:${o?.pages}`);return [v('aaaaaaaaaaa'),v('bbbbbbbbbbb',c2,2000)];},channel:async id=>ch(id)});
+ const calls:string[]=[];const r=await scanBrainstorm(plan,ctx(),{now:clock,search:async(q,o)=>{calls.push(`${q}:${o?.period}:${o?.pages}`);return [v('aaaaaaaaaaa'),v('bbbbbbbbbbb',c2,2000)];},channel:async (id,opts)=>{assert.deepEqual(opts,{pages:3,maxVideos:60});return ch(id);}});
  assert.deepEqual(calls,['snow:week:1','snow:month:1']);assert.equal(r.coverage.completedSearches,2);assert.equal(r.coverage.candidates,1);assert.equal(r.coverage.channelsRead,1);assert.equal(r.directions[0].videoCount,2);assert.equal(r.directions[0].smallChannelHits,1);assert.equal(r.directions[0].unknownSubscriberVideos,1);
 });
 test('search failure and an empty direction are visible, not presented as complete',async()=>{
