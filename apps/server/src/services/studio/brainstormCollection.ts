@@ -24,11 +24,11 @@ export async function previewBrainstormCollection(input:AskInput){
 }
 // Immutable claim is made before any external request. A crash leaves an unknown
 // attempt, never an automatic replay. A fresh deliberate run needs a new UUID.
-async function reserveAttempt(runId:string,projectId:string,hash:string){
+export async function reserveBrainstormAttempt(runId:string,projectId:string,hash:string,kind:'brainstorm-collection'|'brainstorm-ideas'='brainstorm-collection'){
  const dir=dataPath('assistant-attempts');await assistantSafeDir(dir,true);checkCancelled();
  const names=await fs.readdir(dir);if(names.filter(n=>/^[0-9a-f-]{36}\.json$/i.test(n)).length>=500)throw new ApiError('VALIDATION','Лимит записей попыток достигнут. Новый сбор не начат.',409);
  const target=dataPath('assistant-attempts',runId+'.json'),tmp=target+'.'+randomUUID()+'.tmp';
- try{await fs.writeFile(tmp,JSON.stringify({id:runId,projectId,kind:'brainstorm-collection',hash,createdAt:new Date().toISOString(),status:'started-or-unknown'}),{flag:'wx',mode:0o600});checkCancelled();await fs.link(tmp,target);}
+ try{await fs.writeFile(tmp,JSON.stringify({id:runId,projectId,kind,hash,createdAt:new Date().toISOString(),status:'started-or-unknown'}),{flag:'wx',mode:0o600});checkCancelled();await fs.link(tmp,target);}
  catch(e){if((e as NodeJS.ErrnoException).code==='EEXIST')throw new ApiError('VALIDATION','Этот запуск уже начат или его состояние неизвестно. Проверьте проект; для нового запуска нужен новый план.',409);throw e;}
  finally{await fs.rm(tmp,{force:true}).catch(()=>{});}
 }
@@ -38,7 +38,7 @@ export async function runBrainstormCollection(input:z.input<typeof Send>,ctx:Job
  const {previewHash,confirmed,...ask}=Send.parse(input);
  return withTaskSignal(ctx.signal,async()=>{
   checkCancelled();const p=await previewBrainstormCollection(ask);if(p.hash!==previewHash)throw stale();checkCancelled();
-  await reserveAttempt(p.plan.runId,p.plan.projectId,p.hash);checkCancelled();
+  await reserveBrainstormAttempt(p.plan.runId,p.plan.projectId,p.hash);checkCancelled();
   if((await previewBrainstormCollection(ask)).hash!==p.hash)throw stale();checkCancelled();
   const scan=await io.scan(p.plan.scan,{signal:ctx.signal,progress:(s,n)=>ctx.progress(s,Math.floor(n*.8)),partial:ctx.partial});checkCancelled();
   let topics:TopicResult[];

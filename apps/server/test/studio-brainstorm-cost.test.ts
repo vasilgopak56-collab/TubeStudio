@@ -1,0 +1,9 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';
+import {estimateBrainstormModelCall} from '../src/services/studio/brainstormCost.js';
+import type {PriceSnapshot} from '../src/services/usagePricing.js';
+const price:PriceSnapshot={version:1,capturedAt:'2026-11-06T12:00:00.000Z',priceVersion:'a'.repeat(64),provider:'anymodel',model:'test',kind:'text',currency:'USD',source:'cached-anymodel',known:true,usdPerMillion:0.05,coefficientInput:1,coefficientOutput:2};
+const ask={model:'test',contextHash:'b'.repeat(64),characters:20000,outputLimit:4000};
+test('estimates one call using explicit token assumptions and price',()=>{const r=estimateBrainstormModelCall(ask,price);assert.equal(r.inputTokens,10000);assert.equal(r.outputTokens,4000);assert.equal(r.estimate.balanceTokens,18000);assert.equal(r.estimate.usd,0.0009);assert.match(r.notice,/не ограничение расходов/);assert.match(r.notice,/не всего мозгового штурма/);});
+test('unknown tariff and mismatched model are not guessed or replaced',()=>{assert.throws(()=>estimateBrainstormModelCall(ask,{...price,known:false}));assert.throws(()=>estimateBrainstormModelCall(ask,{...price,model:'other'}));assert.throws(()=>estimateBrainstormModelCall(ask,{...price,provider:'gemini'}));});
+test('preview binds inputs, output limit and tariff version',()=>{const r=estimateBrainstormModelCall(ask,price);assert.notEqual(r.previewHash,estimateBrainstormModelCall({...ask,contextHash:'c'.repeat(64)},price).previewHash);assert.notEqual(r.previewHash,estimateBrainstormModelCall(ask,{...price,priceVersion:'d'.repeat(64)}).previewHash);assert.notEqual(r.previewHash,estimateBrainstormModelCall({...ask,outputLimit:3000},price).previewHash);});
+test('input must be bounded and strictly validated',()=>{assert.throws(()=>estimateBrainstormModelCall({...ask,characters:100001},price));assert.throws(()=>estimateBrainstormModelCall({...ask,outputLimit:0},price));});
