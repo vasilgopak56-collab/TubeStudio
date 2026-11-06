@@ -1,4 +1,4 @@
-// Internal natural-language planning stage. No client route yet. It generates
+// Natural-language planning stage. It generates
 // search proposals, not YouTube observations, and makes one paid model call.
 import {createHash} from 'node:crypto';import {z} from 'zod';import {ApiError} from '../../lib/errors.js';
 import {checkCancelled,taskContext,withStoryboardGuard,withTaskSignal} from '../../lib/taskContext.js';import type {JobCtx} from '../../lib/jobs.js';

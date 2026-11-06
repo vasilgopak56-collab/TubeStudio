@@ -15,6 +15,7 @@ import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { fakeGlabs, visualChecks } from "./acceptance-visual.mjs";
+import { brainstormChecks } from "./acceptance-brainstorm.mjs";
 
 const argv = process.argv.slice(2);
 const arg = (n) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
@@ -503,6 +504,7 @@ await phase("N. Визуал: G-Labs на этом компьютере (ими�
     if (!check("N: вход по ссылке", await page.getByTestId("exit-button").first().waitFor({ timeout: 30_000 }).then(() => true, () => false))) return;
     const sid = (await ctx.cookies()).find((c) => c.name === "ts_session");
     await visualChecks({ port: r.link.port, cookie: sid ? `ts_session=${sid.value}` : "", page, gl, dataDir, out, errors }, { check, api, waitFor, exists, readJson, samePathCI, treeContains });
+    await brainstormChecks({ port: r.link.port, cookie: sid ? `ts_session=${sid.value}` : "", page, out, errors }, { check, api });
   } finally {
     await browser.close();
     await stopViaCmd("остановка после Визуала");

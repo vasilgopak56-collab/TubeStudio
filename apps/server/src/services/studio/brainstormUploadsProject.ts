@@ -1,4 +1,4 @@
-// Internal quota-consuming phase; deliberately not routed until the explicit approval UI is complete.
+// Quota-consuming phase: preview and explicit approval are required before a request.
 import {createHash} from 'node:crypto';
 import {z} from 'zod';
 import {ApiError} from '../../lib/errors.js';

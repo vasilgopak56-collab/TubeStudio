@@ -1,5 +1,4 @@
-// Internal one-attempt model stage. No route/UI until end-to-end release is ready.
-// Evidence input must be loaded and validated by the future trusted coordinator.
+// One-attempt model stage. Evidence is loaded and validated by the project coordinator.
 import {createHash} from 'node:crypto';
 import {z} from 'zod';
 import {ApiError} from '../../lib/errors.js';

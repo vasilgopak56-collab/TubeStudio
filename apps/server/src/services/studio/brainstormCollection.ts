@@ -1,5 +1,4 @@
-// Internal research-stage coordinator. Not exposed as a route until the complete
-// release has paid preview and UI approval.
+// Research-stage coordinator. The saved plan is previewed and explicitly approved.
 import {createHash,randomUUID} from 'node:crypto';
 import fs from 'node:fs/promises';
 import {z} from 'zod';

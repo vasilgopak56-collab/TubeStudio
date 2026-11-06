@@ -1,4 +1,4 @@
-// Coordinate one paid planning call and durable local save. No route/UI yet.
+// Coordinate one explicitly approved planning call and durable local save.
 import {z} from 'zod';import {checkCancelled,rethrowCancelled,withTaskSignal} from '../../lib/taskContext.js';import type {JobCtx} from '../../lib/jobs.js';import {runBrainstormPlanning} from './brainstormPlanning.js';import {stageBrainstormSearchPlan} from './brainstormPlanningRecovery.js';import {saveBrainstormSearchPlan} from './brainstormPlanningSave.js';
 type Input=Parameters<typeof runBrainstormPlanning>[0];type ModelIO=NonNullable<Parameters<typeof runBrainstormPlanning>[2]>;type IO={model?:ModelIO;stage?:typeof stageBrainstormSearchPlan;save:typeof saveBrainstormSearchPlan};const defaults:IO={save:saveBrainstormSearchPlan};
 export async function runBrainstormProjectPlanning(raw:Input,ctx:JobCtx,io:IO=defaults){return withTaskSignal(ctx.signal,async()=>{

@@ -1,4 +1,4 @@
-// Internal project-aware coordinator. Not yet a user-facing route.
+// Project-aware coordinator for an explicitly approved ideas request.
 import {createHash} from 'node:crypto';import {z} from 'zod';
 import {ApiError} from '../../lib/errors.js';import {checkCancelled,rethrowCancelled,taskContext,withStoryboardGuard,withTaskSignal} from '../../lib/taskContext.js';import type {JobCtx} from '../../lib/jobs.js';
 import {getChannel,assertChannelBudget} from './channels.js';import {registerBrainstormSpend} from './brainstormChannelBudget.js';import {loadBrainstormProjectEvidence} from './brainstormProjectEvidence.js';
