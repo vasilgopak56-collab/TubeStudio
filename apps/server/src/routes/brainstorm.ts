@@ -1,3 +1,4 @@
+import {BrainstormHandleAsk,checkBrainstormHandle} from '../services/studio/brainstormHandle.js';
 // Brainstorm routes are mounted under assistant's auth, origin and body guards.
 import {BrainstormProjectCreate,createBrainstormProject} from '../services/studio/brainstormProjectCreate.js';
 import {Hono,type Context} from 'hono';import {z} from 'zod';import {ApiError,fail,ok} from '../lib/errors.js';import {startJob} from '../lib/jobs.js';
@@ -26,6 +27,7 @@ brainstormRoute.post(`${base}/ideas-recover`,handle(async c=>recoverBrainstormRe
 brainstormRoute.post(`${base}/brand-preview`,handle(async c=>previewBrainstormProjectBrand(BrainstormProjectBrandAsk.parse(await body(c)))));
 brainstormRoute.post(`${base}/brand`,handle(async c=>{const d=BrainstormProjectBrandSend.parse(await body(c));return {jobId:startJob(ctx=>runBrainstormProjectBrand(d,ctx))};}));
 brainstormRoute.post(`${base}/brand-recover`,handle(async c=>recoverBrainstormBrandResult(z.object({attemptId:id}).strict().parse(await body(c)).attemptId)));
+brainstormRoute.post(`${base}/handle-check`,handle(async c=>checkBrainstormHandle(BrainstormHandleAsk.parse(await body(c)))));
 brainstormRoute.post(`${base}/profile-preview`,handle(async c=>previewBrainstormProjectProfile(BrainstormProjectApplyAsk.parse(await body(c)))));
 brainstormRoute.post(`${base}/profile`,handle(async c=>applyBrainstormProjectProfile(BrainstormProjectApplySend.parse(await body(c)))));
 brainstormRoute.post(`${base}/calendar-preview`,handle(async c=>previewBrainstormProjectCalendar(BrainstormProjectApplyAsk.parse(await body(c)))));
