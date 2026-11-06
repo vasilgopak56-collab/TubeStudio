@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import { z } from "zod";
 import { readJson, writeJson } from "../../lib/storage.js";
 import { ApiError } from "../../lib/errors.js";
+import { checkCancelled } from "../../lib/taskContext.js";
 
 const FILE = "studio/channels.json";
 
@@ -242,4 +243,27 @@ export async function assertChannelBudget(channelId: string) {
   if (!ch.budgetUsd) return;
   const spent = (await channelSpend())[channelId]?.usd ?? 0;
   if (spent >= ch.budgetUsd) throw new ApiError("BUDGET_LIMIT", `Канал «${ch.name}» израсходовал свою часть бюджета: $${spent.toFixed(2)} из $${ch.budgetUsd}. Увеличьте её в профиле канала или дождитесь нового месяца.`, 402);
+}
+
+// Brainstorm profile application is separate from generation and requires an exact preview.
+// The comparison happens inside the same channel mutation queue as ordinary edits.
+export const BrainstormProfile=z.object({niche:ChannelInput.shape.niche.unwrap(),audience:ChannelInput.shape.audience.unwrap(),format:ChannelInput.shape.format.unwrap(),style:ChannelInput.shape.style.unwrap(),skills:ChannelInput.shape.skills.unwrap(),language:ChannelInput.shape.language.unwrap(),lengthMin:ChannelInput.shape.lengthMin.unwrap()}).strict();
+export const BrainstormProfileAsk=z.object({channelId:z.string().uuid(),profile:BrainstormProfile}).strict();
+export const BrainstormProfileSend=BrainstormProfileAsk.extend({previewHash:z.string().regex(/^[a-f0-9]{64}$/),confirmed:z.literal(true)}).strict();
+function profilePreview(channel:Channel,d:z.infer<typeof BrainstormProfileAsk>){
+ if(channel.archived)throw new ApiError('VALIDATION','Канал в архиве. Профиль не изменён.',409);
+ const fields=['niche','audience','format','style','skills','language','lengthMin'] as const;
+ const changes=fields.filter(k=>channel[k]!==d.profile[k]).map(k=>({field:k,before:channel[k],after:d.profile[k]}));
+ const snapshot=crypto.createHash('sha256').update(JSON.stringify(channel)).digest('hex');
+ const hash=crypto.createHash('sha256').update(JSON.stringify({input:d,snapshot})).digest('hex');
+ return {channel:{id:channel.id,name:channel.name},changes,hash,notice:'Будут заменены только показанные поля профиля. Голос, стиль визуала, модели, бюджет, Радар и адрес YouTube не меняются. Описание и правила канала могут быть перезаписаны — проверьте сравнение.'};
+}
+export async function previewBrainstormProfile(raw:z.infer<typeof BrainstormProfileAsk>){const d=BrainstormProfileAsk.parse(raw),ch=await getChannel(d.channelId);return profilePreview(ch,d);}
+export async function applyBrainstormProfile(raw:z.infer<typeof BrainstormProfileSend>){
+ const {previewHash,confirmed,...d}=BrainstormProfileSend.parse(raw);
+ return mutate(s=>{checkCancelled();const i=s.channels.findIndex(c=>c.id===d.channelId);if(i<0)throw new ApiError('NOT_FOUND','Канал не найден.',404);const p=profilePreview(s.channels[i],d);
+  if(p.hash!==previewHash)throw new ApiError('VALIDATION','Канал или предлагаемые изменения изменились. Повторите просмотр; ничего не записано.',409);
+  if(!p.changes.length)throw new ApiError('VALIDATION','Изменений в профиле нет.',409);
+  const next={...s.channels[i],...d.profile,updatedAt:new Date().toISOString()};ChannelInput.parse(stripMeta(next));checkCancelled();s.channels[i]=next;return {channel:next,changed:p.changes.map(c=>c.field)};
+ });
 }
