@@ -1,16 +1,16 @@
 // Выпуск 3, шаг 3: сборка видеоряда по плану шага 1. Только FFmpeg на этом компьютере, платных запросов нет.
-// Черновик: видео 1920×1080 с озвучкой как есть. Музыка, громкость и субтитры — следующие шаги. Звук клипов не используется.
+// Черновик: видео 1920×1080, голос с музыкой сводит шаг 4. Субтитры — следующий шаг. Звук клипов не используется.
 // Каждый кусок кодируется в свой файл: после остановки или сбоя готовые куски берутся снова, заново кодируется только остальное.
-import { spawn } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { ApiError } from "../../lib/errors.js";
 import type { JobCtx } from "../../lib/jobs.js";
-import { cancellation, checkCancelled, taskContext, taskSignal } from "../../lib/taskContext.js";
+import { checkCancelled, taskContext, taskSignal } from "../../lib/taskContext.js";
 import { ffmpegPath } from "../audioFx.js";
 import { ffprobeFor, prepareMontage, probe, projectFile } from "./montageCheck.js";
 import type { ClipSegment, MontagePlan, StillSegment } from "./montagePlan.js";
+import { buildSound, runFfmpeg, usedMusic, type SoundTrack } from "./montageSound.js";
 
 export const FPS = 24;
 const W = 1920, H = 1080;
@@ -50,30 +50,11 @@ export function partArgs(segment: RenderSegment, frames: number, input: string, 
 /** Последний настоящий кадр клипа до секунды time: выход за конец клипа даёт его последний кадр, а не пустоту. */
 export const frameArgs = (clip: string, time: number, output: string) => ["-i", clip, "-an", "-t", String(Math.max(time, 1 / FPS)), "-update", "1", output];
 
-function ffmpeg(bin: string, args: string[], signal?: AbortSignal) {
-  const active = taskSignal(signal);
-  checkCancelled(active);
-  return new Promise<void>((resolve, reject) => {
-    const p = spawn(bin, ["-hide_banner", "-loglevel", "error", "-y", ...args], { windowsHide: true });
-    let err = "";
-    p.stderr.on("data", (d) => { err = (err + d).slice(-400); });
-    const stop = () => p.kill("SIGKILL");
-    active?.addEventListener("abort", stop, { once: true });
-    p.once("error", () => { active?.removeEventListener("abort", stop); reject(new ApiError("VALIDATION", "Не удалось запустить FFmpeg.")); });
-    p.once("close", (code) => {
-      active?.removeEventListener("abort", stop);
-      if (active?.aborted) reject(cancellation());
-      else if (code === 0) resolve();
-      else reject(new ApiError("UPSTREAM", `FFmpeg: ${err || `код ${code}`}`, 502));
-    });
-  });
-}
-
 export type RenderOptions = {
-  plan: MontagePlan; voice: string; resolve: (local: string) => string; dir: string; ffmpeg: string;
-  onProgress?: (done: number, total: number) => void; signal?: AbortSignal;
+  plan: MontagePlan; voice: string; music?: SoundTrack[]; resolve: (local: string) => string; dir: string; ffmpeg: string;
+  onProgress?: (done: number, total: number) => void; onSound?: () => void; signal?: AbortSignal;
 };
-export type RenderOutput = { name: string; seconds: number; width: number; height: number; bytes: number; parts: number; reused: number };
+export type RenderOutput = { name: string; seconds: number; width: number; height: number; bytes: number; parts: number; reused: number; lufs: number; peak: number; music: number };
 
 export async function renderVideo(o: RenderOptions): Promise<RenderOutput> {
   const parts = partsOf(o.plan);
@@ -102,10 +83,10 @@ export async function renderVideo(o: RenderOptions): Promise<RenderOutput> {
       let input = p.input, still: string | null = null;
       if (p.segment.kind === "still" && p.segment.source === "clip") {
         still = path.join(dir, `${p.hash}.tmp.png`);
-        await ffmpeg(o.ffmpeg, frameArgs(p.input, p.segment.clipTime ?? 0, still), o.signal);
+        await runFfmpeg(o.ffmpeg, frameArgs(p.input, p.segment.clipTime ?? 0, still), o.signal);
         input = still;
       }
-      await ffmpeg(o.ffmpeg, partArgs(p.segment, p.frames, input, temp), o.signal);
+      await runFfmpeg(o.ffmpeg, partArgs(p.segment, p.frames, input, temp), o.signal);
       await fs.rename(temp, final);
       if (still) await fs.rm(still, { force: true }).catch(() => {});
     }
@@ -114,10 +95,14 @@ export async function renderVideo(o: RenderOptions): Promise<RenderOutput> {
   }
 
   // Имя с отметкой времени: файл, открытый в плеере, не мешает новой сборке.
-  const name = `draft-${Date.now()}.mp4`, output = path.join(o.dir, `${name}.tmp.mp4`), list = path.join(dir, "list.tmp.txt");
+  const name = `draft-${Date.now()}.mp4`, output = path.join(o.dir, `${name}.tmp.mp4`), list = path.join(dir, "list.tmp.txt"), mixed = path.join(o.dir, `${name}.sound.m4a`);
+  o.onSound?.();
+  const music = o.music ?? [];
+  const sound = await buildSound({ ffmpeg: o.ffmpeg, voice: o.voice, tracks: music, duration: o.plan.duration, output: mixed, signal: o.signal });
   await fs.writeFile(list, named.map((p) => `file '${p.hash}.mp4'`).join("\n") + "\n", "utf8");
-  await ffmpeg(o.ffmpeg, ["-f", "concat", "-safe", "0", "-i", list, "-i", o.voice, "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", output], o.signal);
+  await runFfmpeg(o.ffmpeg, ["-f", "concat", "-safe", "0", "-i", list, "-i", mixed, "-map", "0:v:0", "-map", "1:a:0", "-c", "copy", "-movflags", "+faststart", output], o.signal);
   await fs.rm(list, { force: true }).catch(() => {});
+  await fs.rm(mixed, { force: true }).catch(() => {});
 
   const made = await probe(ffprobeFor(o.ffmpeg), output);
   const expected = totalFrames / FPS;
@@ -126,7 +111,7 @@ export async function renderVideo(o: RenderOptions): Promise<RenderOutput> {
     throw new ApiError("UPSTREAM", `Готовый файл не совпал с планом: ${made ? `${made.width}×${made.height}, ${made.seconds} с` : "файл не открывается"}, ожидалось ${W}×${H}, ${expected.toFixed(2)} с.`, 502);
   }
   await fs.rename(output, path.join(o.dir, name));
-  return { name, seconds: made.seconds, width: W, height: H, bytes: (await fs.stat(path.join(o.dir, name))).size, parts: named.length, reused };
+  return { name, seconds: made.seconds, width: W, height: H, bytes: (await fs.stat(path.join(o.dir, name))).size, parts: named.length, reused, lufs: sound.lufs, peak: sound.peak, music: music.length };
 }
 
 // ---------- сборка настоящего проекта ----------
@@ -149,7 +134,7 @@ export async function renderMontage(projectId: string, ctx: JobCtx): Promise<Mon
     const dir = projectFile(projectId, FOLDER);
     await fs.mkdir(dir, { recursive: true });
     const made = await renderVideo({
-      plan: p.plan, voice: projectFile(projectId, p.audioFile), resolve: (f) => projectFile(projectId, f), dir, ffmpeg: bin, signal: ctx.signal,
+      plan: p.plan, voice: projectFile(projectId, p.audioFile), music: await usedMusic(projectId), onSound: () => ctx.progress("Сведение звука", 96), resolve: (f) => projectFile(projectId, f), dir, ffmpeg: bin, signal: ctx.signal,
       onProgress: (done, total) => ctx.progress(`Кодирование: ${Math.floor(done / FPS / 60)}:${String(Math.floor(done / FPS) % 60).padStart(2, "0")} из ${Math.floor(total / FPS / 60)}:${String(Math.floor(total / FPS) % 60).padStart(2, "0")}`, Math.min(95, 2 + Math.floor(93 * done / total))),
     });
     ctx.progress("Завершение", 98);

@@ -304,7 +304,7 @@ function FolderBranch({ name, path, selected, onSelect }: { name: string; path: 
   </li>;
 }
 /** Окно выбора папки по дереву компьютера. */
-function FolderPicker({ title, onPick, onClose }: { title: string; onPick: (p: string) => void; onClose: () => void }) {
+export function FolderPicker({ title, onPick, onClose }: { title: string; onPick: (p: string) => void; onClose: () => void }) {
   const [selected, setSelected] = useState("");
   const drives = useQuery(folderQuery(""));
   useEffect(() => { const esc = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); }; window.addEventListener("keydown", esc); return () => window.removeEventListener("keydown", esc); }, [onClose]);

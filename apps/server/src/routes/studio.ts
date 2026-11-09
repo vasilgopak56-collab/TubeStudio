@@ -13,6 +13,7 @@ import { TemplateQuery, VoiceOrderInput, VoiceQuery, estimateVoice, getTemplate,
 import { checkGlabs } from "../services/studio/glabs.js";
 import { checkMontage } from "../services/studio/montageCheck.js";
 import { montageBusy, montageState, renderMontage } from "../services/studio/montageRender.js";
+import { chooseMusicFolder, musicState, saveMusicTracks } from "../services/studio/montageSound.js";
 import { ImportInput, PromptsInput, REDO_REASONS, RenderInput, buildScenes, editScene, exportBoard, generateCastImage, importPreview, listFolders, runImport, runRender, saveCastImage, saveImportFolders, syncCast, videoSpend, visualBusy, visualState, writePrompts, type ExportKind } from "../services/studio/visual.js";
 
 export const studioRoute = new Hono();
@@ -191,6 +192,11 @@ studioRoute.get("/studio/visual/projects/:projectId/export/:kind", async (c) => 
 /** Автомонтаж: проверка файлов перед сборкой. Только чтение, платных запросов нет. */
 studioRoute.get("/studio/montage/projects/:projectId/check", handle(async (c) => checkMontage(pid(c))));
 studioRoute.get("/studio/montage/projects/:projectId", handle(async (c) => montageState(pid(c))));
+/** Музыка ролика: своя папка у каждого проекта, треки копируются в проект. */
+const musicIdle = (id: string) => { if (montageBusy(id)) throw new ApiError("VALIDATION", "Идёт сборка этого ролика. Дождитесь окончания.", 409); };
+studioRoute.get("/studio/montage/projects/:projectId/music", handle(async (c) => musicState(pid(c))));
+studioRoute.put("/studio/montage/projects/:projectId/music/folder", handle(async (c) => { const id = pid(c); musicIdle(id); return chooseMusicFolder(id, (await body(c)) as never); }));
+studioRoute.put("/studio/montage/projects/:projectId/music/tracks", handle(async (c) => { const id = pid(c); musicIdle(id); return saveMusicTracks(id, (await body(c)) as never); }));
 /** Сборка черновика: долгая задача на этом компьютере, платных запросов нет. */
 studioRoute.post("/studio/montage/projects/:projectId/render", handle(async (c) => {
   const id = pid(c), { channelId } = z.object({ channelId: Id }).strict().parse(await body(c));
