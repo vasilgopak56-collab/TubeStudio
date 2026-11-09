@@ -26,13 +26,14 @@ const FOLDER = "montage/music", META = "montage/music.json";
 const AUDIO_FILE = /\.(mp3|wav|m4a|aac|ogg|flac)$/i;
 
 /** Запуск FFmpeg. Возвращает его сообщения: по ним читается измеренная громкость. */
-export function runFfmpeg(bin: string, args: string[], signal?: AbortSignal, loglevel = "error") {
+export function runFfmpeg(bin: string, args: string[], signal?: AbortSignal, loglevel = "error", extra: { cwd?: string; onTime?: (seconds: number) => void } = {}) {
   const active = taskSignal(signal);
   checkCancelled(active);
   return new Promise<string>((resolve, reject) => {
-    const p = spawn(bin, ["-hide_banner", "-nostats", "-loglevel", loglevel, "-y", ...args], { windowsHide: true });
+    const p = spawn(bin, ["-hide_banner", "-nostats", "-loglevel", loglevel, ...(extra.onTime ? ["-progress", "pipe:1"] : []), "-y", ...args], { windowsHide: true, cwd: extra.cwd });
     let err = "";
     p.stderr.on("data", (d) => { err = (err + d).slice(-20_000); });
+    p.stdout.on("data", (d) => { const m = /out_time_us=(\d+)(?![\s\S]*out_time_us=)/.exec(String(d)); if (m) extra.onTime?.(Number(m[1]) / 1e6); });
     const stop = () => p.kill("SIGKILL");
     active?.addEventListener("abort", stop, { once: true });
     p.once("error", () => { active?.removeEventListener("abort", stop); reject(new ApiError("VALIDATION", "Не удалось запустить FFmpeg.")); });

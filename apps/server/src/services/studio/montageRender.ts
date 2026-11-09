@@ -11,6 +11,7 @@ import { ffmpegPath } from "../audioFx.js";
 import { ffprobeFor, prepareMontage, probe, projectFile } from "./montageCheck.js";
 import type { ClipSegment, MontagePlan, StillSegment } from "./montagePlan.js";
 import { buildSound, runFfmpeg, usedMusic, type SoundTrack } from "./montageSound.js";
+import { SUB_FILES, requireAss, writeSubtitles, type SubtitlesResult } from "./montageSubtitles.js";
 
 export const FPS = 24;
 const W = 1920, H = 1080;
@@ -36,7 +37,8 @@ export function partsOf(plan: MontagePlan): RenderPart[] {
 
 const cover = (w: number, h: number) => `scale=${w}:${h}:force_original_aspect_ratio=increase:flags=lanczos,crop=${w}:${h}`;
 const FIT = `${cover(W, H)},setsar=1,format=yuv420p`;
-const ENCODE = ["-an", "-sn", "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-video_track_timescale", "24000"];
+const VIDEO_CODEC = ["-c:v", "libx264", "-preset", "medium", "-crf", "18", "-video_track_timescale", "24000"];
+const ENCODE = ["-an", "-sn", ...VIDEO_CODEC];
 
 /** Входные данные и фильтр куска. Для статичного кадра из клипа input — заранее извлечённый кадр. */
 export function partArgs(segment: RenderSegment, frames: number, input: string, output: string): string[] {
@@ -114,18 +116,37 @@ export async function renderVideo(o: RenderOptions): Promise<RenderOutput> {
   return { name, seconds: made.seconds, width: W, height: H, bytes: (await fs.stat(path.join(o.dir, name))).size, parts: named.length, reused, lufs: sound.lufs, peak: sound.peak, music: music.length };
 }
 
+/** Перекодирует всё видео с субтитрами в кадре. Звук копируется без изменений. Имя файла ASS простое: FFmpeg запускается из его папки. */
+export async function burnVideo(o: { ffmpeg: string; input: string; dir: string; ass: string; name: string; onTime?: (seconds: number) => void; signal?: AbortSignal }) {
+  const temp = path.join(o.dir, `${o.name}.tmp.mp4`), final = path.join(o.dir, o.name);
+  const source = await probe(ffprobeFor(o.ffmpeg), o.input);
+  if (!source?.seconds) throw new ApiError("VALIDATION", "Черновик видео не открывается. Соберите его заново.");
+  await runFfmpeg(o.ffmpeg, ["-i", o.input, "-map", "0:v:0", "-map", "0:a:0", "-vf", `ass=${o.ass}`, ...VIDEO_CODEC, "-c:a", "copy", "-movflags", "+faststart", temp], o.signal, "error", { cwd: o.dir, onTime: o.onTime });
+  const made = await probe(ffprobeFor(o.ffmpeg), temp);
+  if (!made?.seconds || made.width !== W || made.height !== H || !made.audio || Math.abs(made.seconds - source.seconds) > LENGTH_TOLERANCE_SEC) {
+    await fs.rm(temp, { force: true }).catch(() => {});
+    throw new ApiError("UPSTREAM", "Видео со вшитыми субтитрами не совпало с черновиком по длине или размеру.", 502);
+  }
+  await fs.rename(temp, final);
+  return { seconds: made.seconds, bytes: (await fs.stat(final)).size };
+}
+
 // ---------- сборка настоящего проекта ----------
-type Running = { jobId: string | null; since: string };
+type Running = { jobId: string | null; since: string; what: "render" | "burn" };
 const running = new Map<string, Running>();
 export const montageBusy = (projectId: string) => running.get(projectId) ?? null;
-
-export type MontageResult = Omit<RenderOutput, "name"> & { file: string; at: string };
-const FOLDER = "montage", META = "draft.json";
-
-export async function renderMontage(projectId: string, ctx: JobCtx): Promise<MontageResult> {
+function lockMontage<T>(projectId: string, what: Running["what"], fn: () => Promise<T>): Promise<T> {
   if (running.has(projectId)) throw new ApiError("VALIDATION", "Сборка этого ролика уже идёт.", 409);
-  running.set(projectId, { jobId: taskContext()?.jobId ?? null, since: new Date().toISOString() });
-  try {
+  running.set(projectId, { jobId: taskContext()?.jobId ?? null, since: new Date().toISOString(), what });
+  return fn().finally(() => running.delete(projectId));
+}
+
+export type MontageResult = Omit<RenderOutput, "name"> & { file: string; at: string; subtitles?: SubtitlesResult };
+export type BurnResult = { file: string; at: string; seconds: number; bytes: number; source: string };
+const FOLDER = "montage", META = "draft.json", BURN_META = "burned.json";
+
+export function renderMontage(projectId: string, ctx: JobCtx): Promise<MontageResult> {
+  return lockMontage(projectId, "render", async () => {
     ctx.progress("Проверка файлов", 1);
     const p = await prepareMontage(projectId);
     if (!p.ready || !p.plan || !p.audioFile) throw new ApiError("VALIDATION", `Сборку начинать нельзя. ${p.blockers.map((b) => b.message).join(" ")}`);
@@ -137,28 +158,54 @@ export async function renderMontage(projectId: string, ctx: JobCtx): Promise<Mon
       plan: p.plan, voice: projectFile(projectId, p.audioFile), music: await usedMusic(projectId), onSound: () => ctx.progress("Сведение звука", 96), resolve: (f) => projectFile(projectId, f), dir, ffmpeg: bin, signal: ctx.signal,
       onProgress: (done, total) => ctx.progress(`Кодирование: ${Math.floor(done / FPS / 60)}:${String(Math.floor(done / FPS) % 60).padStart(2, "0")} из ${Math.floor(total / FPS / 60)}:${String(Math.floor(total / FPS) % 60).padStart(2, "0")}`, Math.min(95, 2 + Math.floor(93 * done / total))),
     });
-    ctx.progress("Завершение", 98);
+    ctx.progress("Субтитры", 98);
+    const subtitles = await writeSubtitles(projectId, p.audioFile, p.plan.duration);
     const { name, ...rest } = made;
-    const result: MontageResult = { ...rest, file: `${FOLDER}/${name}`, at: new Date().toISOString() };
+    const result: MontageResult = { ...rest, file: `${FOLDER}/${name}`, at: new Date().toISOString(), subtitles };
     const previous = await readResult(projectId);
     await fs.writeFile(path.join(dir, `${META}.tmp`), JSON.stringify(result), "utf8");
     await fs.rename(path.join(dir, `${META}.tmp`), path.join(dir, META));
     if (previous && previous.file !== result.file) await fs.rm(projectFile(projectId, previous.file), { force: true }).catch(() => {});
     return result;
-  } finally { running.delete(projectId); }
+  });
 }
 
-async function readResult(projectId: string): Promise<MontageResult | null> {
-  const raw = await fs.readFile(projectFile(projectId, `${FOLDER}/${META}`), "utf8").catch(() => null);
+/** Отдельная сборка со вшитыми субтитрами из готового черновика: около того же времени, что и первое кодирование. */
+export function burnMontage(projectId: string, ctx: JobCtx): Promise<BurnResult> {
+  return lockMontage(projectId, "burn", async () => {
+    ctx.progress("Подготовка", 1);
+    const draft = await readResult(projectId);
+    requireAss(draft);
+    const bin = ffmpegPath();
+    if (!bin) throw new ApiError("VALIDATION", "Для сборки нужен FFmpeg. Установите его или укажите FFMPEG_PATH в .env и перезапустите TubeStudio.");
+    const dir = projectFile(projectId, FOLDER), name = `burned-${Date.now()}.mp4`;
+    const made = await burnVideo({
+      ffmpeg: bin, input: projectFile(projectId, draft!.file), dir, ass: path.basename(SUB_FILES.ass), name, signal: ctx.signal,
+      onTime: (t) => ctx.progress(`Кодирование с субтитрами: ${Math.floor(t / 60)}:${String(Math.floor(t) % 60).padStart(2, "0")} из ${Math.floor(draft!.seconds / 60)}:${String(Math.floor(draft!.seconds) % 60).padStart(2, "0")}`, Math.min(98, 1 + Math.floor(97 * t / draft!.seconds))),
+    });
+    const result: BurnResult = { file: `${FOLDER}/${name}`, at: new Date().toISOString(), seconds: made.seconds, bytes: made.bytes, source: draft!.file };
+    const previous = await readBurned(projectId);
+    await fs.writeFile(path.join(dir, `${BURN_META}.tmp`), JSON.stringify(result), "utf8");
+    await fs.rename(path.join(dir, `${BURN_META}.tmp`), path.join(dir, BURN_META));
+    if (previous && previous.file !== result.file) await fs.rm(projectFile(projectId, previous.file), { force: true }).catch(() => {});
+    return result;
+  });
+}
+
+async function readMeta<T extends { file: string }>(projectId: string, meta: string): Promise<T | null> {
+  const raw = await fs.readFile(projectFile(projectId, `${FOLDER}/${meta}`), "utf8").catch(() => null);
   if (!raw) return null;
   try {
-    const r = JSON.parse(raw) as MontageResult;
+    const r = JSON.parse(raw) as T;
     return await fs.stat(projectFile(projectId, r.file)).then(() => r, () => null);
   } catch { return null; }
 }
-/** Состояние для страницы: идёт ли сборка и последний готовый черновик. */
+const readResult = (projectId: string) => readMeta<MontageResult>(projectId, META);
+const readBurned = (projectId: string) => readMeta<BurnResult>(projectId, BURN_META);
+/** Состояние для страницы: идёт ли сборка, последний черновик и версия со вшитыми субтитрами. */
 export async function montageState(projectId: string) {
   const { getProject } = await import("../projects.js");
   await getProject(projectId);
-  return { running: montageBusy(projectId), result: await readResult(projectId) };
+  const [result, burned] = await Promise.all([readResult(projectId), readBurned(projectId)]);
+  return { running: montageBusy(projectId), result, burned: burned ? { ...burned, stale: burned.source !== result?.file } : null };
 }

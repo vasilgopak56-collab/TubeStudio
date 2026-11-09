@@ -12,7 +12,7 @@ import { lintScript } from "../services/studio/scriptLint.js";
 import { TemplateQuery, VoiceOrderInput, VoiceQuery, estimateVoice, getTemplate, listTemplates, listVoices, lumeanAccount, lumeanOrders, runVoice } from "../services/studio/lumean.js";
 import { checkGlabs } from "../services/studio/glabs.js";
 import { checkMontage } from "../services/studio/montageCheck.js";
-import { montageBusy, montageState, renderMontage } from "../services/studio/montageRender.js";
+import { burnMontage, montageBusy, montageState, renderMontage } from "../services/studio/montageRender.js";
 import { chooseMusicFolder, musicState, saveMusicTracks } from "../services/studio/montageSound.js";
 import { ImportInput, PromptsInput, REDO_REASONS, RenderInput, buildScenes, editScene, exportBoard, generateCastImage, importPreview, listFolders, runImport, runRender, saveCastImage, saveImportFolders, syncCast, videoSpend, visualBusy, visualState, writePrompts, type ExportKind } from "../services/studio/visual.js";
 
@@ -204,6 +204,13 @@ studioRoute.post("/studio/montage/projects/:projectId/render", handle(async (c) 
   if (visualBusy(id)) throw new ApiError("VALIDATION", "В этом проекте идёт работа «Визуала». Дождитесь окончания.", 409);
   if (montageBusy(id)) throw new ApiError("VALIDATION", "Сборка этого ролика уже идёт.", 409);
   return job(channelId, "montage-render", (ctx) => renderMontage(id, ctx), id);
+}));
+/** Вшивание субтитров в готовый черновик: долгая задача, платных запросов нет. */
+studioRoute.post("/studio/montage/projects/:projectId/burn", handle(async (c) => {
+  const id = pid(c), { channelId } = z.object({ channelId: Id }).strict().parse(await body(c));
+  await getChannel(channelId);
+  if (montageBusy(id)) throw new ApiError("VALIDATION", "Сборка этого ролика уже идёт.", 409);
+  return job(channelId, "montage-burn", (ctx) => burnMontage(id, ctx), id);
 }));
 
 // ---------- персонажи и локации канала: эталоны ----------

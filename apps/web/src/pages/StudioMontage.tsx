@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowDown, ArrowUp, CheckCircle2, Clapperboard, Film, Folder, SearchCheck, X, XCircle } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, CheckCircle2, Clapperboard, Download, Film, Folder, SearchCheck, X, XCircle } from "lucide-react";
 import { api } from "@/lib/api";
 import { useJob } from "@/lib/jobs";
 import type { ProjectSummary } from "@/lib/types";
@@ -15,8 +15,9 @@ type MontageCheck = {
   ready: boolean; blockers: Issue[]; warnings: Issue[];
   summary: { scenes: number; clips: number; pictures: number; files: number; audioSeconds: number | null };
 };
-type RenderResult = { file: string; at: string; seconds: number; width: number; height: number; bytes: number; parts: number; reused: number; lufs?: number; peak?: number; music?: number };
-type MontageState = { running: { jobId: string | null; since: string } | null; result: RenderResult | null };
+type RenderResult = { file: string; at: string; seconds: number; width: number; height: number; bytes: number; parts: number; reused: number; lufs?: number; peak?: number; music?: number; subtitles?: { files: { srt: string; vtt: string } | null; cues: number; problem: string | null } };
+type BurnResult = { file: string; at: string; seconds: number; bytes: number; source: string };
+type MontageState = { running: { jobId: string | null; since: string; what?: "render" | "burn" } | null; result: RenderResult | null; burned: (BurnResult & { stale: boolean }) | null };
 type MusicTrack = { name: string; file: string; seconds: number; lufs: number; use: boolean };
 type MusicState = { folder: string | null; tracks: MusicTrack[]; skipped?: string[] };
 
@@ -90,15 +91,19 @@ export default function StudioMontage() {
   const withBoard = (projects.data ?? []).filter((p) => (p.counts.storyboard ?? 0) > 0).sort((a, b) => Number(b.channelId === channel?.id) - Number(a.channelId === channel?.id));
   const check = useQuery({ queryKey: ["montage-check", projectId], queryFn: () => api<MontageCheck>(`/studio/montage/projects/${projectId}/check`), enabled: false, retry: false, gcTime: 0 });
   const render = useJob<RenderResult>("");
-  const rendering = render.status === "running";
+  const burn = useJob<BurnResult>("");
+  const rendering = render.status === "running" || burn.status === "running";
   const state = useQuery({
     queryKey: ["montage-state", projectId], queryFn: () => api<MontageState>(`/studio/montage/projects/${projectId}`), enabled: !!projectId, retry: false,
     refetchInterval: (q) => (q.state.data?.running ? 3000 : false),
   });
-  useEffect(() => { if (render.status === "done" || render.status === "error") void state.refetch(); }, [render.status]);
+  useEffect(() => { if (render.status === "done" || render.status === "error" || burn.status === "done" || burn.status === "error") void state.refetch(); }, [render.status, burn.status]);
   const stop = useMutation({ mutationFn: (jobId: string) => api(`/jobs/${jobId}/cancel`, { method: "POST" }), onSuccess: () => void state.refetch() });
   const external = !rendering ? state.data?.running ?? null : null;
   const draft = state.data?.result ?? null;
+  const burned = state.data?.burned ?? null;
+  const url = (local: string) => `/files/${encodeURIComponent(projectId)}/${local.split("/").map(encodeURIComponent).join("/")}`;
+  const subs = draft?.subtitles ?? null;
 
   if (loading) return null;
   const header = <ToolHeader icon={Film} title="Монтаж" eyebrow="// ВЫПУСК 3" subtitle="Проверка файлов перед сборкой ролика" right={channel ? <ChannelPicker /> : undefined} />;
@@ -131,18 +136,36 @@ export default function StudioMontage() {
 
     {projectId && <Card className="space-y-4 p-5" data-testid="montage-render">
       <SectionTitle>Черновик видео</SectionTitle>
-      <p className="text-sm text-muted-foreground">Видео 1920×1080 с голосом и музыкой, громкость −14 LUFS, пока без субтитров. Бесплатно, считается на этом компьютере. Первая сборка может занять больше часа, повторная быстрее: готовые куски берутся снова. Перед сборкой файлы проверяются ещё раз. После остановки сборка продолжится с прерванного места.</p>
+      <p className="text-sm text-muted-foreground">Видео 1920×1080 с голосом и музыкой, громкость −14 LUFS, субтитры отдельным файлом. Бесплатно, считается на этом компьютере. Первая сборка может занять больше часа, повторная быстрее: готовые куски берутся снова. Перед сборкой файлы проверяются ещё раз. После остановки сборка продолжится с прерванного места.</p>
       {!rendering && !external && <Button className="min-h-11" disabled={!!stop.isPending} onClick={() => void render.start({ channelId: channel.id }, `/studio/montage/projects/${projectId}/render`)}><Clapperboard className="h-4 w-4" />{draft ? "Собрать заново" : "Собрать"}</Button>}
       <JobBox job={render} onCancel={render.cancel} />
       {external && <div className="flex flex-wrap items-center gap-3 text-sm" role="status">
-        <span className="font-semibold">Идёт сборка этого ролика</span>
+        <span className="font-semibold">{external.what === "burn" ? "Идёт вшивание субтитров" : "Идёт сборка этого ролика"}</span>
         {external.jobId && <Button variant="danger" size="sm" className="min-h-11" loading={stop.isPending} onClick={() => stop.mutate(external.jobId!)}><X className="h-4 w-4" />Остановить</Button>}
       </div>}
       {render.status === "error" && render.error && <ErrorAlert error={render.error} />}
       {state.error && <ErrorAlert error={state.error} onRetry={() => void state.refetch()} />}
       {draft && !rendering && <div className="space-y-2">
-        <video key={draft.file} controls preload="metadata" className="aspect-video w-full rounded-md bg-black" src={`/files/${encodeURIComponent(projectId)}/${draft.file.split("/").map(encodeURIComponent).join("/")}`} data-testid="montage-video" />
+        <video key={draft.file} controls preload="metadata" className="aspect-video w-full rounded-md bg-black" src={url(draft.file)} data-testid="montage-video">
+          {subs?.files && <track default kind="subtitles" label="Субтитры" src={url(subs.files.vtt)} />}
+        </video>
         <p className="text-sm text-muted-foreground">{draft.width}×{draft.height} · {mmss(draft.seconds)} · {(draft.bytes / 1024 ** 3).toFixed(2)} ГБ · собрано {new Date(draft.at).toLocaleString("ru-RU")}{draft.lufs !== undefined ? ` · ${draft.lufs.toFixed(1)} LUFS, пик ${draft.peak?.toFixed(1)} dBTP` : ""}{draft.music !== undefined ? ` · ${draft.music ? `треков: ${draft.music}` : "только голос"}` : ""}</p>
+        {subs?.files && <a className="inline-flex min-h-11 items-center gap-2 text-sm text-primary hover:underline" href={url(subs.files.srt)} download="subtitles.srt"><Download className="h-4 w-4" />Скачать субтитры SRT ({subs.cues})</a>}
+        {subs?.problem && <p role="alert" className="flex items-center gap-2 text-sm text-crown"><AlertTriangle className="h-4 w-4 shrink-0" />Субтитры не подготовлены. {subs.problem}</p>}
+      </div>}
+    </Card>}
+
+    {projectId && draft && <Card className="space-y-4 p-5" data-testid="montage-burn">
+      <SectionTitle>Видео со вшитыми субтитрами</SectionTitle>
+      <p className="text-sm text-muted-foreground">Отдельный файл: белый текст внизу кадра, выключить его потом нельзя. Всё видео кодируется заново, это может занять больше часа. При остановке работа начнётся сначала.</p>
+      {!rendering && !external && <Button className="min-h-11" variant="outline" disabled={!subs?.files} onClick={() => void burn.start({ channelId: channel.id }, `/studio/montage/projects/${projectId}/burn`)}><Clapperboard className="h-4 w-4" />{burned ? "Собрать со вшитыми субтитрами заново" : "Собрать со вшитыми субтитрами"}</Button>}
+      {!subs?.files && !rendering && !external && <p className="text-sm text-muted-foreground">Сначала соберите черновик заново: при этом подготовятся субтитры.</p>}
+      <JobBox job={burn} onCancel={burn.cancel} />
+      {burn.status === "error" && burn.error && <ErrorAlert error={burn.error} />}
+      {burned?.stale && <p role="alert" className="flex items-center gap-2 text-sm text-crown"><AlertTriangle className="h-4 w-4 shrink-0" />Черновик собран заново после вшивания. Этот файл устарел.</p>}
+      {burned && !rendering && <div className="space-y-2">
+        <video key={burned.file} controls preload="metadata" className="aspect-video w-full rounded-md bg-black" src={url(burned.file)} data-testid="montage-burned" />
+        <p className="text-sm text-muted-foreground">{mmss(burned.seconds)} · {(burned.bytes / 1024 ** 3).toFixed(2)} ГБ · собрано {new Date(burned.at).toLocaleString("ru-RU")}</p>
       </div>}
     </Card>}
   </div>;
