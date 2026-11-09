@@ -4,7 +4,7 @@ import { ok, fail, ApiError } from "../lib/errors.js";
 import { startJob } from "../lib/jobs.js";
 import { listReports, loadReport, moreOutliers, runChannelAnalysis } from "../services/analysis.js";
 import { addTopic, deleteTopic, listTopics, updateTopic } from "../services/topics.js";
-import { getUsage, retryUsageAccounting } from "../services/usage.js";
+import { getUsage, reconcileOperation, retryUsageAccounting, unpricedOperations } from "../services/usage.js";
 
 const AnalysisInput = z.object({
   channel: z.string().min(2, "Укажите канал"),
@@ -45,5 +45,12 @@ analysis.patch("/saved-topics/:id", async (c) => { try { return ok(c, await upda
 analysis.delete("/saved-topics/:id", async (c) => { try { await deleteTopic(c.req.param("id")); return ok(c, {}); } catch (e) { return fail(c, e); } });
 
 analysis.get("/usage", async (c) => { try { return ok(c, await getUsage()); } catch (e) { return fail(c, e); } });
+
+analysis.get("/usage/unpriced", async (c) => { try { return ok(c, { operations: await unpricedOperations() }); } catch (e) { return fail(c, e); } });
+analysis.post("/usage/unpriced/:id/reconcile", async (c) => { try {
+  const id = z.string().uuid().parse(c.req.param("id"));
+  const { expectedUsd } = z.object({ expectedUsd: z.number().finite().nonnegative() }).strict().parse(await c.req.json());
+  return ok(c, await reconcileOperation(id, expectedUsd));
+} catch (e) { return fail(c, e); } });
 
 analysis.post("/usage/retry-accounting", async (c) => { try { const recovered=await retryUsageAccounting();return ok(c,{recovered,usage:await getUsage()}); } catch(e){return fail(c,e);} });

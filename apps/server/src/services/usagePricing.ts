@@ -22,7 +22,8 @@ export async function capturePrice(provider:string,model:string,kind:PaidKind,bi
  }
  return {...tariff,capturedAt:new Date().toISOString(),priceVersion:createHash('sha256').update(JSON.stringify(tariff)).digest('hex')};
 }
-export type OperationVolume={input?:number;output?:number;count?:number;chars?:number;known:boolean};
+/** estimated: объём не сообщён провайдером, а оценён с запасом; в сумме учитывается как обычный расход. */
+export type OperationVolume={input?:number;output?:number;count?:number;chars?:number;known:boolean;estimated?:boolean};
 export function operationCost(p:PriceSnapshot,v:OperationVolume){
  if(!p.known||!v.known)return {usd:null,balanceTokens:null};
  const required=p.kind==='text'||p.kind==='audio'?num(v.input)&&num(v.output):p.kind==='tts'?num(v.chars):num(v.count);
@@ -38,4 +39,4 @@ export function operationCost(p:PriceSnapshot,v:OperationVolume){
 
 const N=z.number().finite().nonnegative().max(Number.MAX_SAFE_INTEGER);
 export const PriceSnapshotSchema=z.object({version:z.literal(1),capturedAt:z.string().datetime(),priceVersion:z.string().regex(/^[a-f0-9]{64}$/),provider:z.string().min(1).max(300),model:z.string().min(1).max(300),kind:z.enum(['text','image','tts','audio','search']),currency:z.literal('USD'),source:z.enum(['configured-direct','cached-anymodel','builtin-search-estimate']),known:z.boolean(),input:N.optional(),output:N.optional(),image:N.optional(),usdPerMillion:N.optional(),coefficientInput:N.optional(),coefficientOutput:N.optional(),baseTokens:N.optional(),scale:N.optional(),reason:z.string().max(500).optional()}).strict();
-export const OperationVolumeSchema=z.object({input:N.optional(),output:N.optional(),count:N.optional(),chars:N.optional(),known:z.boolean()}).strict();
+export const OperationVolumeSchema=z.object({input:N.optional(),output:N.optional(),count:N.optional(),chars:N.optional(),known:z.boolean(),estimated:z.boolean().optional()}).strict();

@@ -3,7 +3,7 @@ import { paidDispatch, storyboardConsent } from "./paidDispatch.js";
 import { taskContext, checkCancelled, taskSignal } from "../lib/taskContext.js";
 import { queued } from "../lib/queue.js";
 /** AnyModel (anymodel.org) — OpenAI-совместимый шлюз: один ключ на тексты, поиск, картинки и озвучку */
-import {capturePrice,operationCost} from "./usagePricing.js";
+import {capturePrice,operationCost,type OperationVolume} from "./usagePricing.js";
 import {recordOperation} from "./usage.js";
 import { config } from "../config.js";
 import { ApiError } from "../lib/errors.js";
@@ -92,6 +92,14 @@ export function amImageTokens(model: string, size = "1024x1024", quality = "medi
 
 // ───────── текст ─────────
 export type AmMsgImage = { mime: string; b64: string };
+/** Объём текстового вызова. Ответ есть, а расход не сообщён: оценка с запасом (2 символа на токен), запись помечается как оценка.
+ *  С картинками или без текста ответа оценить нельзя — операция остаётся неизвестной. */
+function textVolume(usage: any, o: { system: string; user: string; images?: AmMsgImage[] }, reply: string): OperationVolume {
+  // AnyModel иногда присылает нули при непустом ответе, хотя баланс списывается: это не бесплатный вызов.
+  const known = Number.isFinite(usage?.prompt_tokens) && Number.isFinite(usage?.completion_tokens) && (usage.prompt_tokens + usage.completion_tokens > 0 || !reply.trim());
+  if (known || o.images?.length || !reply.trim()) return { input: usage?.prompt_tokens ?? 0, output: usage?.completion_tokens ?? 0, known };
+  return { input: Math.ceil((o.system.length + o.user.length) / 2), output: Math.ceil(reply.length / 2), known: true, estimated: true };
+}
 export const amChat = queued("llm", async function amChat(o: { model: string; system: string; user: string; images?: AmMsgImage[]; maxTokens?: number; temperature?: number; tools?: unknown[]; timeoutMs?: number; singleAttempt?: boolean }) {
   const content = o.images?.length
     ? [...o.images.map((i) => ({ type: "image_url", image_url: { url: `data:${i.mime};base64,${i.b64}` } })), { type: "text", text: o.user }]
@@ -103,10 +111,10 @@ export const amChat = queued("llm", async function amChat(o: { model: string; sy
   const r = await fetchRetry(url,{method:"POST",headers,body}, { timeoutMs: o.timeoutMs ?? 240_000, retries: o.singleAttempt ? 0 : 1, beforeAttempt: dispatch.beforeAttempt });
   const j: any = await r.json().catch(() => ({}));
   if (!r.ok || j.error) throw amError(r.ok ? 502 : r.status, j, o.model);
-  await recordOperation(dispatch.prices[0],{input:j.usage?.prompt_tokens??0,output:j.usage?.completion_tokens??0,known:Number.isFinite(j.usage?.prompt_tokens)&&Number.isFinite(j.usage?.completion_tokens)},taskContext()?.jobId);
-  if(dispatch.prices[1])await recordOperation(dispatch.prices[1],{count:j.usage?.web_search_requests??0,known:Number.isFinite(j.usage?.web_search_requests)},taskContext()?.jobId);
   const msg = j.choices?.[0]?.message;
   const text: string = typeof msg?.content === "string" ? msg.content : Array.isArray(msg?.content) ? msg.content.map((p: any) => p.text ?? "").join("") : "";
+  await recordOperation(dispatch.prices[0],textVolume(j.usage,o,text),taskContext()?.jobId);
+  if(dispatch.prices[1])await recordOperation(dispatch.prices[1],{count:j.usage?.web_search_requests??0,known:Number.isFinite(j.usage?.web_search_requests)},taskContext()?.jobId);
   if (!text.trim()) throw new ApiError("UPSTREAM", `AnyModel (${o.model}): пустой ответ (${j.choices?.[0]?.finish_reason ?? "?"})`, 502, true);
   const sources = (msg?.annotations ?? []).filter((a: any) => a.type === "url_citation").map((a: any) => ({ title: a.url_citation?.title ?? a.url_citation?.url, url: a.url_citation?.url }));
   return { text, usage: { input: j.usage?.prompt_tokens ?? 0, output: j.usage?.completion_tokens ?? 0, searches: j.usage?.web_search_requests ?? 0 }, sources, finish: j.choices?.[0]?.finish_reason as string | undefined };

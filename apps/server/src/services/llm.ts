@@ -15,7 +15,7 @@ import { assertBudget } from "./usage.js";
 import { amCatalog, amChat, hasAnymodel } from "./anymodel.js";
 
 export type LlmImage = { mime: string; b64: string };
-export type LlmCall = { system: string; user: string; maxTokens?: number; temperature?: number; fast?: boolean; images?: LlmImage[]; role?: "script"; model?: string; singleAttempt?: boolean };
+export type LlmCall = { system: string; user: string; maxTokens?: number; temperature?: number; fast?: boolean; images?: LlmImage[]; role?: "script"; model?: string; singleAttempt?: boolean; /** Только указанная модель AnyModel: при сбое ошибка, резервная модель не запускается. */ noFallback?: boolean };
 type Raw = { text: string; model: string };
 
 const callAnthropic = queued("llm", async function callAnthropic(c: LlmCall, model: string): Promise<Raw> {
@@ -55,7 +55,7 @@ const callGemini = queued("llm", async function callGemini(c: LlmCall, model: st
 });
 
 async function callAnymodel(c: LlmCall, model: string): Promise<Raw> {
-  const r = await amChat({ model, system: c.system, user: c.user, images: c.images, maxTokens: c.maxTokens, temperature: c.temperature });
+  const r = await amChat({ model, system: c.system, user: c.user, images: c.images, maxTokens: c.maxTokens, temperature: c.temperature, singleAttempt: c.singleAttempt });
   await amCatalog().catch(() => []);
 
   return { text: r.text, model };
@@ -81,7 +81,9 @@ const skipUntil = new Map<string, number>();
 async function raw(c: LlmCall, json: boolean): Promise<Raw> {
   let last: unknown;
   await assertBudget();
-  const steps = await plan(c.fast, c.role, c.model);
+  const planned = await plan(c.fast, c.role, c.model);
+  const steps = c.noFallback ? planned.filter((s) => s.p === "anymodel" && s.m === c.model).slice(0, 1) : planned;
+  if (!steps.length) throw new ApiError("KEY_MISSING", `Модель ${c.model ?? ""} недоступна: проверьте ключ AnyModel и что он включён в Настройках. Другая модель не запускалась.`, 400);
   const live = steps.filter((s) => (skipUntil.get(`${s.p}:${s.m}`) ?? 0) < Date.now());
   for (const step of live.length ? live : steps) {
     try { return step.p === "anymodel" ? await callAnymodel(c, step.m) : step.p === "anthropic" ? await callAnthropic(c, step.m) : await callGemini(c, step.m, json); }

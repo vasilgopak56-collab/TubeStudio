@@ -32,8 +32,9 @@ export function paidDispatch(prepare: () => Promise<PriceSnapshot | PriceSnapsho
         let u: Awaited<ReturnType<typeof getUsage>>;
         try { u = await getUsage(); }
         catch { throw new ApiError("BUDGET_LIMIT", "Платный запрос не отправлен: журнал расходов недоступен или повреждён. Восстановите резервную копию; ошибка не считается нулевыми расходами.", 402); }
-        if (!u.cost.complete || !usageAccountingComplete()) throw new ApiError("BUDGET_LIMIT",
-          "Платный запрос не отправлен: расходы известны не полностью или запись журнала не завершена. Не повторяйте выполненную генерацию ради учёта.", 402);
+        // Операции без цены работу не останавливают: расход и баланс показываются по ролику. Незаписанный журнал — останавливает.
+        if (!usageAccountingComplete()) throw new ApiError("BUDGET_LIMIT",
+          "Платный запрос не отправлен: запись журнала расходов не завершена. Не повторяйте выполненную генерацию ради учёта.", 402);
         if (s.budget.monthlyUsd > 0 && u.cost.knownTotalRaw >= s.budget.monthlyUsd) throw new ApiError("BUDGET_LIMIT", "Платный запрос не отправлен: месячный лимит расходов достигнут.", 402);
       }
       return captured;

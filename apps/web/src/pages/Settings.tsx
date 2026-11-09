@@ -8,7 +8,7 @@ import { CONTENT_LANGUAGES, TIMEZONES } from "@/lib/constants";
 import { applyTheme } from "@/lib/theme";
 import { ResearchSettingsCard } from "@/features/research/ResearchSettings";
 import { Badge, Button, Card, Chip, ErrorAlert, Input, Label, SectionTitle, Select, Skeleton, StatusDot, Switch, ToolHeader } from "@/components/ui";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const KEY_LINKS: Record<string, string> = {
   anymodel: "https://anymodel.org/app/providers",
@@ -28,6 +28,30 @@ function GlabsCheck({ dirty }: { dirty: boolean }) {
     <Button type="button" variant="outline" className="min-h-10" disabled={dirty} title={dirty ? "Сначала сохраните адрес" : undefined} loading={q.isFetching} loadingText="Проверяю…" onClick={() => void q.refetch()}><RefreshCw className="h-3.5 w-3.5" />Проверить связь</Button>
     {q.data && <p role="status" className={`max-w-md text-[12px] ${q.data.ok ? "text-success" : "text-accent"}`}>{q.data.message}</p>}
     {q.error && <p role="alert" className="max-w-md text-[12px] text-accent">{(q.error as Error).message}</p>}
+  </div>;
+}
+
+type UnpricedOp = { id: string; completedAt: string; model: string; kind: string; estimateUsd: number | null };
+/** Ручная сверка операций без цены: пока такая операция есть, платные вызовы в режиме блокировки остановлены. */
+function UnpricedOperations() {
+  const qc = useQueryClient();
+  const q = useQuery({ queryKey: ["usage-unpriced"], queryFn: () => api<{ operations: UnpricedOp[] }>("/usage/unpriced") });
+  const save = useMutation({
+    mutationFn: (o: UnpricedOp) => api(`/usage/unpriced/${o.id}/reconcile`, { method: "POST", json: { expectedUsd: o.estimateUsd } }),
+    onSettled: () => { void qc.invalidateQueries({ queryKey: ["usage-unpriced"] }); void qc.invalidateQueries({ queryKey: ["usage"] }); },
+  });
+  const ops = q.data?.operations ?? [];
+  if (!ops.length && !q.error) return null;
+  return <div className="mb-4 space-y-2 rounded-lg border border-amber-500/40 p-3" data-testid="unpriced-operations">
+    <p className="text-[13px] text-muted-foreground">Эти операции прошли, но провайдер не сообщил расход. Пока они не сверены, платные вызовы в режиме блокировки остановлены. Оценка — самая крупная операция той же модели из того же задания; сумма записывается как оценка и только один раз.</p>
+    {ops.map((o) => <div key={o.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+      <span className="font-mono">{o.model} · {new Date(o.completedAt).toLocaleString("ru-RU")}</span>
+      {o.estimateUsd === null
+        ? <span className="text-[13px] text-muted-foreground">Оценить не с чем, сверка недоступна</span>
+        : <Button size="sm" variant="outline" className="min-h-10" loading={save.isPending && save.variables?.id === o.id} loadingText="Записываю…" disabled={save.isPending} onClick={() => save.mutate(o)}>Оценить по похожим: записать ${o.estimateUsd.toFixed(4)}</Button>}
+    </div>)}
+    {q.error && <ErrorAlert error={q.error} />}
+    {save.error && <ErrorAlert error={save.error} />}
   </div>;
 }
 
@@ -282,6 +306,7 @@ export default function Settings() {
               <SectionTitle right={<Button size="sm" variant="ghost" onClick={() => set("budget", { ...form.budget, prices: [...form.budget.prices, { match: "model-name", input: 0, output: 0, image: 0 }] })}><Plus className="h-3.5 w-3.5" />Цена</Button>}>
                 Бюджет
               </SectionTitle>
+              <UnpricedOperations />
               <p className="mb-3 text-[13px] text-muted-foreground">Месячный лимит на учитываемые платные API. Расход считается по токенам × цены ниже — это оценка, точная сумма в кабинете провайдера. 0 — без лимита. Неизвестная цена не равна нулю: на Панели показывается известная часть и неполнота итога. Старый журнал оценивается по текущим тарифам; тариф каждой прошлой операции в нём не закреплён. Для новых успешно учтённых вызовов текстов, картинок, озвучки и аудиораспознавания сохраняются провайдер, модель, объём и доступный до отправки тариф; смена настроек их не переоценивает. Неизвестный тариф сохраняется неизвестным. Сравнение лимита выполняется без округления отображаемых сумм. Это не резервирование будущих расходов и не гарантия общего лимита параллельных запросов. В режиме «Блокировать вызовы» перед каждой отправкой, после очереди и перед сетевым повтором проверяется тариф каждой включённой задачи: неизвестный тариф, неполный учёт и повреждённый журнал останавливают отправку без перехода к резервной модели. Это действует и при лимите 0 (он отключает только месячный порог). Каталог автоматически ради проверки не загружается; обновите его отдельно. Режим «Только предупреждать» пока не запрашивает отдельного согласия на неизвестную цену — этот этап ещё не реализован. В .73 подготовлен только серверный протокол одноразового согласия. Он ещё не подключён к генерации и окну подтверждения; открытие этой страницы не выдаёт разрешений.</p>
               <div className="mb-4 grid gap-4 md:grid-cols-3">
                 <label><Label>Лимит в месяц, $</Label>

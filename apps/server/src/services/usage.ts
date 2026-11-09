@@ -124,10 +124,51 @@ export async function retryUsageAccounting():Promise<boolean>{
 export function operationTotals(u:Usage,prices:Settings["budget"]["prices"],usdPerMillion:number){
  const old=costOf(u.pricingV1?.legacy??u,prices,usdPerMillion);
  const fixed=u.pricingV1?.operations??[];
- const rows=[...old.rows.map(r=>({...r,valuation:'current-rate-estimate' as const})),...fixed.map(op=>({model:op.price.model,kind:op.price.kind,calls:op.volume.count??1,in:op.volume.input??0,out:op.volume.output??0,usd:op.usd,priced:op.usd!==null,via:op.price.provider==='anymodel'?'anymodel' as const:'direct' as const,provider:op.price.provider,operationId:op.id,balanceTokens:op.balanceTokens??undefined,valuation:'captured-tariff' as const}))].sort((a,b)=>(b.usd??-1)-(a.usd??-1));
+ const rows=[...old.rows.map(r=>({...r,valuation:'current-rate-estimate' as const})),...fixed.map(op=>({model:op.price.model,kind:op.price.kind,calls:op.volume.count??1,in:op.volume.input??0,out:op.volume.output??0,usd:op.usd,priced:op.usd!==null,via:op.price.provider==='anymodel'?'anymodel' as const:'direct' as const,provider:op.price.provider,operationId:op.id,balanceTokens:op.balanceTokens??undefined,valuation:'captured-tariff' as const,...(op.volume.estimated?{estimated:true}:{})}))].sort((a,b)=>(b.usd??-1)-(a.usd??-1));
  const knownTotalRaw=rows.reduce((sum,r)=>sum+(r.usd??0),0),knownTotal=Math.round(knownTotalRaw*10000)/10000;
  const unknownRows=rows.filter(r=>r.usd===null).length,complete=unknownRows===0&&!accountingFailure;
  return {rows,total:complete?knownTotal:null,knownTotal,knownTotalRaw,complete,unknownRows,valuation:fixed.length?(old.rows.length?'mixed-estimate-and-captured' as const:'captured-tariff' as const):'current-rate-estimate' as const,legacyRows:old.rows.length,recordedOperations:fixed.length,accountingWarning:accountingFailure?'Не удалось записать часть выполненных операций. Не повторяйте генерацию ради журнала. До перезапуска сохраните данные; незаписанные записи могут удерживаться только в памяти; при некорректных данных или переполнении нужна ручная сверка.':null,pendingOperations:pendingOperations.length,balanceTokens:Object.values(u.am??{}).reduce((sum,n)=>sum+n,0)};
+}
+
+/** Оценка для ручной сверки: самая крупная операция той же модели из того же задания, по тарифу самой операции.
+ *  Нет задания, похожих операций или цены — оценки нет, операция остаётся неизвестной и продолжает блокировать платные вызовы. */
+function estimateFromPeers(op:CostOperation,ops:CostOperation[]){
+ if(op.usd!==null||op.volume.known||!op.price.known||!op.jobId||(op.price.kind!=='text'&&op.price.kind!=='audio'))return null;
+ const same=ops.filter(p=>p.id!==op.id&&p.jobId===op.jobId&&p.price.provider===op.price.provider&&p.price.model===op.price.model&&p.price.kind===op.price.kind&&p.volume.known&&!p.volume.estimated&&(p.usd??0)>0);
+ if(!same.length)return null;
+ const peer=same.reduce((a,b)=>(b.usd??0)>(a.usd??0)?b:a);
+ const volume:OperationVolume={input:peer.volume.input??0,output:peer.volume.output??0,known:true,estimated:true};
+ const cost=operationCost(op.price,volume);
+ return cost.usd===null?null:{volume,usd:cost.usd,balanceTokens:cost.balanceTokens};
+}
+/** Операции текущего месяца без цены и предлагаемая оценка. Только чтение. */
+export async function unpricedOperations(){
+ await q;
+ const u=await readLedger();
+ if(u.month!==month())return [];
+ const ops=u.pricingV1?.operations??[];
+ return ops.filter(o=>o.usd===null).map(op=>({id:op.id,completedAt:op.completedAt,model:op.price.model,kind:op.price.kind,estimateUsd:estimateFromPeers(op,ops)?.usd??null}));
+}
+/** Разовая сверка по подтверждённой пользователем сумме. Запись помечается как оценка; повторно изменить её нельзя. */
+export async function reconcileOperation(id:string,expectedUsd:number):Promise<{id:string;usd:number}>{
+ const write=q.then(async()=>{
+  const u=await readLedger();
+  const ops=u.month===month()?(u.pricingV1?.operations??[]):[];
+  const op=ops.find(o=>o.id===id);
+  if(!op)throw new ApiError('NOT_FOUND','Операция не найдена в журнале текущего месяца.',404);
+  const e=estimateFromPeers(op,ops);
+  if(!e)throw new ApiError('VALIDATION','Для этой операции нет оценки: сверка уже выполнена или не с чем сравнить.');
+  if(e.usd!==expectedUsd)throw new ApiError('VALIDATION','Оценка изменилась. Обновите страницу и проверьте сумму.',409);
+  op.volume=e.volume;op.usd=e.usd;op.balanceTokens=e.balanceTokens;
+  const m=op.price.model,row=(u.llm[m]??={in:0,out:0,calls:0});
+  row.in+=e.volume.input??0;row.out+=e.volume.output??0;
+  if(e.balanceTokens!==null)(u.am??={})[m]=(u.am?.[m]??0)+e.balanceTokens;
+  validateLedger(structuredClone(u));
+  await writeJson(FILE,u);
+  return {id,usd:e.usd};
+ });
+ q=write.then(()=>{},()=>{});
+ return write;
 }
 
 export type BudgetLevel = "off" | "ok" | "warn" | "over";
