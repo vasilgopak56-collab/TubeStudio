@@ -6,7 +6,7 @@ import { ApiError } from "../../lib/errors.js";
 import { dataPath } from "../../lib/storage.js";
 import { ffmpegPath } from "../audioFx.js";
 import { factStatus, type FactCheckReport } from "./factCheck.js";
-import { buildMontagePlan, type MontageScene } from "./montagePlan.js";
+import { buildMontagePlan, type MontagePlan, type MontageScene } from "./montagePlan.js";
 import { visualState } from "./visual.js";
 
 /** Короткая сторона исходника, ниже которой показывается предупреждение. Итоговое видео всё равно 1920×1080. */
@@ -24,6 +24,8 @@ export type MontageCheck = {
   ready: boolean; blockers: MontageIssue[]; warnings: MontageIssue[];
   summary: { scenes: number; clips: number; pictures: number; files: number; audioSeconds: number | null };
 };
+/** Проверка плюс то, что нужно сборке. На страницу уходит только сама проверка. */
+export type MontagePrepared = MontageCheck & { plan: MontagePlan | null; audioFile: string | null };
 type Gen = { file?: string; verdict?: "accepted" | "redo" };
 type Row = { n: number; start: number; end: number; picture: Gen; clip: Gen };
 export type MontageInput = {
@@ -44,7 +46,7 @@ export function parseProbe(json: string): MediaInfo | null {
 /** ffprobe лежит рядом с ffmpeg и называется так же. */
 export const ffprobeFor = (ffmpeg: string) => ffmpeg.replace(/ffmpeg(\.exe)?$/i, (m) => m.replace(/ffmpeg/i, "ffprobe"));
 
-function probe(bin: string, file: string): Promise<MediaInfo | null> {
+export function probe(bin: string, file: string): Promise<MediaInfo | null> {
   return new Promise((resolve, reject) => {
     const p = spawn(bin, ["-v", "error", "-print_format", "json", "-show_entries", "format=duration:stream=codec_type,width,height,duration", file], { windowsHide: true });
     let out = "";
@@ -57,12 +59,15 @@ function probe(bin: string, file: string): Promise<MediaInfo | null> {
   });
 }
 
+/** Полный путь к файлу проекта по его записи в раскадровке. */
+export const projectFile = (projectId: string, local: string) => dataPath("files", projectId.replace(/[^\w-]/g, ""), ...local.split("/"));
+
 function diskInspector(projectId: string): Inspect {
   const ffmpeg = ffmpegPath();
   if (!ffmpeg) throw new ApiError("VALIDATION", "Для проверки файлов нужен FFmpeg. Установите его или укажите FFMPEG_PATH в .env и перезапустите TubeStudio.");
   const bin = ffprobeFor(ffmpeg);
   return async (local) => {
-    const full = dataPath("files", projectId.replace(/[^\w-]/g, ""), ...local.split("/"));
+    const full = projectFile(projectId, local);
     const stat = await fs.stat(full).catch(() => null);
     if (!stat?.isFile()) return "missing";
     return (await probe(bin, full)) ?? "broken";
@@ -86,7 +91,7 @@ const FACTS: Partial<Record<MontageInput["facts"], string>> = {
 const usableVisual = (m: Inspected | undefined): m is MediaInfo => !!m && typeof m === "object" && m.video;
 
 /** Сама проверка: файлы приходят через inspect, поэтому в тестах FFmpeg не нужен. */
-export async function assessMontage(input: MontageInput, inspect: Inspect): Promise<MontageCheck> {
+export async function assessMontage(input: MontageInput, inspect: Inspect): Promise<MontagePrepared> {
   const blockers: MontageIssue[] = [], warnings: MontageIssue[] = [];
   const add = (list: MontageIssue[], code: string, message: string, scenes: number[] = []) => { list.push({ code, message, scenes }); };
   const factsNote = FACTS[input.facts];
@@ -94,7 +99,7 @@ export async function assessMontage(input: MontageInput, inspect: Inspect): Prom
   const b = input.board;
   if (!b) {
     add(blockers, "no-board", "Раскадровки нет: сначала нарежьте сцены в разделе «Визуал».");
-    return { ready: false, blockers, warnings, summary: { scenes: 0, clips: 0, pictures: 0, files: 0, audioSeconds: null } };
+    return { ready: false, blockers, warnings, summary: { scenes: 0, clips: 0, pictures: 0, files: 0, audioSeconds: null }, plan: null, audioFile: null };
   }
   if (b.timing !== "audio") add(blockers, "estimated-timing", "Тайминги сцен примерные, а не из озвучки. Нарежьте сцены заново по готовой озвучке с субтитрами.");
   if (b.stale) add(blockers, "stale-board", "Текст изменился после нарезки на сцены. Нарежьте сцены заново.");
@@ -133,18 +138,24 @@ export async function assessMontage(input: MontageInput, inspect: Inspect): Prom
   if (noClip.length) add(warnings, "no-clip", "Есть картинка, но нет клипа: сцена пойдёт с медленным приближением.", noClip);
 
   // Раскладка шага 1 находит разрывы между сценами и тайминги от другой озвучки.
+  let plan: MontagePlan | null = null;
   if (audioSeconds !== null) {
-    try { buildMontagePlan(scenes, audioSeconds); }
+    try { plan = buildMontagePlan(scenes, audioSeconds); }
     catch (e) { if (!(e instanceof ApiError)) throw e; add(blockers, "timeline", e.message); }
   }
   return {
     ready: blockers.length === 0, blockers, warnings,
     summary: { scenes: b.rows.length, clips: b.rows.filter((r) => r.clip.file).length, pictures: b.rows.filter((r) => r.picture.file).length, files: files.length, audioSeconds },
+    plan, audioFile: b.audioFile ?? null,
   };
 }
 
 /** Проверка настоящего проекта: раскадровка из «Визуала», файлы с диска. */
 export async function checkMontage(projectId: string): Promise<MontageCheck> {
+  const { plan: _plan, audioFile: _audio, ...check } = await prepareMontage(projectId);
+  return check;
+}
+export async function prepareMontage(projectId: string): Promise<MontagePrepared> {
   const state = await visualState(projectId);
   const { getProject } = await import("../projects.js");
   const p = await getProject(projectId);

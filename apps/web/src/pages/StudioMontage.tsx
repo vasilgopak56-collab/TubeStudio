@@ -1,17 +1,21 @@
-// Выпуск 3: «Монтаж». Пока только проверка файлов перед сборкой (шаг 2); сама сборка появится на следующих шагах.
+// Выпуск 3: «Монтаж». Проверка файлов перед сборкой и черновая сборка видеоряда с голосом.
+import { useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, Film, SearchCheck, XCircle } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { AlertTriangle, CheckCircle2, Clapperboard, Film, SearchCheck, X, XCircle } from "lucide-react";
 import { api } from "@/lib/api";
+import { useJob } from "@/lib/jobs";
 import type { ProjectSummary } from "@/lib/types";
 import { Button, Card, ErrorAlert, Label, SectionTitle, Select, ToolHeader } from "@/components/ui";
-import { ChannelPicker, NeedChannel, useActiveChannel } from "@/features/studio/common";
+import { ChannelPicker, JobBox, NeedChannel, useActiveChannel } from "@/features/studio/common";
 
 type Issue = { code: string; message: string; scenes: number[] };
 type MontageCheck = {
   ready: boolean; blockers: Issue[]; warnings: Issue[];
   summary: { scenes: number; clips: number; pictures: number; files: number; audioSeconds: number | null };
 };
+type RenderResult = { file: string; at: string; seconds: number; width: number; height: number; bytes: number; parts: number; reused: number };
+type MontageState = { running: { jobId: string | null; since: string } | null; result: RenderResult | null };
 
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 /** Номера сцен коротко: 1–5, 7, 197. */
@@ -43,6 +47,16 @@ export default function StudioMontage() {
   const projects = useQuery({ queryKey: ["projects"], queryFn: () => api<(ProjectSummary & { channelId?: string })[]>("/projects"), refetchOnWindowFocus: false });
   const withBoard = (projects.data ?? []).filter((p) => (p.counts.storyboard ?? 0) > 0).sort((a, b) => Number(b.channelId === channel?.id) - Number(a.channelId === channel?.id));
   const check = useQuery({ queryKey: ["montage-check", projectId], queryFn: () => api<MontageCheck>(`/studio/montage/projects/${projectId}/check`), enabled: false, retry: false, gcTime: 0 });
+  const render = useJob<RenderResult>("");
+  const rendering = render.status === "running";
+  const state = useQuery({
+    queryKey: ["montage-state", projectId], queryFn: () => api<MontageState>(`/studio/montage/projects/${projectId}`), enabled: !!projectId, retry: false,
+    refetchInterval: (q) => (q.state.data?.running ? 3000 : false),
+  });
+  useEffect(() => { if (render.status === "done" || render.status === "error") void state.refetch(); }, [render.status]);
+  const stop = useMutation({ mutationFn: (jobId: string) => api(`/jobs/${jobId}/cancel`, { method: "POST" }), onSuccess: () => void state.refetch() });
+  const external = !rendering ? state.data?.running ?? null : null;
+  const draft = state.data?.result ?? null;
 
   if (loading) return null;
   const header = <ToolHeader icon={Film} title="Монтаж" eyebrow="// ВЫПУСК 3" subtitle="Проверка файлов перед сборкой ролика" right={channel ? <ChannelPicker /> : undefined} />;
@@ -69,6 +83,23 @@ export default function StudioMontage() {
       <p className="text-sm text-muted-foreground">Сцен: {r.summary.scenes} · клипов: {r.summary.clips} · картинок: {r.summary.pictures} · проверено файлов: {r.summary.files}{r.summary.audioSeconds !== null ? ` · озвучка ${mmss(r.summary.audioSeconds)}` : ""}</p>
       {r.blockers.length > 0 && <Issues title="Мешает сборке" items={r.blockers} danger />}
       {r.warnings.length > 0 && <Issues title="Предупреждения" items={r.warnings} />}
+    </Card>}
+
+    {projectId && <Card className="space-y-4 p-5" data-testid="montage-render">
+      <SectionTitle>Черновик видео</SectionTitle>
+      <p className="text-sm text-muted-foreground">Видео 1920×1080 с голосом озвучки, без музыки и субтитров. Бесплатно, считается на этом компьютере и может занять десятки минут. Перед сборкой файлы проверяются ещё раз. После остановки сборка продолжится с прерванного места.</p>
+      {!rendering && !external && <Button className="min-h-11" disabled={!!stop.isPending} onClick={() => void render.start({ channelId: channel.id }, `/studio/montage/projects/${projectId}/render`)}><Clapperboard className="h-4 w-4" />{draft ? "Собрать заново" : "Собрать"}</Button>}
+      <JobBox job={render} onCancel={render.cancel} />
+      {external && <div className="flex flex-wrap items-center gap-3 text-sm" role="status">
+        <span className="font-semibold">Идёт сборка этого ролика</span>
+        {external.jobId && <Button variant="danger" size="sm" className="min-h-11" loading={stop.isPending} onClick={() => stop.mutate(external.jobId!)}><X className="h-4 w-4" />Остановить</Button>}
+      </div>}
+      {render.status === "error" && render.error && <ErrorAlert error={render.error} />}
+      {state.error && <ErrorAlert error={state.error} onRetry={() => void state.refetch()} />}
+      {draft && !rendering && <div className="space-y-2">
+        <video key={draft.file} controls preload="metadata" className="aspect-video w-full rounded-md bg-black" src={`/files/${encodeURIComponent(projectId)}/${draft.file.split("/").map(encodeURIComponent).join("/")}`} data-testid="montage-video" />
+        <p className="text-sm text-muted-foreground">{draft.width}×{draft.height} · {mmss(draft.seconds)} · {(draft.bytes / 1024 ** 3).toFixed(2)} ГБ · собрано {new Date(draft.at).toLocaleString("ru-RU")}</p>
+      </div>}
     </Card>}
   </div>;
 }
