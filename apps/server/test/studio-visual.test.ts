@@ -200,7 +200,7 @@ test("клипы: кадр сцены — первый кадр анимации
   assert.equal(sum.done, animated);
   const v = submits("video")[0].body;
   assert.equal(v.mode, "start_image"); assert.equal(v.model, "veo_31_fast"); assert.equal(v.video_length, 8);
-  assert.deepEqual(v.resolution, ["720p"]);
+  assert.deepEqual(v.resolution, ["1080p"]);
   assert.match(v.reference_images[0].path, /visual[\\/]001\.png$/);
   assert.match(v.prompt, /No dialogue, no narration, no music\.$/);
   await fs.access(path.join(dir, "files", projectId, "visual", "001_anim.mp4"));
@@ -311,4 +311,26 @@ test("промпты моделью: @имена, ключевые сцены о
   assert.ok(st.rows.every((x) => x.image.includes(anchor)));
   assert.equal(st.prompts?.model, "fake-director");
   assert.ok(b.rows.length === st.rows.length);
+});
+
+test("промпты моделью: готовая часть сохраняется при сбое, продолжение дописывает только черновики", async () => {
+  const p = await projects.createProject({ title: "1816 — продолжение", channelId, artifact: { kind: "script", title: "Сценарий", data: { script: Array(8).fill(SCRIPT).join("\n\n") } } as any });
+  const built = await V.buildScenes(p.id, { channelId });
+  assert.ok(built.rows.length > 12, "нужно больше одной части");
+  await V.writePrompts(p.id, { channelId, free: true });
+  const answer = (user: string, tag: string) => ({ model: "fake-director", data: { scenes: (JSON.parse(user.slice(user.indexOf("SCENES:") + 8)) as { n: number }[]).map((s) => ({ n: s.n, concept: `${tag} scene ${s.n}: a frozen village street at dawn`, motion: "Slow push-in" })) } });
+  let calls = 0;
+  VP.setPromptAi(async ({ user }) => { if (++calls === 2) throw new Error("пустой ответ"); return answer(user, "first"); });
+  await assert.rejects(V.writePrompts(p.id, { channelId, free: false }), /пустой ответ/);
+  let st = (await V.visualState(p.id)).board!;
+  assert.ok(st.rows.slice(0, 12).every((r) => !r.draft && r.concept.startsWith("first")), "первая часть сохранена");
+  assert.ok(st.rows.slice(12).every((r) => r.draft), "остальное осталось черновиком");
+  const asked: number[] = [];
+  VP.setPromptAi(async ({ user }) => { asked.push(...(JSON.parse(user.slice(user.indexOf("SCENES:") + 8)) as { n: number }[]).map((s) => s.n)); return answer(user, "second"); });
+  await V.writePrompts(p.id, { channelId, free: false, onlyEmpty: true });
+  assert.ok(asked.length > 0 && asked.every((n) => n > 12), "готовая часть не оплачивается второй раз");
+  st = (await V.visualState(p.id)).board!;
+  assert.ok(st.rows.every((r) => !r.draft));
+  assert.ok(st.rows[0].concept.startsWith("first"));
+  assert.ok(st.rows[12].concept.startsWith("second"));
 });

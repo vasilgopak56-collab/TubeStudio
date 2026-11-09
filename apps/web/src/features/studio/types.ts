@@ -102,13 +102,14 @@ export type Board = {
   mode: "rhythm" | "sentence"; maxSec: number; style: { id: string; name: string; anchor: string; motion: string; negative: string; palette: string };
   input: { imageModel: string; videoModel: string; clipSec: number; aspect: "16:9" | "9:16" }; rows: Scene[];
   prompts?: { model?: string; at: string; free?: boolean; notes?: string[] }; audioFile?: string; createdAt: string; updatedAt: string; stale: boolean;
+  sources?: { images?: string; clips?: string };
 };
 export type VisualState = {
   project: { id: string; title: string; channelId: string | null };
   script: { artifactId: string; words: number } | null;
   audio: { artifactId: string; file: string | null; subtitles: boolean; seconds: number | null } | null;
   board: Board | null;
-  running: { what: "prompts" | "images" | "clips"; jobId: string | null; since: string } | null;
+  running: { what: "prompts" | "images" | "clips" | "import"; jobId: string | null; since: string } | null;
   reasons: Record<RedoReason, string>;
 };
 export type RenderSummary = { what: "images" | "clips"; total: number; done: number; failed: number; waiting: number; skipped: number; stop: string | null; message: string };

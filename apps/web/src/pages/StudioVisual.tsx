@@ -248,6 +248,84 @@ function counts(b: Board) {
   };
 }
 
+type VideoSpend = {
+  anymodel: { spentUsd: number; operations: number; unknown: number; balanceUsd: number | null; needUsd: number | null; remainingScenes: number; model: string };
+  lumean: { units: number; balanceLmc: number | null };
+};
+/** Расход по ролику, балансы и предупреждение, если на оставшиеся промпты не хватает. */
+function VideoSpendCard({ projectId }: { projectId: string }) {
+  const q = useQuery({ queryKey: ["video-spend", projectId], queryFn: () => api<VideoSpend>(`/studio/visual/projects/${projectId}/spend`), retry: false, refetchOnWindowFocus: false });
+  if (!q.data) return q.error ? <ErrorAlert error={q.error} /> : null;
+  const { anymodel: am, lumean: lu } = q.data;
+  const short = am.balanceUsd !== null && am.needUsd !== null && am.balanceUsd < am.needUsd;
+  return <Card className="space-y-2 p-5" data-testid="video-spend">
+    <SectionTitle>Расход и баланс</SectionTitle>
+    <p className="text-sm">Расход по ролику: <b>${am.spentUsd.toFixed(4)}</b> AnyModel · операций {am.operations}{am.unknown ? ` · без цены ${am.unknown}, в сумму не вошли` : ""}{lu.units ? ` · озвучка ${lu.units.toLocaleString("ru-RU")} ед. Lumean` : ""}</p>
+    <p className="text-sm">Баланс: AnyModel {am.balanceUsd === null ? "неизвестен" : <b>${am.balanceUsd.toFixed(2)}</b>} · Lumean {lu.balanceLmc === null ? "неизвестен" : <b>{lu.balanceLmc.toFixed(2)} LMC</b>}</p>
+    {am.remainingScenes > 0 && am.needUsd !== null && <p className="text-sm text-muted-foreground">На оставшиеся промпты ({am.remainingScenes} сцен, {am.model}) нужно примерно ${am.needUsd.toFixed(2)}, с запасом.</p>}
+    {short && <p role="alert" className="text-sm font-medium text-accent" data-testid="video-spend-short">На балансе AnyModel меньше, чем нужно для ролика. Пополните счёт, иначе промпты не допишутся.</p>}
+    <p className="text-xs text-muted-foreground">Журнал программы может быть ниже реального списания: точная сумма — в кабинете AnyModel. Кредиты G-Labs программа не видит.</p>
+  </Card>;
+}
+
+type ImportSide = { found: number; willImport: number[]; alreadyDone: number[]; missing: number[]; noNumber: string[]; outOfRange: string[]; duplicates: { n: number; names: string[] }[]; empty: string[]; otherType: string[] };
+type ImportPreview = { imageDir: string; clipDir: string; total: number; clips: ImportSide; images: ImportSide };
+type ImportResult = { clips: { imported: number; failed: string[] }; images: { imported: number; failed: string[] } };
+const some = (list: (string | number)[]) => `${list.slice(0, 12).join(", ")}${list.length > 12 ? ` и ещё ${list.length - 12}` : ""}`;
+function ImportSideView({ title, s }: { title: string; s: ImportSide }) {
+  return <div className="space-y-1 text-sm">
+    <p><b>{title}:</b> найдено {s.found} · подтянется {s.willImport.length} · уже есть {s.alreadyDone.length} · нет файла {s.missing.length}</p>
+    {s.missing.length > 0 && <p className="text-xs text-muted-foreground">Сцены без файла: {some(s.missing)}</p>}
+    {s.noNumber.length > 0 && <p className="text-xs text-crown">Без номера в начале имени: {some(s.noNumber)}</p>}
+    {s.outOfRange.length > 0 && <p className="text-xs text-crown">Номер больше числа сцен: {some(s.outOfRange)}</p>}
+    {s.duplicates.length > 0 && <p className="text-xs text-crown">Один номер у нескольких файлов, не подтянуты: {some(s.duplicates.map((d) => d.n))}</p>}
+    {s.empty.length > 0 && <p className="text-xs text-crown">Пустые файлы: {some(s.empty)}</p>}
+    {s.otherType.length > 0 && <p className="text-xs text-crown">Другой формат, не подтянуты: {some(s.otherType)}</p>}
+  </div>;
+}
+/** Файлы, сделанные вручную: программа находит их по номеру сцены в папке ролика. */
+function ImportCard({ projectId, channelId, disabled, sources, onDone }: { projectId: string; channelId: string; disabled: boolean; sources?: { images?: string; clips?: string }; onDone: () => void }) {
+  const [images, setImages] = useState(sources?.images ?? "");
+  const [clips, setClips] = useState(sources?.clips ?? "");
+  useEffect(() => { setImages(sources?.images ?? ""); setClips(sources?.clips ?? ""); }, [projectId, sources?.images, sources?.clips]);
+  const dirty = images !== (sources?.images ?? "") || clips !== (sources?.clips ?? "");
+  const saveFolders = useMutation({
+    mutationFn: () => api(`/studio/visual/projects/${projectId}/import/folders`, { method: "PUT", json: { images, clips } }),
+    onSuccess: () => { onDone(); if (images.trim() && clips.trim()) void q.refetch(); },
+  });
+  const noFolders = !sources?.images || !sources?.clips;
+  const q = useQuery({ queryKey: ["visual-import", projectId], queryFn: () => api<ImportPreview>(`/studio/visual/projects/${projectId}/import`), enabled: false, retry: false });
+  const job = useJob<ImportResult>("");
+  useEffect(() => { if (job.status === "done" || job.status === "error") { onDone(); void q.refetch(); } }, [job.status]);
+  const running = job.status === "running";
+  const count = q.data ? q.data.clips.willImport.length + q.data.images.willImport.length : 0;
+  return <Card className="space-y-3 p-5" data-testid="visual-import">
+    <SectionTitle>Файлы, сделанные вручную</SectionTitle>
+    <p className="text-sm text-muted-foreground">Укажите папки с исходниками этого ролика: у каждого ролика свои. Номер сцены берётся из начала имени файла: <span className="font-mono">12_….mp4</span>. Заполняются только сцены без готового результата, ваши файлы остаются на месте.</p>
+    <div className="grid gap-3 md:grid-cols-2">
+      <label className="block space-y-1"><Label>Папка картинок</Label><Input value={images} maxLength={1000} disabled={disabled || running} onChange={(e) => setImages(e.target.value)} placeholder="Например: D:\Ролики\Картинки" dir="ltr" /></label>
+      <label className="block space-y-1"><Label>Папка анимаций</Label><Input value={clips} maxLength={1000} disabled={disabled || running} onChange={(e) => setClips(e.target.value)} placeholder="Например: D:\Ролики\Анимации" dir="ltr" /></label>
+    </div>
+    <div className="flex flex-wrap gap-2">
+      <Button variant="outline" className="min-h-11" disabled={disabled || running || !dirty} loading={saveFolders.isPending} loadingText="Сохраняю…" onClick={() => saveFolders.mutate()}>Сохранить папки</Button>
+    <Button variant="outline" className="min-h-11" disabled={disabled || running || dirty || noFolders} title={dirty ? "Сначала сохраните папки" : noFolders ? "Укажите папки" : undefined} loading={q.isFetching} loadingText="Смотрю папку…" onClick={() => void q.refetch()}>Подтянуть файлы</Button>
+    </div>
+    {noFolders && <p role="alert" className="text-sm font-medium text-accent" data-testid="import-need-folders">Укажите папки картинок и анимаций этого ролика.</p>}
+    {saveFolders.error && <ErrorAlert error={saveFolders.error} />}
+    {q.error && <ErrorAlert error={q.error} />}
+    {q.data && <div className="space-y-2 rounded-lg border p-3">
+      <p className="break-all font-mono text-xs text-muted-foreground">Картинки: {q.data.imageDir}<br />Анимации: {q.data.clipDir}</p>
+      <ImportSideView title="Анимации" s={q.data.clips} />
+      <ImportSideView title="Картинки" s={q.data.images} />
+      <Button className="min-h-11" disabled={disabled || running || count === 0} onClick={() => void job.start({ channelId }, `/studio/visual/projects/${projectId}/import`)}>Подтянуть: {count} {plural(count, ["файл", "файла", "файлов"])}</Button>
+    </div>}
+    {running && <JobBox job={job} onCancel={() => void job.cancel()} note="Уже скопированные файлы сохраняются." />}
+    {job.status === "done" && job.data && <p role="status" className="text-sm text-success">Подтянуто: клипов {job.data.clips.imported}, картинок {job.data.images.imported}.</p>}
+    {job.status === "done" && job.data && [...job.data.clips.failed, ...job.data.images.failed].length > 0 && <p role="alert" className="text-sm text-accent">Не подошли (файл повреждён или не того формата): {some([...job.data.clips.failed, ...job.data.images.failed])}</p>}
+    {job.status === "error" && job.error && <ErrorAlert error={job.error} />}
+  </Card>;
+}
+
 export default function StudioVisual() {
   const [sp, setSp] = useSearchParams();
   const qc = useQueryClient();
@@ -263,7 +341,7 @@ export default function StudioVisual() {
     queryKey: ["visual", projectId], queryFn: () => api<VisualState>(`/studio/visual/projects/${projectId}`), enabled: !!projectId, retry: false,
     refetchInterval: (q) => (q.state.data?.running || jobRunning ? 3000 : false),
   });
-  const reload = () => qc.invalidateQueries({ queryKey: ["visual", projectId] });
+  const reload = () => { void qc.invalidateQueries({ queryKey: ["video-spend", projectId] }); return qc.invalidateQueries({ queryKey: ["visual", projectId] }); };
   useEffect(() => { if (prompts.status === "done" || prompts.status === "error" || render.status === "done" || render.status === "error") void reload(); }, [prompts.status, render.status]);
   const scenes = useMutation({
     mutationFn: (replace: boolean) => api(`/studio/visual/projects/${projectId}/scenes`, { method: "POST", json: { channelId: channel!.id, replace } }),
@@ -298,6 +376,8 @@ export default function StudioVisual() {
     <GlabsStatus q={glabs} />
     <VisualSettingsCard channel={channel} />
     <CastCard channel={channel} glabsOk={glabsOk} />
+    {projectId && <VideoSpendCard projectId={projectId} />}
+    {projectId && b && <ImportCard projectId={projectId} channelId={channel.id} disabled={jobRunning || !!busy} sources={b.sources} onDone={() => void reload()} />}
 
     <Card className="space-y-4 p-5">
       <SectionTitle>Проект</SectionTitle>
@@ -315,7 +395,7 @@ export default function StudioVisual() {
 
     {projectId && state.data && <>
       {external && <Card className="flex flex-wrap items-center gap-3 p-4 text-sm" role="status">
-        <span className="font-semibold">Идёт работа: {external.what === "prompts" ? "пишутся промпты" : external.what === "images" ? "G-Labs делает картинки" : "G-Labs делает клипы"}{c ? ` · картинок ${c.pics} из ${c.total}${c.animate ? `, клипов ${c.clips} из ${c.animate}` : ""}` : ""}</span>
+        <span className="font-semibold">Идёт работа: {external.what === "prompts" ? "пишутся промпты" : external.what === "images" ? "G-Labs делает картинки" : external.what === "clips" ? "G-Labs делает клипы" : "подтягиваются файлы"}{c ? ` · картинок ${c.pics} из ${c.total}${c.animate ? `, клипов ${c.clips} из ${c.animate}` : ""}` : ""}</span>
         {external.jobId && <Button variant="danger" size="sm" className="min-h-11" loading={stop.isPending} onClick={() => stop.mutate(external.jobId!)}><X className="h-4 w-4" />Остановить</Button>}
       </Card>}
 

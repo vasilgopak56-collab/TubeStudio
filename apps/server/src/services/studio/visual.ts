@@ -36,6 +36,8 @@ export type Board = {
   style: StyleKit; input: { imageModel: string; videoModel: string; clipSec: number; aspect: "16:9" | "9:16" };
   rows: Scene[]; prompts?: { model?: string; at: string; free?: boolean; notes?: string[] };
   audioArtifactId?: string; audioFile?: string; scriptArtifactId?: string; createdAt: string; updatedAt: string;
+  /** Папки с исходниками этого ролика, заданные вручную. Пусто — папка ролика по умолчанию. */
+  sources?: { images?: string; clips?: string };
 };
 const blank = (): Gen => ({ state: "none", attempts: 0 });
 const pad = (n: number) => String(n).padStart(3, "0");
@@ -93,15 +95,45 @@ async function mutateBoard(projectId: string, artifactId: string, fn: (b: Board)
 
 /** Занятые проекты: одна работа «Визуала» на проект одновременно. Номер задачи — чтобы страница
  *  после перезагрузки показала ход работы и могла её остановить. */
-type Busy = { what: "prompts" | "images" | "clips"; jobId: string | null; since: string };
+type Busy = { what: "prompts" | "images" | "clips" | "import"; jobId: string | null; since: string };
 const running = new Map<string, Busy>();
 function lock<T>(projectId: string, what: Busy["what"], fn: () => Promise<T>): Promise<T> {
   const cur = running.get(projectId);
-  if (cur) throw new ApiError("VALIDATION", `В этом проекте уже идёт работа: ${cur.what === "prompts" ? "пишутся промпты" : cur.what === "images" ? "делаются картинки" : "делаются клипы"}. Дождитесь окончания или остановите её.`, 409);
+  if (cur) throw new ApiError("VALIDATION", `В этом проекте уже идёт работа: ${cur.what === "prompts" ? "пишутся промпты" : cur.what === "images" ? "делаются картинки" : cur.what === "clips" ? "делаются клипы" : "подтягиваются файлы"}. Дождитесь окончания или остановите её.`, 409);
   running.set(projectId, { what, jobId: taskContext()?.jobId ?? null, since: new Date().toISOString() });
   return fn().finally(() => running.delete(projectId));
 }
 export const visualBusy = (projectId: string) => running.get(projectId) ?? null;
+
+/** Токенов на сцену в промптах (вход и выход) и запас: реальное списание AnyModel бывает в несколько раз выше журнала. */
+const PROMPT_TOKENS_PER_SCENE = 530, BALANCE_MARGIN = 4;
+/** Расход по ролику, балансы и сколько нужно на оставшиеся промпты. Только чтение; недоступный баланс — null, а не ноль. */
+export async function videoSpend(projectId: string) {
+  const p = await loadProject(projectId);
+  const { channelJobs } = await import("./channels.js");
+  const { getUsage } = await import("../usage.js");
+  const { getSettings } = await import("../settings.js");
+  const { amBalance, amCatalog } = await import("../anymodel.js");
+  const { lumeanAccount } = await import("./lumean.js");
+  const [u, jobs, s] = await Promise.all([getUsage(), channelJobs(), getSettings()]);
+  let usd = 0, operations = 0, unknown = 0;
+  for (const op of u.pricingV1?.operations ?? []) {
+    if (!op.jobId || jobs[op.jobId]?.projectId !== p.id) continue;
+    operations++;
+    if (op.usd === null) unknown++; else usd += op.usd;
+  }
+  const lumeanUnits = p.artifacts.filter((a) => a.kind === "audio" && (a.data as { source?: string } | undefined)?.source === "lumean").reduce((sum, a) => sum + (Number((a.data as { tokens?: number }).tokens) || 0), 0);
+  const art = boardOf(p);
+  const remainingScenes = art ? (art.data as Board).rows.filter((r) => !r.concept || r.draft).length : 0;
+  const rate = s.anymodel.usdPerMillion;
+  const [balance, catalog, account] = await Promise.all([amBalance().catch(() => null), amCatalog().catch(() => []), lumeanAccount().catch(() => null)]);
+  const coefficient = catalog.find((m) => m.id === s.anymodel.script)?.billing?.coefficient?.output;
+  const needUsd = typeof coefficient === "number" ? remainingScenes * PROMPT_TOKENS_PER_SCENE * coefficient * rate * BALANCE_MARGIN / 1e6 : null;
+  return {
+    anymodel: { spentUsd: Math.round(usd * 10_000) / 10_000, operations, unknown, balanceUsd: balance ? balance.balance * rate / 1e6 : null, needUsd, remainingScenes, model: s.anymodel.script },
+    lumean: { units: lumeanUnits, balanceLmc: account ? account.balance.reduce((sum: number, w: { value: number; locked: number }) => sum + w.value - w.locked, 0) : null },
+  };
+}
 
 // ---------- 1. сцены (бесплатно, кодом) ----------
 export const ScenesInput = z.object({
@@ -140,6 +172,7 @@ export async function buildScenes(projectId: string, raw: z.input<typeof ScenesI
   const old = boardOf(p);
   if (old) {
     const ob = old.data as Board;
+    if (ob.sources) board.sources = ob.sources;
     const made = ob.rows.some((r) => r.picture.file || r.clip.file);
     if (made && !i.replace) throw new ApiError("VALIDATION", "Для этих сцен уже есть картинки. Нарезать заново? Готовые файлы переедут в папку visual-old, привязка к сценам начнётся заново.", 409, false, { needReplace: true });
     if (made) {
@@ -183,7 +216,9 @@ export async function writePrompts(projectId: string, raw: z.input<typeof Prompt
     if (!art) throw new ApiError("VALIDATION", "Сначала нарежьте сценарий на сцены", 400);
     const b = art.data as Board;
     const want = new Set(i.scenes ?? b.rows.map((r) => r.n));
-    const targets = b.rows.filter((r) => want.has(r.n) && (!i.onlyEmpty || !r.concept));
+    // Продолжение платных промптов: черновики тоже считаются незаполненными, написанное моделью не трогаем.
+    const resume = i.onlyEmpty && !i.free;
+    const targets = b.rows.filter((r) => want.has(r.n) && (!i.onlyEmpty || !r.concept || (resume && r.draft)));
     if (!targets.length) throw new ApiError("VALIDATION", "Нет сцен для промптов", 400);
     const results = new Map<number, { concept: string; motion: string; key: boolean; cast: string[]; draft: boolean }>();
     const notes: string[] = [];
@@ -207,17 +242,27 @@ export async function writePrompts(projectId: string, raw: z.input<typeof Prompt
           const t = normalizeTags(got.concept, ch.visual.cast);
           results.set(s.n, { concept: t.concept, motion: got.motion, key: got.key, cast: t.cast, draft: false });
         }
+        // Часть оплачена: сохраняем сразу, чтобы сбой на следующей части не потерял её.
+        await mutateBoard(p.id, art.id, (d) => {
+          for (const r of d.rows) {
+            const v = part.some((s) => s.n === r.n) ? results.get(r.n) : undefined;
+            if (v) { r.concept = v.concept; r.motion = v.motion; r.cast = v.cast; r.key = v.key; r.draft = v.draft; }
+          }
+          assemble(d, kit);
+        });
       }
     }
     const keys = new Set([...results].filter(([, v]) => v.key).map(([n]) => n));
     const cap = Math.max(2, Math.round(b.rows.length * 0.3));
-    const keyList = [...keys].slice(0, cap);
+    const earlierKeys = resume ? b.rows.filter((r) => r.key && !results.has(r.n)).length : 0;
+    const keyList = [...keys].slice(0, Math.max(0, cap - earlierKeys));
     const board = await mutateBoard(p.id, art.id, (d) => {
+      const animateKeys = new Set(keyList.concat(d.rows.filter((x) => x.key && !results.has(x.n)).map((x) => x.n)));
       for (const r of d.rows) {
         const v = results.get(r.n);
-        if (!v) continue;
+        if (!v) { if (resume && !r.draft) r.animate = shouldAnimate(r.n, ch.visual, animateKeys); continue; }
         r.concept = v.concept; r.motion = v.motion; r.cast = v.cast; r.key = keyList.includes(r.n); r.draft = v.draft;
-        r.animate = shouldAnimate(r.n, ch.visual, i.free ? null : new Set(keyList.concat(d.rows.filter((x) => x.key && !results.has(x.n)).map((x) => x.n))));
+        r.animate = shouldAnimate(r.n, ch.visual, i.free ? null : animateKeys);
       }
       assemble(d, kit);
       d.input = { imageModel: ch.visual.imageModel, videoModel: ch.visual.videoModel, clipSec: ch.visual.clipSec, aspect: ch.visual.aspect };
@@ -474,6 +519,133 @@ export async function exportBoard(projectId: string, kind: ExportKind) {
   const b = art.data as Board;
   await writeExports(p.id, b).catch(() => {});
   return { body: exportBody(b, kind), name: kind === "images.txt" ? "prompts_images.txt" : kind === "motion.txt" ? "prompts_motion.txt" : "scenes.json" };
+}
+
+// ---------- папка ролика: картинки и клипы, сделанные вручную ----------
+const CLIP_FILE = /\.mp4$/i, IMAGE_FILE = /\.(png|jpe?g|webp)$/i, SERVICE_FILE = /^(thumbs\.db|desktop\.ini)$/i;
+export type ImportFile = { name: string; bytes: number };
+export type ImportMatch = { ok: { n: number; name: string; bytes: number }[]; noNumber: string[]; outOfRange: string[]; duplicates: { n: number; names: string[] }[]; empty: string[]; otherType: string[] };
+/** Номер сцены — число в начале имени (`12_…`, `012.jpg`). Файл с повторяющимся номером не берётся: неизвестно, какой из них верный. */
+export function matchImportFiles(files: ImportFile[], type: RegExp, total: number): ImportMatch {
+  const out: ImportMatch = { ok: [], noNumber: [], outOfRange: [], duplicates: [], empty: [], otherType: [] };
+  const byN = new Map<number, ImportFile[]>();
+  for (const f of files) {
+    if (SERVICE_FILE.test(f.name)) continue;
+    if (!type.test(f.name)) { out.otherType.push(f.name); continue; }
+    const m = /^(\d+)(?=[\s_.\-])/.exec(f.name);
+    if (!m) { out.noNumber.push(f.name); continue; }
+    const n = Number(m[1]);
+    if (n < 1 || n > total) { out.outOfRange.push(f.name); continue; }
+    if (f.bytes < 100) { out.empty.push(f.name); continue; }
+    byN.set(n, [...(byN.get(n) ?? []), f]);
+  }
+  for (const [n, list] of [...byN].sort((a, z) => a[0] - z[0])) {
+    if (list.length > 1) out.duplicates.push({ n, names: list.map((f) => f.name) });
+    else out.ok.push({ n, name: list[0].name, bytes: list[0].bytes });
+  }
+  return out;
+}
+async function listFiles(dir: string): Promise<ImportFile[]> {
+  const out: ImportFile[] = [];
+  for (const e of await fs.readdir(dir, { withFileTypes: true })) {
+    if (e.isFile()) out.push({ name: e.name, bytes: (await fs.stat(path.join(dir, e.name))).size });
+  }
+  return out;
+}
+async function assertFolder(dir: string) {
+  const ok = await fs.stat(dir).then((s) => s.isDirectory(), () => false);
+  if (!ok) throw new ApiError("VALIDATION", `Папка не найдена: ${dir}. Проверьте адрес и что диск подключён.`, 400);
+}
+/** Адрес из проводника: «Копировать как путь» даёт его в кавычках. */
+const cleanFolder = (s: string) => s.trim().replace(/^["'«“]+|["'»”]+$/g, "").trim();
+export const ImportFoldersInput = z.object({ images: z.string().max(1000), clips: z.string().max(1000) }).strict();
+/** Сохраняет папки с исходниками этого ролика. Пустое поле очищает адрес: файлы не берутся, пока он не указан. */
+export async function saveImportFolders(projectId: string, raw: z.input<typeof ImportFoldersInput>) {
+  const i = ImportFoldersInput.parse(raw);
+  if (running.has(projectId)) throw new ApiError("VALIDATION", "В проекте идёт работа «Визуала». Дождитесь окончания.", 409);
+  const images = cleanFolder(i.images), clips = cleanFolder(i.clips);
+  for (const dir of [images, clips].filter(Boolean)) {
+    if (!path.isAbsolute(dir)) throw new ApiError("VALIDATION", `Укажите полный адрес папки, например D:\\Видео\\Клипы. Сейчас: ${dir}`, 400);
+    await assertFolder(dir);
+  }
+  const art = boardOf(await loadProject(projectId));
+  if (!art) throw new ApiError("VALIDATION", "Сначала нарежьте сценарий на сцены", 400);
+  const sources = { ...(images ? { images } : {}), ...(clips ? { clips } : {}) };
+  await mutateBoard(projectId, art.id, (d) => { d.sources = sources; });
+  return { sources };
+}
+/** Исходные файлы программа только читает. Папки свои у каждого ролика и из других роликов не берутся. */
+async function scanVideoFolder(projectId: string) {
+  const p = await loadProject(projectId);
+  const art = boardOf(p);
+  if (!art) throw new ApiError("VALIDATION", "Сначала нарежьте сценарий на сцены", 400);
+  const b = art.data as Board;
+  const imageDir = b.sources?.images, clipDir = b.sources?.clips;
+  if (!imageDir || !clipDir) throw new ApiError("VALIDATION", "Укажите папки картинок и анимаций этого ролика.", 400);
+  await assertFolder(imageDir);
+  await assertFolder(clipDir);
+  const total = b.rows.length;
+  return { p, art, b, imageDir, clipDir, clips: matchImportFiles(await listFiles(clipDir), CLIP_FILE, total), images: matchImportFiles(await listFiles(imageDir), IMAGE_FILE, total) };
+}
+const importSide = (b: Board, m: ImportMatch, kind: "clip" | "picture") => {
+  const done = new Set(b.rows.filter((r) => r[kind].state === "done").map((r) => r.n)), found = new Set(m.ok.map((x) => x.n));
+  return { found: m.ok.length, willImport: m.ok.filter((x) => !done.has(x.n)).map((x) => x.n), alreadyDone: m.ok.filter((x) => done.has(x.n)).map((x) => x.n), missing: b.rows.filter((r) => r[kind].state !== "done" && !found.has(r.n)).map((r) => r.n), noNumber: m.noNumber, outOfRange: m.outOfRange, duplicates: m.duplicates, empty: m.empty, otherType: m.otherType };
+};
+/** Что лежит в папке ролика и что будет подтянуто. Файлы проекта не меняются. */
+export async function importPreview(projectId: string) {
+  const s = await scanVideoFolder(projectId);
+  return { imageDir: s.imageDir, clipDir: s.clipDir, total: s.b.rows.length, clips: importSide(s.b, s.clips, "clip"), images: importSide(s.b, s.images, "picture") };
+}
+async function mediaHeaderOk(file: string, kind: "clip" | "picture") {
+  const h = await fs.open(file, "r");
+  try {
+    const b = Buffer.alloc(12);
+    await h.read(b, 0, 12, 0);
+    if (kind === "clip") return b.toString("latin1", 4, 8) === "ftyp";
+    return (b[0] === 0xff && b[1] === 0xd8) || b.toString("latin1", 1, 4) === "PNG" || (b.toString("latin1", 0, 4) === "RIFF" && b.toString("latin1", 8, 12) === "WEBP");
+  } finally { await h.close(); }
+}
+export const ImportInput = z.object({ channelId: z.string().uuid() }).strict();
+/** Копирует файлы только в сцены, где ещё нет готового результата. Запросов к платным сервисам нет. */
+export async function runImport(projectId: string, ctx: JobCtx) {
+  return lock(projectId, "import", async () => {
+    const s = await scanVideoFolder(projectId);
+    const clipTodo = new Set(importSide(s.b, s.clips, "clip").willImport), imageTodo = new Set(importSide(s.b, s.images, "picture").willImport);
+    const items = [
+      ...s.images.ok.filter((x) => imageTodo.has(x.n)).map((x) => ({ ...x, kind: "picture" as const, src: path.join(s.imageDir, x.name) })),
+      ...s.clips.ok.filter((x) => clipTodo.has(x.n)).map((x) => ({ ...x, kind: "clip" as const, src: path.join(s.clipDir, x.name) })),
+    ];
+    const dir = dataPath("files", safeId(s.p.id), "visual");
+    await fs.mkdir(dir, { recursive: true });
+    const result = { clips: { imported: 0, failed: [] as string[] }, images: { imported: 0, failed: [] as string[] } };
+    for (const [k, item] of items.entries()) {
+      checkCancelled();
+      ctx.progress(`Подтягиваю файлы: ${k + 1} из ${items.length}`, Math.round((k / Math.max(1, items.length)) * 98));
+      const side = item.kind === "clip" ? result.clips : result.images;
+      const ext = path.extname(item.name).toLowerCase().replace(".jpeg", ".jpg");
+      const name = item.kind === "clip" ? `${pad(item.n)}_anim.mp4` : `${pad(item.n)}${ext}`;
+      const dest = path.join(dir, name), part = `${dest}.part`;
+      try {
+        await fs.copyFile(item.src, part);
+        if ((await fs.stat(part)).size !== item.bytes || !(await mediaHeaderOk(part, item.kind))) throw new Error("bad file");
+        await fs.rename(part, dest);
+      } catch (e) {
+        rethrowCancelled(e);
+        await fs.rm(part, { force: true }).catch(() => {});
+        side.failed.push(item.name);
+        continue;
+      }
+      await mutateBoard(s.p.id, s.art.id, (d) => {
+        const g = d.rows.find((r) => r.n === item.n)?.[item.kind];
+        if (g) { g.state = "done"; g.file = `visual/${name}`; g.taskId = undefined; g.error = undefined; g.verdict = undefined; g.reason = undefined; g.at = new Date().toISOString(); }
+      });
+      side.imported++;
+    }
+    const latest = (await loadProject(projectId)).artifacts.find((a) => a.id === s.art.id);
+    if (latest) await writeExports(s.p.id, latest.data as Board).catch(() => {});
+    ctx.progress("Готово", 100);
+    return result;
+  });
 }
 
 // ---------- персонажи и локации канала: эталоны ----------

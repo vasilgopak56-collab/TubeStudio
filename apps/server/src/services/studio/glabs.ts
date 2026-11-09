@@ -106,7 +106,7 @@ export async function submitImage(r: ImageRequest, base?: string): Promise<strin
   return taskIdOf(await call("POST", "/api/image/generate", { use_characters: false, auto_fix_prompt: true, ...r }, { base, timeoutMs: 120_000 }));
 }
 export async function submitVideo(r: VideoRequest, base?: string): Promise<string> {
-  return taskIdOf(await call("POST", "/api/video/generate", { use_characters: false, auto_fix_prompt: true, resolution: ["720p"], ...r }, { base, timeoutMs: 120_000 }));
+  return taskIdOf(await call("POST", "/api/video/generate", { use_characters: false, auto_fix_prompt: true, resolution: ["1080p"], ...r }, { base, timeoutMs: 120_000 }));
 }
 
 export type GlabsTask = { task_id: string; status: "pending" | "running" | "completed" | "failed" | string; results?: string[]; error_code?: number; error?: string; error_detail?: string; final_prompt?: string; prompt_rewrites?: number };

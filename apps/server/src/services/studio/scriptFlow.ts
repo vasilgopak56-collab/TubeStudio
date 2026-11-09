@@ -4,10 +4,10 @@
 // здесь — профиль канала, разбор донора, проверка, критик и правка. Всё сохраняется в проект.
 import { z } from "zod";
 import { ApiError, rethrowFinancial } from "../../lib/errors.js";
-import { rethrowCancelled } from "../../lib/taskContext.js";
+import { rethrowCancelled, taskContext } from "../../lib/taskContext.js";
 import type { JobCtx } from "../../lib/jobs.js";
 import { log } from "../../lib/logging.js";
-import { assertChannelBudget, getChannel, type Channel } from "./channels.js";
+import { assertChannelBudget, getChannel, linkJobToChannel, type Channel } from "./channels.js";
 import { lintScript, DEFAULT_WPM, type LintReport } from "./scriptLint.js";
 import { checkFacts, dossierBrief, type FactCheckReport } from "./factCheck.js";
 
@@ -135,6 +135,9 @@ export async function runStudioScript(raw: StudioScriptInputT, ctx: JobCtx): Pro
     ...ctx,
     progress: (stage, pct) => ctx.progress(stage, 5 + Math.round(pct * 0.55)),
   });
+  // Проект мог создаться только сейчас: привязываем задачу к нему для расхода по ролику.
+  const scriptJobId = taskContext()?.jobId;
+  if (scriptJobId) await linkJobToChannel(scriptJobId, ch.id, "script", draft.projectId).catch(() => {});
   const authorModel = draft.model || author;
   const authorFamily = modelFamily(authorModel);
 

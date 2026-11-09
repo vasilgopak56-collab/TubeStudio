@@ -11,7 +11,7 @@ import { FactCheckJobInput, StudioScriptInput, lintForChannel, runFactCheck, run
 import { lintScript } from "../services/studio/scriptLint.js";
 import { TemplateQuery, VoiceOrderInput, VoiceQuery, estimateVoice, getTemplate, listTemplates, listVoices, lumeanAccount, lumeanOrders, runVoice } from "../services/studio/lumean.js";
 import { checkGlabs } from "../services/studio/glabs.js";
-import { PromptsInput, REDO_REASONS, RenderInput, buildScenes, editScene, exportBoard, generateCastImage, runRender, saveCastImage, syncCast, visualBusy, visualState, writePrompts, type ExportKind } from "../services/studio/visual.js";
+import { ImportInput, PromptsInput, REDO_REASONS, RenderInput, buildScenes, editScene, exportBoard, generateCastImage, importPreview, runImport, runRender, saveCastImage, saveImportFolders, syncCast, videoSpend, visualBusy, visualState, writePrompts, type ExportKind } from "../services/studio/visual.js";
 
 export const studioRoute = new Hono();
 const tooBig = (c: Context) => c.json({ ok: false, error: { code: "VALIDATION", message: "Слишком большой запрос" } }, 413);
@@ -24,9 +24,9 @@ const handle = (fn: (c: Context) => Promise<unknown>) => async (c: Context) => {
 const Id = z.string().uuid("Неверный номер канала");
 const VideoId = z.string().regex(/^[\w-]{11}$/, "Неверный номер ролика");
 /** Задача помечается каналом: расходы делятся между каналами. */
-const job = async (channelId: string, kind: string, fn: Parameters<typeof startJob>[0]) => {
+const job = async (channelId: string, kind: string, fn: Parameters<typeof startJob>[0], projectId?: string) => {
   const jobId = startJob(fn);
-  await linkJobToChannel(jobId, channelId, kind).catch(() => {});
+  await linkJobToChannel(jobId, channelId, kind, projectId).catch(() => {});
   return { jobId };
 };
 
@@ -99,7 +99,7 @@ studioRoute.post("/studio/script/factcheck", handle(async (c) => {
     const p = await getProject(i.projectId);
     if (!p.artifacts.some((a) => a.kind === "script" && (!i.artifactId || a.id === i.artifactId))) throw new ApiError("NOT_FOUND", "Сценарий в проекте не найден", 404);
   }
-  return job(i.channelId, "factcheck", (ctx) => runFactCheck(i, ctx));
+  return job(i.channelId, "factcheck", (ctx) => runFactCheck(i, ctx), i.projectId);
 }));
 studioRoute.post("/studio/script", handle(async (c) => {
   const i = StudioScriptInput.parse(await body(c));
@@ -129,7 +129,7 @@ studioRoute.post("/studio/voice/estimate", handle(async (c) => {
 studioRoute.post("/studio/voice", handle(async (c) => {
   const i = VoiceOrderInput.parse(await body(c));
   await getChannel(i.channelId);
-  return job(i.channelId, "voice", (ctx) => runVoice(i, ctx));
+  return job(i.channelId, "voice", (ctx) => runVoice(i, ctx), i.projectId);
 }));
 studioRoute.get("/studio/voice/orders", handle(async () => ({ orders: (await lumeanOrders()).slice(0, 100) })));
 studioRoute.get("/studio/voice/templates", handle(async (c) => listTemplates({
@@ -144,6 +144,17 @@ const CastName = z.string().regex(/^[A-Za-z][A-Za-z0-9]{2,31}$/, "Неверно
 const pid = (c: Context) => ProjectId.parse(c.req.param("projectId"));
 studioRoute.get("/studio/visual/glabs", handle(async () => checkGlabs()));
 studioRoute.get("/studio/visual/projects/:projectId", handle(async (c) => ({ ...(await visualState(pid(c))), reasons: REDO_REASONS })));
+/** Папка ролика: что найдено; подтягивание — задачей, без платных запросов. */
+studioRoute.get("/studio/visual/projects/:projectId/import", handle(async (c) => importPreview(pid(c))));
+studioRoute.put("/studio/visual/projects/:projectId/import/folders", handle(async (c) => saveImportFolders(pid(c), (await body(c)) as never)));
+studioRoute.post("/studio/visual/projects/:projectId/import", handle(async (c) => {
+  const id = pid(c), i = ImportInput.parse(await body(c));
+  await getChannel(i.channelId);
+  if (visualBusy(id)) throw new ApiError("VALIDATION", "В этом проекте уже идёт работа «Визуала». Дождитесь окончания.", 409);
+  return job(i.channelId, "visual-import", (ctx) => runImport(id, ctx), id);
+}));
+/** Расход по ролику и балансы: только чтение, платных запросов нет. */
+studioRoute.get("/studio/visual/projects/:projectId/spend", handle(async (c) => videoSpend(pid(c))));
 /** Нарезка на сцены — бесплатно, кодом. */
 studioRoute.post("/studio/visual/projects/:projectId/scenes", handle(async (c) => buildScenes(pid(c), (await body(c)) as never)));
 /** Промпты: черновик бесплатно и сразу; моделью — платно, задачей с подтверждением цены. */
@@ -152,7 +163,7 @@ studioRoute.post("/studio/visual/projects/:projectId/prompts", handle(async (c) 
   await getChannel(i.channelId);
   if (i.free) return { result: await writePrompts(id, i) };
   if (visualBusy(id)) throw new ApiError("VALIDATION", "В этом проекте уже идёт работа «Визуала». Дождитесь окончания.", 409);
-  return job(i.channelId, "visual-prompts", (ctx) => writePrompts(id, i, ctx));
+  return job(i.channelId, "visual-prompts", (ctx) => writePrompts(id, i, ctx), id);
 }));
 studioRoute.patch("/studio/visual/projects/:projectId/scenes/:n", handle(async (c) => {
   const n = z.coerce.number().int().min(1).max(5000).parse(c.req.param("n"));
@@ -163,7 +174,7 @@ studioRoute.post("/studio/visual/projects/:projectId/render", handle(async (c) =
   const id = pid(c), i = RenderInput.parse(await body(c));
   await getChannel(i.channelId);
   if (visualBusy(id)) throw new ApiError("VALIDATION", "В этом проекте уже идёт работа «Визуала». Дождитесь окончания или остановите её.", 409);
-  return job(i.channelId, i.what === "images" ? "visual-images" : "visual-clips", (ctx) => runRender(id, i, ctx));
+  return job(i.channelId, i.what === "images" ? "visual-images" : "visual-clips", (ctx) => runRender(id, i, ctx), id);
 }));
 studioRoute.get("/studio/visual/projects/:projectId/export/:kind", async (c) => {
   try {

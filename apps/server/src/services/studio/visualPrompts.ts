@@ -99,7 +99,10 @@ export async function modelPrompts(o: {
   ].filter(Boolean).join("\n\n");
   const maxTokens = Math.min(12_000, 900 + o.scenes.length * 380);
   if (promptAi) { const r = await promptAi({ system: PROMPT_SYSTEM, user, maxTokens }); return { items: Out.parse(r.data).scenes, model: r.model }; }
-  const r = await generateJson({ system: PROMPT_SYSTEM, user, maxTokens, temperature: 0.6 }, Out);
+  // Промпты пишет модель сценариста, без подмены резервной: при сбое задание останавливается, готовые части сохранены.
+  const { getSettings } = await import("../settings.js");
+  const model = (await getSettings()).anymodel.script;
+  const r = await generateJson({ system: PROMPT_SYSTEM, user, maxTokens, temperature: 0.6, model, noFallback: true, singleAttempt: true }, Out);
   return { items: r.data.scenes, model: r.model };
 }
 

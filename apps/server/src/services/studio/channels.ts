@@ -204,12 +204,13 @@ export function activateChannel(id: string): Promise<Channel> {
 
 /** Задача → канал: по ней журнал расходов делится между каналами. */
 const SPEND_FILE = "studio/channel-jobs.json";
-type JobMap = { version: 1; jobs: Record<string, { channelId: string; at: string; kind: string }> };
+type JobMap = { version: 1; jobs: Record<string, { channelId: string; at: string; kind: string; projectId?: string }> };
 let jobQueue: Promise<unknown> = Promise.resolve();
-export function linkJobToChannel(jobId: string, channelId: string, kind: string) {
+export function linkJobToChannel(jobId: string, channelId: string, kind: string, projectId?: string) {
   const run = jobQueue.then(async () => {
     const m = await readJson<JobMap>(SPEND_FILE, { version: 1, jobs: {} });
-    m.jobs[jobId] = { channelId, at: new Date().toISOString(), kind };
+    const known = projectId ?? m.jobs[jobId]?.projectId;
+    m.jobs[jobId] = { channelId, at: new Date().toISOString(), kind, ...(known ? { projectId: known } : {}) };
     // Храним 6 месяцев: старые записи журнала расходов всё равно сбрасываются помесячно.
     const cutoff = Date.now() - 186 * 86400_000;
     for (const [k, v] of Object.entries(m.jobs)) if (Date.parse(v.at) < cutoff) delete m.jobs[k];

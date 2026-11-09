@@ -217,6 +217,7 @@ export default function StudioVoice() {
       {estimate.error && <ErrorAlert error={estimate.error} />}
       {estimate.data && <div className="space-y-2 rounded-lg border p-3 text-sm" data-testid="voice-estimate">
         <p>{estimate.data.chars.toLocaleString("ru-RU")} символов · {estimate.data.paragraphs} абз. · режим «{estimate.data.mode === "whole" ? "одним заказом" : "по абзацам"}»{summary.total_chunks ?? summary.chunks_count ? ` · частей: ${summary.total_chunks ?? summary.chunks_count}` : ""}{summary.cost_lmc !== undefined ? ` · стоимость ≈ ${summary.cost_lmc} LMC` : ""}</p>
+        {summary.cost_lmc !== undefined && estimate.data.account?.balance?.length && estimate.data.account.balance.reduce((a, w) => a + w.value - w.locked, 0) < Number(summary.cost_lmc) ? <p role="alert" className="font-medium text-accent" data-testid="voice-balance-short">На балансе Lumean меньше, чем нужно для этой озвучки. Пополните счёт перед заказом.</p> : null}
         {estimate.data.preview?.error && <p className="text-muted-foreground">Оценка Lumean недоступна: {estimate.data.preview.error}</p>}
         {estimate.data.preview?.status === "processing" && <p className="text-muted-foreground">Lumean ещё считает длинный текст — оценка появится при следующем нажатии.</p>}
         {summary.has_blocked_content && <p className="text-accent">Часть текста уже отклонялась политикой сервиса (фрагменты {summary.blocked_chunks?.join(", ")}). Перефразируйте эти места до озвучки.</p>}
