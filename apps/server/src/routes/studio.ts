@@ -11,6 +11,7 @@ import { FactCheckJobInput, StudioScriptInput, lintForChannel, runFactCheck, run
 import { lintScript } from "../services/studio/scriptLint.js";
 import { TemplateQuery, VoiceOrderInput, VoiceQuery, estimateVoice, getTemplate, listTemplates, listVoices, lumeanAccount, lumeanOrders, runVoice } from "../services/studio/lumean.js";
 import { checkGlabs } from "../services/studio/glabs.js";
+import { checkMontage } from "../services/studio/montageCheck.js";
 import { ImportInput, PromptsInput, REDO_REASONS, RenderInput, buildScenes, editScene, exportBoard, generateCastImage, importPreview, listFolders, runImport, runRender, saveCastImage, saveImportFolders, syncCast, videoSpend, visualBusy, visualState, writePrompts, type ExportKind } from "../services/studio/visual.js";
 
 export const studioRoute = new Hono();
@@ -185,6 +186,9 @@ studioRoute.get("/studio/visual/projects/:projectId/export/:kind", async (c) => 
     return c.body(text, 200, { "content-type": kind === "scenes.json" ? "application/json; charset=utf-8" : "text/plain; charset=utf-8", "content-disposition": `attachment; filename="${name}"` });
   } catch (e) { return fail(c, e); }
 });
+
+/** Автомонтаж: проверка файлов перед сборкой. Только чтение, платных запросов нет. */
+studioRoute.get("/studio/montage/projects/:projectId/check", handle(async (c) => checkMontage(pid(c))));
 
 // ---------- персонажи и локации канала: эталоны ----------
 studioRoute.post("/studio/channels/:id/cast/:name/image", handle(async (c) => {
