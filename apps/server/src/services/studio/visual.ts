@@ -556,6 +556,28 @@ async function assertFolder(dir: string) {
   const ok = await fs.stat(dir).then((s) => s.isDirectory(), () => false);
   if (!ok) throw new ApiError("VALIDATION", `Папка не найдена: ${dir}. Проверьте адрес и что диск подключён.`, 400);
 }
+const HIDDEN_FOLDER = /^(\$recycle\.bin|system volume information|recovery|config\.msi)$/i;
+export type FolderEntry = { name: string; path: string };
+/** Дерево папок для выбора источника: только имена папок, файлы не показываются. Без адреса — список дисков. */
+export async function listFolders(raw?: string): Promise<{ path: string; folders: FolderEntry[]; denied: boolean }> {
+  const dir = cleanFolder(raw ?? "");
+  if (!dir) {
+    if (process.platform !== "win32") return { path: "", folders: [{ name: "/", path: "/" }], denied: false };
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((l) => `${l}:\\`);
+    const found = await Promise.all(letters.map((d) => fs.stat(d).then(() => d, () => null)));
+    return { path: "", folders: found.filter((d): d is string => !!d).map((d) => ({ name: d.slice(0, 2), path: d })), denied: false };
+  }
+  if (!path.isAbsolute(dir)) throw new ApiError("VALIDATION", "Нужен полный адрес папки.", 400);
+  try {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    const folders = entries.filter((e) => e.isDirectory() && !HIDDEN_FOLDER.test(e.name)).map((e) => ({ name: e.name, path: path.join(dir, e.name) })).sort((a, z) => a.name.localeCompare(z.name, "ru"));
+    return { path: dir, folders, denied: false };
+  } catch (e) {
+    const code = (e as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "ENOTDIR") throw new ApiError("VALIDATION", `Папка не найдена: ${dir}`, 400);
+    return { path: dir, folders: [], denied: true };
+  }
+}
 /** Адрес из проводника: «Копировать как путь» даёт его в кавычках. */
 const cleanFolder = (s: string) => s.trim().replace(/^["'«“]+|["'»”]+$/g, "").trim();
 export const ImportFoldersInput = z.object({ images: z.string().max(1000), clips: z.string().max(1000) }).strict();

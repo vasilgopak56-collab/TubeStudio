@@ -138,6 +138,29 @@ test("неверный адрес не сохраняется, пустые по
   await assert.rejects(V.importPreview(p.id), /Укажите папки/);
 });
 
+test("дерево папок: только папки, по алфавиту, без файлов и служебных папок", async () => {
+  const base = path.join(dir, "дерево");
+  await fs.mkdir(path.join(base, "Яблоки"), { recursive: true });
+  await fs.mkdir(path.join(base, "Апельсины"), { recursive: true });
+  await fs.mkdir(path.join(base, "System Volume Information"), { recursive: true });
+  await fs.writeFile(path.join(base, "файл.mp4"), MP4);
+  const r = await V.listFolders(base);
+  assert.equal(r.denied, false);
+  assert.deepEqual(r.folders, [{ name: "Апельсины", path: path.join(base, "Апельсины") }, { name: "Яблоки", path: path.join(base, "Яблоки") }]);
+});
+
+test("дерево папок: диски без адреса, неверный адрес понятно отклоняется", async () => {
+  const drives = await V.listFolders();
+  assert.equal(drives.path, "");
+  assert.ok(drives.folders.length > 0);
+  assert.ok(drives.folders.every((d) => path.isAbsolute(d.path)));
+  await assert.rejects(V.listFolders("относительная\\папка"), /полный адрес/);
+  await assert.rejects(V.listFolders(path.join(dir, "нет-такой")), /Папка не найдена/);
+  const file = path.join(dir, "просто-файл.txt");
+  await fs.writeFile(file, "x");
+  await assert.rejects(V.listFolders(file), /Папка не найдена/);
+});
+
 test("файл не того содержимого не подтягивается и называется в итоге", async () => {
   await fs.writeFile(path.join(clipDir, "3_broken.mp4"), Buffer.alloc(300, 1));
   const r = await V.runImport(projectId, ctx);

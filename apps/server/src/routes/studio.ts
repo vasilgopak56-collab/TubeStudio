@@ -11,7 +11,7 @@ import { FactCheckJobInput, StudioScriptInput, lintForChannel, runFactCheck, run
 import { lintScript } from "../services/studio/scriptLint.js";
 import { TemplateQuery, VoiceOrderInput, VoiceQuery, estimateVoice, getTemplate, listTemplates, listVoices, lumeanAccount, lumeanOrders, runVoice } from "../services/studio/lumean.js";
 import { checkGlabs } from "../services/studio/glabs.js";
-import { ImportInput, PromptsInput, REDO_REASONS, RenderInput, buildScenes, editScene, exportBoard, generateCastImage, importPreview, runImport, runRender, saveCastImage, saveImportFolders, syncCast, videoSpend, visualBusy, visualState, writePrompts, type ExportKind } from "../services/studio/visual.js";
+import { ImportInput, PromptsInput, REDO_REASONS, RenderInput, buildScenes, editScene, exportBoard, generateCastImage, importPreview, listFolders, runImport, runRender, saveCastImage, saveImportFolders, syncCast, videoSpend, visualBusy, visualState, writePrompts, type ExportKind } from "../services/studio/visual.js";
 
 export const studioRoute = new Hono();
 const tooBig = (c: Context) => c.json({ ok: false, error: { code: "VALIDATION", message: "Слишком большой запрос" } }, 413);
@@ -146,6 +146,8 @@ studioRoute.get("/studio/visual/glabs", handle(async () => checkGlabs()));
 studioRoute.get("/studio/visual/projects/:projectId", handle(async (c) => ({ ...(await visualState(pid(c))), reasons: REDO_REASONS })));
 /** Папка ролика: что найдено; подтягивание — задачей, без платных запросов. */
 studioRoute.get("/studio/visual/projects/:projectId/import", handle(async (c) => importPreview(pid(c))));
+/** Дерево папок компьютера для выбора источников: только имена папок. */
+studioRoute.get("/studio/folders", handle(async (c) => listFolders(c.req.query("path"))));
 studioRoute.put("/studio/visual/projects/:projectId/import/folders", handle(async (c) => saveImportFolders(pid(c), (await body(c)) as never)));
 studioRoute.post("/studio/visual/projects/:projectId/import", handle(async (c) => {
   const id = pid(c), i = ImportInput.parse(await body(c));

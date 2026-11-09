@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Clapperboard, Download, ImagePlus, Plus, RefreshCw, Trash2, Upload, Wand2, X } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronRight, Clapperboard, Download, Folder, ImagePlus, Plus, RefreshCw, Trash2, Upload, Wand2, X } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { useJob } from "@/lib/jobs";
 import type { ProjectSummary } from "@/lib/types";
@@ -283,17 +283,53 @@ function ImportSideView({ title, s }: { title: string; s: ImportSide }) {
     {s.otherType.length > 0 && <p className="text-xs text-crown">Другой формат, не подтянуты: {some(s.otherType)}</p>}
   </div>;
 }
-/** Файлы, сделанные вручную: программа находит их по номеру сцены в папке ролика. */
+type FolderList = { path: string; folders: { name: string; path: string }[]; denied: boolean };
+const folderQuery = (p: string) => ({ queryKey: ["folders", p], queryFn: () => api<FolderList>(`/studio/folders${p ? `?path=${encodeURIComponent(p)}` : ""}`), retry: false, staleTime: 10_000 });
+/** Ветка дерева: вложенные папки читаются только при раскрытии. */
+function FolderBranch({ name, path, selected, onSelect }: { name: string; path: string; selected: string; onSelect: (p: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const q = useQuery({ ...folderQuery(path), enabled: open });
+  return <li>
+    <div className={`flex items-center gap-1 rounded ${selected === path ? "bg-primary/20" : "hover:bg-muted"}`}>
+      <button type="button" aria-label={open ? `Свернуть ${name}` : `Раскрыть ${name}`} className="grid h-8 w-8 shrink-0 place-items-center" onClick={() => setOpen(!open)}>{open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</button>
+      <button type="button" className="flex min-h-8 min-w-0 flex-1 items-center gap-2 py-1 text-left text-sm" onClick={() => onSelect(path)} onDoubleClick={() => setOpen(!open)}><Folder className="h-4 w-4 shrink-0 text-primary" /><span className="truncate">{name}</span></button>
+    </div>
+    {open && <div className="ml-4 border-l pl-1">
+      {q.isLoading && <p className="px-2 py-1 text-xs text-muted-foreground">Открываю…</p>}
+      {q.error && <p className="px-2 py-1 text-xs text-accent">{(q.error as Error).message}</p>}
+      {q.data?.denied && <p className="px-2 py-1 text-xs text-muted-foreground">Нет доступа к этой папке</p>}
+      {q.data && !q.data.denied && q.data.folders.length === 0 && <p className="px-2 py-1 text-xs text-muted-foreground">Вложенных папок нет</p>}
+      {q.data && q.data.folders.length > 0 && <ul>{q.data.folders.map((f) => <FolderBranch key={f.path} name={f.name} path={f.path} selected={selected} onSelect={onSelect} />)}</ul>}
+    </div>}
+  </li>;
+}
+/** Окно выбора папки по дереву компьютера. */
+function FolderPicker({ title, onPick, onClose }: { title: string; onPick: (p: string) => void; onClose: () => void }) {
+  const [selected, setSelected] = useState("");
+  const drives = useQuery(folderQuery(""));
+  useEffect(() => { const esc = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); }; window.addEventListener("keydown", esc); return () => window.removeEventListener("keydown", esc); }, [onClose]);
+  return <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4" onClick={(e) => e.target === e.currentTarget && onClose()} role="dialog" aria-modal="true" aria-label={title} data-testid="folder-picker">
+    <Card className="flex max-h-[85vh] w-full max-w-xl flex-col gap-3 p-5">
+      <div className="flex items-center justify-between gap-2"><SectionTitle>{title}</SectionTitle><Button size="sm" variant="ghost" aria-label="Закрыть" onClick={onClose}><X className="h-4 w-4" /></Button></div>
+      <div className="min-h-[260px] flex-1 overflow-auto rounded-lg border p-2">
+        {drives.isLoading && <p className="p-2 text-sm text-muted-foreground">Ищу диски…</p>}
+        {drives.error && <ErrorAlert error={drives.error} />}
+        {drives.data && <ul>{drives.data.folders.map((f) => <FolderBranch key={f.path} name={f.name} path={f.path} selected={selected} onSelect={setSelected} />)}</ul>}
+      </div>
+      <p className="min-h-5 break-all font-mono text-xs text-muted-foreground">{selected || "Щёлкните по папке"}</p>
+      <div className="flex justify-end gap-2"><Button variant="outline" className="min-h-11" onClick={onClose}>Отмена</Button><Button className="min-h-11" disabled={!selected} onClick={() => onPick(selected)}>Выбрать эту папку</Button></div>
+    </Card>
+  </div>;
+}
+/** Файлы, сделанные вручную: программа находит их по номеру сцены в папках этого ролика. */
 function ImportCard({ projectId, channelId, disabled, sources, onDone }: { projectId: string; channelId: string; disabled: boolean; sources?: { images?: string; clips?: string }; onDone: () => void }) {
-  const [images, setImages] = useState(sources?.images ?? "");
-  const [clips, setClips] = useState(sources?.clips ?? "");
-  useEffect(() => { setImages(sources?.images ?? ""); setClips(sources?.clips ?? ""); }, [projectId, sources?.images, sources?.clips]);
-  const dirty = images !== (sources?.images ?? "") || clips !== (sources?.clips ?? "");
+  const images = sources?.images ?? "", clips = sources?.clips ?? "";
+  const [picking, setPicking] = useState<"images" | "clips" | null>(null);
   const saveFolders = useMutation({
-    mutationFn: () => api(`/studio/visual/projects/${projectId}/import/folders`, { method: "PUT", json: { images, clips } }),
-    onSuccess: () => { onDone(); if (images.trim() && clips.trim()) void q.refetch(); },
+    mutationFn: (next: { images: string; clips: string }) => api(`/studio/visual/projects/${projectId}/import/folders`, { method: "PUT", json: next }),
+    onSuccess: (_d, next) => { onDone(); if (next.images && next.clips) void q.refetch(); },
   });
-  const noFolders = !sources?.images || !sources?.clips;
+  const noFolders = !images || !clips;
   const q = useQuery({ queryKey: ["visual-import", projectId], queryFn: () => api<ImportPreview>(`/studio/visual/projects/${projectId}/import`), enabled: false, retry: false });
   const job = useJob<ImportResult>("");
   useEffect(() => { if (job.status === "done" || job.status === "error") { onDone(); void q.refetch(); } }, [job.status]);
@@ -303,12 +339,14 @@ function ImportCard({ projectId, channelId, disabled, sources, onDone }: { proje
     <SectionTitle>Файлы, сделанные вручную</SectionTitle>
     <p className="text-sm text-muted-foreground">Укажите папки с исходниками этого ролика: у каждого ролика свои. Номер сцены берётся из начала имени файла: <span className="font-mono">12_….mp4</span>. Заполняются только сцены без готового результата, ваши файлы остаются на месте.</p>
     <div className="grid gap-3 md:grid-cols-2">
-      <label className="block space-y-1"><Label>Папка картинок</Label><Input value={images} maxLength={1000} disabled={disabled || running} onChange={(e) => setImages(e.target.value)} placeholder="Например: D:\Ролики\Картинки" dir="ltr" /></label>
-      <label className="block space-y-1"><Label>Папка анимаций</Label><Input value={clips} maxLength={1000} disabled={disabled || running} onChange={(e) => setClips(e.target.value)} placeholder="Например: D:\Ролики\Анимации" dir="ltr" /></label>
+      {([["images", "Выбрать папку картинок", images], ["clips", "Выбрать папку анимаций", clips]] as const).map(([k, label, value]) => <div key={k} className="space-y-1">
+        <Button variant="outline" className="min-h-11" disabled={disabled || running || saveFolders.isPending} onClick={() => setPicking(k)}><Folder className="h-4 w-4" />{label}</Button>
+        <p className="break-all font-mono text-xs text-muted-foreground">{value || "Папка не выбрана"}</p>
+      </div>)}
     </div>
+    {picking && <FolderPicker title={picking === "images" ? "Папка картинок" : "Папка анимаций"} onClose={() => setPicking(null)} onPick={(p) => { saveFolders.mutate(picking === "images" ? { images: p, clips } : { images, clips: p }); setPicking(null); }} />}
     <div className="flex flex-wrap gap-2">
-      <Button variant="outline" className="min-h-11" disabled={disabled || running || !dirty} loading={saveFolders.isPending} loadingText="Сохраняю…" onClick={() => saveFolders.mutate()}>Сохранить папки</Button>
-    <Button variant="outline" className="min-h-11" disabled={disabled || running || dirty || noFolders} title={dirty ? "Сначала сохраните папки" : noFolders ? "Укажите папки" : undefined} loading={q.isFetching} loadingText="Смотрю папку…" onClick={() => void q.refetch()}>Подтянуть файлы</Button>
+    <Button variant="outline" className="min-h-11" disabled={disabled || running || noFolders} title={noFolders ? "Укажите папки" : undefined} loading={q.isFetching} loadingText="Смотрю папку…" onClick={() => void q.refetch()}>Подтянуть файлы</Button>
     </div>
     {noFolders && <p role="alert" className="text-sm font-medium text-accent" data-testid="import-need-folders">Укажите папки картинок и анимаций этого ролика.</p>}
     {saveFolders.error && <ErrorAlert error={saveFolders.error} />}
