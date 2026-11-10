@@ -3,7 +3,7 @@ import { constants } from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { z } from "zod";
-export const VERSION="2.1.0";
+export const VERSION="3.0.0";
 export const KINDS=["projects","reports","transcripts","audio","ad-breaks","profit"] as const;
 export type Kind=typeof KINDS[number];
 export const DEFAULT_SCOPES:Kind[]=["projects","reports"];
