@@ -17,6 +17,7 @@ import { chooseMusicFolder, musicState, saveMusicTracks } from "../services/stud
 import { graphicsState, scanGraphics, setGraphicStatus } from "../services/studio/montageGraphics.js";
 import { acceptMontage, exportMontage, exportState, montageExporting } from "../services/studio/montageExport.js";
 import { publishState, removeThumbnail, saveCard, saveThumbnail } from "../services/studio/publishCard.js";
+import { PublishTextInput, publishTextBusy, runPublishText } from "../services/studio/publishText.js";
 import { ImportInput, PromptsInput, REDO_REASONS, RenderInput, buildScenes, editScene, exportBoard, generateCastImage, importPreview, listFolders, runImport, runRender, saveCastImage, saveImportFolders, syncCast, videoSpend, visualBusy, visualState, writePrompts, type ExportKind } from "../services/studio/visual.js";
 
 export const studioRoute = new Hono();
@@ -196,6 +197,13 @@ studioRoute.get("/studio/visual/projects/:projectId/export/:kind", async (c) => 
 // ---------- публикация (Выпуск 4) ----------
 studioRoute.get("/studio/publish/projects/:projectId", handle(async (c) => publishState(pid(c))));
 studioRoute.put("/studio/publish/projects/:projectId", handle(async (c) => saveCard(pid(c), await body(c))));
+/** Платный текстовый запрос: задача ждёт отдельного подтверждения автора. */
+studioRoute.post("/studio/publish/projects/:projectId/seo", handle(async (c) => {
+  const id = pid(c), raw = await body(c), i = PublishTextInput.parse(raw);
+  await getChannel(i.channelId);
+  if (publishTextBusy(id)) throw new ApiError("VALIDATION", "Тексты для этого ролика уже готовятся.", 409);
+  return job(i.channelId, "publish-seo", (ctx) => runPublishText(id, raw, ctx), id);
+}));
 studioRoute.put("/studio/publish/projects/:projectId/thumbnail", handle(async (c) => saveThumbnail(pid(c), await body(c))));
 studioRoute.delete("/studio/publish/projects/:projectId/thumbnail", handle(async (c) => removeThumbnail(pid(c))));
 

@@ -6,12 +6,17 @@ import path from "node:path";
 import sharp from "sharp";
 import { z } from "zod";
 import { ApiError } from "../../lib/errors.js";
+import { tagsLen } from "../seo.js";
 import { projectFile } from "./montageCheck.js";
 import { exportState } from "./montageExport.js";
 import { montageState } from "./montageRender.js";
 import { visualState } from "./visual.js";
 
-const CARD = "publish/card.json";
+const CARD = "publish/card.json", PROPOSAL = "publish/proposal.json";
+/** Требования YouTube к текстам: описание считается в байтах, поэтому кириллица занимает вдвое больше. */
+export const MAX_TITLE = 100;
+export const MAX_DESCRIPTION_BYTES = 5000;
+export const MAX_TAGS_LENGTH = 500;
 /** Требования YouTube к главам: первая с 0:00, минимум три, каждая не короче 10 секунд. */
 export const MIN_CHAPTER_SEC = 10;
 export const MIN_CHAPTERS = 3;
@@ -31,10 +36,21 @@ export type ChapterRow = { n: number; start: number; paragraph: number; text: st
 export type Chapter = { scene: number; start: number; excerpt: string; title: string };
 type StoredChapter = { scene: number; excerpt: string; title: string };
 type Thumbnail = { file: string; width: number; height: number; bytes: number };
-export type StoredCard = { language: string | null; categoryId: string | null; madeForKids: boolean | null; syntheticMedia: boolean | null; thumbnail: Thumbnail | null; chapters: StoredChapter[] };
-const EMPTY: StoredCard = { language: null, categoryId: null, madeForKids: null, syntheticMedia: null, thumbnail: null, chapters: [] };
+export type StoredCard = { title: string | null; description: string | null; tags: string[]; language: string | null; categoryId: string | null; madeForKids: boolean | null; syntheticMedia: boolean | null; thumbnail: Thumbnail | null; chapters: StoredChapter[] };
+const EMPTY: StoredCard = { title: null, description: null, tags: [], language: null, categoryId: null, madeForKids: null, syntheticMedia: null, thumbnail: null, chapters: [] };
+/** Предложение модели. Сохраняется сразу, чтобы оплаченный результат не пропал, но в карточку попадает только то, что выбрал автор. */
+export type Proposal = {
+  at: string; model: string; keyword: string; titles: string[]; description: string; tags: string[];
+  pinnedComments: { type: string; text: string }[]; chapters: { scene: number; excerpt: string; title: string }[];
+};
+const noAngle = (t: string) => !/[<>]/.test(t);
+const ANGLE = "YouTube не принимает знаки < и >";
 
 export const CardInput = z.object({
+  title: z.string().trim().min(1).refine((t) => [...t].length <= MAX_TITLE, `Название длиннее ${MAX_TITLE} знаков`).refine(noAngle, ANGLE).nullable(),
+  description: z.string().trim().min(1).max(MAX_DESCRIPTION_BYTES, `Описание длиннее ${MAX_DESCRIPTION_BYTES} знаков`).refine(noAngle, ANGLE).nullable(),
+  tags: z.array(z.string().trim().min(1).max(60, "Тег длиннее 60 знаков").refine((t) => !/[<>,"]/.test(t), "Тег содержит запрещённый знак")).max(100)
+    .refine((t) => tagsLen(t) <= MAX_TAGS_LENGTH, `Теги длиннее ${MAX_TAGS_LENGTH} знаков`),
   language: z.string().regex(LANGUAGE, "Код языка, например en или ru").nullable(),
   categoryId: z.enum(CATEGORIES.map((c) => c.id) as [string, ...string[]]).nullable(),
   madeForKids: z.boolean().nullable(),
@@ -76,10 +92,20 @@ export function mergeChapters(proposed: Chapter[], stored: StoredChapter[]): Cha
   return proposed.map((c) => ({ ...c, title: stored.find((s) => s.scene === c.scene && s.excerpt === c.excerpt)?.title ?? "" }));
 }
 
+const pad2 = (n: number) => String(n).padStart(2, "0");
+export const chapterClock = (s: number) => { const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = Math.floor(s % 60); return h ? `${h}:${pad2(m)}:${pad2(r)}` : `${pad2(m)}:${pad2(r)}`; };
+/** Итоговое описание: текст автора и главы по времени монтажа. Пока названия глав не заполнены, блока глав нет. */
+export function composeDescription(text: string | null, chapters: Chapter[], language: string | null): string {
+  const base = text?.trim() ?? "";
+  if (!chapters.length || chapters.some((c) => !c.title)) return base;
+  const lang = (language ?? "").slice(0, 2), label = lang === "ru" || lang === "uk" ? "Таймкоды:" : lang === "en" ? "Chapters:" : "⏱";
+  return [base, `${label}\n${chapters.map((c) => `${chapterClock(c.start)} ${c.title}`).join("\n")}`].filter(Boolean).join("\n\n");
+}
+
 export type CardCheck = { code: string; level: "ok" | "warn" | "block"; message: string };
 export type CardFacts = {
   hasMontage: boolean; busy: boolean; accepted: boolean; facts: "none" | "stale" | "issues" | "passed"; boardChanged: boolean;
-  card: Omit<StoredCard, "chapters">; chapters: Chapter[];
+  card: Omit<StoredCard, "chapters">; chapters: Chapter[]; descriptionBytes: number;
 };
 const FACTS: Record<Exclude<CardFacts["facts"], "passed">, string> = {
   none: "Программа считает факты сценария непроверенными. Ручная проверка ей неизвестна.",
@@ -96,6 +122,9 @@ export function assessCard(o: CardFacts): { checks: CardCheck[]; ready: boolean 
   need("accepted", o.accepted, "Ролик принят вами.", "Ролик не принят: посмотрите его и нажмите «Принять ролик» в разделе «Монтаж».");
   if (o.facts !== "passed") checks.push({ code: "facts", level: "warn", message: FACTS[o.facts] });
   if (o.boardChanged) checks.push({ code: "board-changed", level: "warn", message: "Раскадровку меняли после сборки. Время глав могло разойтись с видео." });
+  need("title", !!o.card.title, "Название выбрано.", "Выберите или впишите название ролика.");
+  need("description", !!o.card.description, "Описание заполнено.", "Заполните описание ролика.");
+  if (o.descriptionBytes > MAX_DESCRIPTION_BYTES) checks.push({ code: "description-long", level: "block", message: `Описание вместе с главами занимает ${o.descriptionBytes} байт, YouTube принимает до ${MAX_DESCRIPTION_BYTES}. Сократите текст.` });
   need("language", !!o.card.language, "Язык указан.", "Укажите язык ролика.");
   need("category", !!o.card.categoryId, "Категория выбрана.", "Выберите категорию.");
   need("kids", o.card.madeForKids !== null, "Ответ об аудитории дан.", "Ответьте, снят ли ролик для детей.");
@@ -129,29 +158,43 @@ async function writeCard(projectId: string, card: StoredCard) {
 }
 // Сохранения одного проекта идут по очереди: форма и обложка не затирают друг друга.
 const queues = new Map<string, Promise<unknown>>();
-function serial<T>(projectId: string, fn: () => Promise<T>): Promise<T> {
+export function serial<T>(projectId: string, fn: () => Promise<T>): Promise<T> {
   const p = (queues.get(projectId) ?? Promise.resolve()).then(fn, fn);
   queues.set(projectId, p.catch(() => {}));
   return p;
 }
 
-async function currentChapters(projectId: string, stored: StoredChapter[]) {
+async function readProposal(projectId: string): Promise<Proposal | null> {
+  const raw = await fs.readFile(projectFile(projectId, PROPOSAL), "utf8").catch(() => null);
+  if (!raw) return null;
+  try { return JSON.parse(raw) as Proposal; } catch { return null; }
+}
+export async function writeProposal(projectId: string, proposal: Proposal) {
+  const file = projectFile(projectId, PROPOSAL), tmp = `${file}.${crypto.randomUUID()}.tmp`;
+  await fs.mkdir(path.dirname(file), { recursive: true });
+  try { await fs.writeFile(tmp, JSON.stringify(proposal), "utf8"); await fs.rename(tmp, file); }
+  finally { await fs.rm(tmp, { force: true }).catch(() => {}); }
+}
+
+export async function currentChapters(projectId: string, stored: StoredChapter[]) {
   const [v, m] = await Promise.all([visualState(projectId), montageState(projectId)]);
   return { visual: v, montage: m, chapters: m.result ? mergeChapters(proposeChapters(v.board?.rows ?? [], m.result.seconds), stored) : [] };
 }
 
 export async function publishState(projectId: string) {
-  const stored = await readCard(projectId);
+  const [stored, proposal] = await Promise.all([readCard(projectId), readProposal(projectId)]);
   const [{ visual, montage, chapters }, exported] = await Promise.all([currentChapters(projectId, stored.chapters), exportState(projectId)]);
   const { chapters: _stored, ...rest } = stored;
   const card = { ...rest, language: stored.language ?? visual.board?.language ?? null };
   const r = montage.result;
   const boardChanged = !!r && !!visual.board && visual.board.updatedAt > r.at;
+  const finalDescription = composeDescription(stored.description, chapters, card.language), descriptionBytes = Buffer.byteLength(finalDescription, "utf8");
   return {
+    proposal, finalDescription, descriptionBytes, limits: { title: MAX_TITLE, descriptionBytes: MAX_DESCRIPTION_BYTES, tags: MAX_TAGS_LENGTH }, tagsLength: tagsLen(stored.tags),
     project: visual.project,
     montage: r ? { file: r.file, seconds: r.seconds, bytes: r.bytes, width: r.width, height: r.height, at: r.at } : null,
     accepted: exported.accepted, card, chapters, categories: CATEGORIES,
-    ...assessCard({ hasMontage: !!r, busy: !!montage.running, accepted: !!exported.accepted, facts: exported.facts, boardChanged, card, chapters }),
+    ...assessCard({ hasMontage: !!r, busy: !!montage.running, accepted: !!exported.accepted, facts: exported.facts, boardChanged, card, chapters, descriptionBytes }),
   };
 }
 
@@ -165,7 +208,7 @@ export function saveCard(projectId: string, raw: unknown) {
       if (!found) throw new ApiError("VALIDATION", "Главы изменились. Обновите страницу.", 409);
       return { scene: c.scene, excerpt: found.excerpt, title: c.title };
     });
-    await writeCard(projectId, { ...stored, language: input.language, categoryId: input.categoryId, madeForKids: input.madeForKids, syntheticMedia: input.syntheticMedia, chapters: chaptersToStore });
+    await writeCard(projectId, { ...stored, title: input.title, description: input.description, tags: [...new Set(input.tags)], language: input.language, categoryId: input.categoryId, madeForKids: input.madeForKids, syntheticMedia: input.syntheticMedia, chapters: chaptersToStore });
     return publishState(projectId);
   });
 }

@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import sharp from "sharp";
-import { CardInput, MAX_CHAPTERS, MAX_THUMBNAIL_BYTES, assessCard, inspectThumbnail, mergeChapters, proposeChapters, type CardFacts, type ChapterRow } from "../src/services/studio/publishCard.js";
+import { CardInput, MAX_CHAPTERS, MAX_THUMBNAIL_BYTES, assessCard, chapterClock, composeDescription, inspectThumbnail, mergeChapters, proposeChapters, type CardFacts, type ChapterRow } from "../src/services/studio/publishCard.js";
 
 /** Сцены по 5 секунд, новый абзац каждые 6 сцен. */
 const board = (seconds: number): ChapterRow[] => Array.from({ length: Math.floor(seconds / 5) }, (_, i) => ({ n: i + 1, start: i * 5, paragraph: Math.floor(i / 6), text: `Scene ${i + 1} words here` }));
@@ -34,8 +34,8 @@ test("название возвращается только к той же сц
 });
 
 const ready: CardFacts = {
-  hasMontage: true, busy: false, accepted: true, facts: "passed", boardChanged: false,
-  card: { language: "en", categoryId: "27", madeForKids: false, syntheticMedia: true, thumbnail: { file: "publish/t.jpg", width: 1280, height: 720, bytes: 10 } },
+  hasMontage: true, busy: false, accepted: true, facts: "passed", boardChanged: false, descriptionBytes: 100,
+  card: { title: "A title", description: "Text", tags: ["tag"], language: "en", categoryId: "27", madeForKids: false, syntheticMedia: true, thumbnail: { file: "publish/t.jpg", width: 1280, height: 720, bytes: 10 } },
   chapters: [{ scene: 1, start: 0, excerpt: "x", title: "Intro" }],
 };
 const levelOf = (o: CardFacts, code: string) => assessCard(o).checks.find((c) => c.code === code)?.level;
@@ -76,13 +76,39 @@ test("непроверенные факты и изменённая раскад
 });
 
 test("форма: неверные язык, категория и лишние поля отклоняются", () => {
-  const ok = { language: "en", categoryId: "27", madeForKids: false, syntheticMedia: null, chapters: [{ scene: 1, title: "Intro" }] };
+  const ok = { title: "A title", description: "Text", tags: ["tag one"], language: "en", categoryId: "27", madeForKids: false, syntheticMedia: null, chapters: [{ scene: 1, title: "Intro" }] };
   assert.equal(CardInput.safeParse(ok).success, true);
   assert.equal(CardInput.safeParse({ ...ok, language: "english" }).success, false);
   assert.equal(CardInput.safeParse({ ...ok, categoryId: "999" }).success, false);
   assert.equal(CardInput.safeParse({ ...ok, privacy: "public" }).success, false);
   assert.equal(CardInput.safeParse({ ...ok, chapters: [{ scene: 1, title: "a < b" }] }).success, false);
   assert.equal(CardInput.safeParse({ ...ok, chapters: [{ scene: 1, title: "x".repeat(81) }] }).success, false);
+});
+
+test("форма: длины текстов и теги проверяются", () => {
+  const ok = { title: null, description: null, tags: [], language: null, categoryId: null, madeForKids: null, syntheticMedia: null, chapters: [] };
+  assert.equal(CardInput.safeParse(ok).success, true);
+  assert.equal(CardInput.safeParse({ ...ok, title: "x".repeat(100) }).success, true);
+  assert.equal(CardInput.safeParse({ ...ok, title: "x".repeat(101) }).success, false);
+  assert.equal(CardInput.safeParse({ ...ok, description: "a <b> c" }).success, false);
+  assert.equal(CardInput.safeParse({ ...ok, tags: Array.from({ length: 60 }, (_, i) => `longer tag number ${i}`) }).success, false, "больше 500 знаков");
+  assert.equal(CardInput.safeParse({ ...ok, tags: ["a,b"] }).success, false);
+});
+
+test("название и описание обязательны, длина описания считается в байтах", () => {
+  assert.equal(levelOf({ ...ready, card: { ...ready.card, title: null } }, "title"), "block");
+  assert.equal(levelOf({ ...ready, card: { ...ready.card, description: null } }, "description"), "block");
+  assert.equal(levelOf({ ...ready, descriptionBytes: 5001 }, "description-long"), "block");
+  assert.equal(levelOf({ ...ready, descriptionBytes: 5000 }, "description-long"), undefined);
+});
+
+test("итоговое описание: главы только с заполненными названиями и по времени монтажа", () => {
+  const chapters = [{ scene: 1, start: 0, excerpt: "a", title: "Intro" }, { scene: 5, start: 95, excerpt: "b", title: "River" }];
+  assert.equal(composeDescription("Text", chapters, "en"), "Text\n\nChapters:\n00:00 Intro\n01:35 River");
+  assert.equal(composeDescription("Текст", chapters, "ru"), "Текст\n\nТаймкоды:\n00:00 Intro\n01:35 River");
+  assert.equal(composeDescription("Text", [{ ...chapters[0], title: "" }, chapters[1]], "en"), "Text");
+  assert.equal(composeDescription(null, [], "en"), "");
+  assert.equal(chapterClock(3725.9), "1:02:05");
 });
 
 const image = (width: number, height: number) => sharp({ create: { width, height, channels: 3, background: "#123456" } });

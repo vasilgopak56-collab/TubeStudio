@@ -57,5 +57,5 @@ export function paidDispatch(prepare: () => Promise<PriceSnapshot | PriceSnapsho
 /** The exact request is immutable before consent; secrets are only hashed, never sent to the UI. */
 export function storyboardConsent(url:string, headers:Record<string,string>, body:string) {
   if(!taskContext()?.requireStoryboardConsent)return undefined;
-  return {contextHash:createHash("sha256").update(JSON.stringify({url,headers,body})).digest("hex"),message:"Подтвердите один текстовый запрос для создания промптов раскадровки. Точная сумма неизвестна; согласие не ограничивает списание и не распространяется на другие запросы, повторы или резервные модели."};
+  return {contextHash:createHash("sha256").update(JSON.stringify({url,headers,body})).digest("hex"),message:taskContext()?.consentMessage??"Подтвердите один текстовый запрос для создания промптов раскадровки. Точная сумма неизвестна; согласие не ограничивает списание и не распространяется на другие запросы, повторы или резервные модели."};
 }

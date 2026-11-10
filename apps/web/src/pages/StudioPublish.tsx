@@ -1,29 +1,34 @@
 // Выпуск 4: «Публикация». Шаг 1: карточка ролика без сети и платных запросов.
-import { useEffect, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, ImagePlus, Save, Trash2, Upload, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Copy, ImagePlus, Save, Sparkles, Trash2, Upload, XCircle } from "lucide-react";
 import { api } from "@/lib/api";
+import { useJob } from "@/lib/jobs";
 import type { ProjectSummary } from "@/lib/types";
-import { Button, Card, ErrorAlert, Input, Label, SectionTitle, Select, ToolHeader } from "@/components/ui";
-import { ChannelPicker, NeedChannel, useActiveChannel } from "@/features/studio/common";
+import { Button, Card, ErrorAlert, Input, Label, SectionTitle, Select, Textarea, ToolHeader } from "@/components/ui";
+import { ChannelPicker, JobBox, NeedChannel, useActiveChannel } from "@/features/studio/common";
 
 type Chapter = { scene: number; start: number; excerpt: string; title: string };
 type Check = { code: string; level: "ok" | "warn" | "block"; message: string };
-type PublishCard = { language: string | null; categoryId: string | null; madeForKids: boolean | null; syntheticMedia: boolean | null; thumbnail: { file: string; width: number; height: number; bytes: number } | null };
+type Proposal = { at: string; model: string; keyword: string; titles: string[]; description: string; tags: string[]; pinnedComments: { type: string; text: string }[]; chapters: { scene: number; excerpt: string; title: string }[] };
+type PublishCard = { title: string | null; description: string | null; tags: string[]; language: string | null; categoryId: string | null; madeForKids: boolean | null; syntheticMedia: boolean | null; thumbnail: { file: string; width: number; height: number; bytes: number } | null };
 type PublishState = {
   project: { id: string; title: string };
   montage: { file: string; seconds: number; bytes: number; width: number; height: number; at: string } | null;
   accepted: { file: string; at: string } | null;
   card: PublishCard; chapters: Chapter[]; categories: { id: string; name: string }[]; checks: Check[]; ready: boolean;
+  proposal: Proposal | null; finalDescription: string; descriptionBytes: number; tagsLength: number; limits: { title: number; descriptionBytes: number; tags: number };
 };
-type Draft = { language: string; categoryId: string; madeForKids: string; syntheticMedia: string; titles: Record<number, string> };
+type Draft = { title: string; description: string; tags: string; language: string; categoryId: string; madeForKids: string; syntheticMedia: string; titles: Record<number, string> };
 
 const clock = (s: number) => { const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = Math.floor(s % 60), p = (n: number) => String(n).padStart(2, "0"); return h ? `${h}:${p(m)}:${p(r)}` : `${p(m)}:${p(r)}`; };
 const yesNo = (v: boolean | null) => (v === null ? "" : v ? "yes" : "no");
 const fromYesNo = (v: string) => (v === "" ? null : v === "yes");
+const COMMENT: Record<string, string> = { controversial: "Спорный вопрос", sensory: "Образ", challenge: "Вызов" };
+const tagList = (text: string) => text.split(",").map((t) => t.trim()).filter(Boolean);
 const draftOf = (s: PublishState): Draft => ({
-  language: s.card.language ?? "", categoryId: s.card.categoryId ?? "", madeForKids: yesNo(s.card.madeForKids), syntheticMedia: yesNo(s.card.syntheticMedia),
+  title: s.card.title ?? "", description: s.card.description ?? "", tags: s.card.tags.join(", "), language: s.card.language ?? "", categoryId: s.card.categoryId ?? "", madeForKids: yesNo(s.card.madeForKids), syntheticMedia: yesNo(s.card.syntheticMedia),
   titles: Object.fromEntries(s.chapters.map((c) => [c.scene, c.title])),
 });
 function fileToBase64(file: File) {
@@ -45,13 +50,19 @@ export default function StudioPublish() {
   const path = `/studio/publish/projects/${projectId}`;
   const state = useQuery({ queryKey: ["publish-state", projectId], queryFn: () => api<PublishState>(path), enabled: !!projectId, retry: false, refetchOnWindowFocus: false });
   const [draft, setDraft] = useState<Draft | null>(null);
-  useEffect(() => { setDraft(state.data ? draftOf(state.data) : null); }, [state.data]);
+  // Форма заполняется только при открытии ролика и после сохранения: обложка и готовые тексты не стирают ваши правки.
+  const resetDraft = useRef(true);
+  useEffect(() => { resetDraft.current = true; setDraft(null); }, [projectId]);
+  useEffect(() => { if (state.data && resetDraft.current && state.data.project.id === projectId) { resetDraft.current = false; setDraft(draftOf(state.data)); } }, [state.data, projectId]);
+  const texts = useJob<Proposal>("");
+  useEffect(() => { if (texts.status === "done" || texts.status === "error") void state.refetch(); }, [texts.status]);
   const save = useMutation({
     mutationFn: (d: Draft) => api<PublishState>(path, { method: "PUT", json: {
+      title: d.title.trim() || null, description: d.description.trim() || null, tags: tagList(d.tags),
       language: d.language.trim() || null, categoryId: d.categoryId || null, madeForKids: fromYesNo(d.madeForKids), syntheticMedia: fromYesNo(d.syntheticMedia),
       chapters: (state.data?.chapters ?? []).map((c) => ({ scene: c.scene, title: d.titles[c.scene] ?? "" })),
     } }),
-    onSuccess: () => void state.refetch(),
+    onSuccess: () => { resetDraft.current = true; void state.refetch(); },
   });
   const cover = useMutation({
     mutationFn: async (file: File) => api<PublishState>(`${path}/thumbnail`, { method: "PUT", json: { data: await fileToBase64(file) } }),
@@ -66,7 +77,14 @@ export default function StudioPublish() {
   if (!list?.channels.length || !channel) return <div className="space-y-6">{header}<NeedChannel /></div>;
   const s = state.data;
   const set = (patch: Partial<Draft>) => setDraft((d) => (d ? { ...d, ...patch } : d));
-  const busy = save.isPending || cover.isPending || dropCover.isPending;
+  const preparing = texts.status === "running";
+  const busy = save.isPending || cover.isPending || dropCover.isPending || preparing;
+  const applyProposal = (p: Proposal) => setDraft((d) => {
+    if (!d) return d;
+    const titles = { ...d.titles };
+    for (const c of s?.chapters ?? []) { const found = p.chapters.find((x) => x.scene === c.scene && x.excerpt === c.excerpt); if (found?.title && !titles[c.scene]) titles[c.scene] = found.title; }
+    return { ...d, description: p.description, tags: p.tags.join(", "), titles };
+  });
   return <div className="space-y-6" data-testid="studio-publish">
     {header}
     <Card className="space-y-4 p-5">
@@ -91,6 +109,26 @@ export default function StudioPublish() {
         {(!s.montage || !s.accepted) && <Link to={`/studio/montage?project=${encodeURIComponent(projectId)}`} className="inline-flex min-h-11 items-center text-sm text-primary hover:underline">Открыть «Монтаж»</Link>}
       </Card>
 
+      <Card className="space-y-4 p-5" data-testid="publish-texts">
+        <SectionTitle>Название, описание и теги</SectionTitle>
+        <p className="text-sm text-muted-foreground">Платный запрос к текстовой модели AnyModel. Ориентир цены вы увидите до отправки, запрос уходит только после подтверждения. Автоматических повторов и резервных моделей нет.</p>
+        {!preparing && <Button className="min-h-11" variant="outline" disabled={busy || !s.accepted} onClick={() => void texts.start({ channelId: channel.id }, `${path}/seo`, { serverConsent: true })}><Sparkles className="h-4 w-4" />{s.proposal ? "Подготовить тексты заново" : "Подготовить тексты"}</Button>}
+        <JobBox job={texts} onCancel={() => void texts.cancel()} note="Обычно занимает меньше минуты." />
+        {s.proposal && <div className="space-y-3 rounded-md border border-border p-4" data-testid="publish-proposal">
+          <p className="font-semibold">Предложение модели</p>
+          <p className="text-sm text-muted-foreground">{s.proposal.model} · {new Date(s.proposal.at).toLocaleString("ru-RU")} · ключевая фраза: {s.proposal.keyword}. Это предложения модели: факты и поисковый спрос не проверялись. В карточку попадёт только то, что вы выберете и сохраните.</p>
+          <ul className="space-y-2">{s.proposal.titles.map((t) => <li key={t}><button type="button" className={`min-h-11 w-full rounded-md border px-3 py-2 text-left text-sm ${draft.title === t ? "border-primary font-semibold" : "border-border"}`} aria-pressed={draft.title === t} onClick={() => set({ title: t })}>{t}</button></li>)}</ul>
+          <Button variant="outline" className="min-h-11" onClick={() => applyProposal(s.proposal!)}>Подставить описание, теги и пустые названия глав</Button>
+          <div className="space-y-2"><p className="text-sm font-semibold">Для закреплённого комментария</p>
+            {s.proposal.pinnedComments.map((c) => <div key={c.type} className="flex items-start justify-between gap-3 text-sm"><p><span className="text-muted-foreground">{COMMENT[c.type] ?? c.type}:</span> {c.text}</p><Button variant="outline" size="sm" className="min-h-11 shrink-0" aria-label="Копировать комментарий" onClick={() => void navigator.clipboard.writeText(c.text)}><Copy className="h-4 w-4" /></Button></div>)}
+          </div>
+        </div>}
+        <label className="block space-y-1 text-sm"><Label counter={`${[...draft.title].length}/${s.limits.title}`}>Название ролика</Label><Input value={draft.title} onChange={(e) => set({ title: e.target.value })} /></label>
+        <Textarea label="Описание" hint="Главы добавятся в конец автоматически, когда заполнены все их названия." value={draft.description} rows={10} onChange={(e) => set({ description: e.target.value })} />
+        <label className="block space-y-1 text-sm"><Label hint="через запятую">Теги</Label><Input value={draft.tags} onChange={(e) => set({ tags: e.target.value })} /></label>
+        <p className="text-sm text-muted-foreground">После сохранения: описание с главами {s.descriptionBytes}/{s.limits.descriptionBytes} байт, теги {s.tagsLength}/{s.limits.tags} знаков.</p>
+      </Card>
+
       <Card className="space-y-4 p-5" data-testid="publish-details">
         <SectionTitle>Сведения для YouTube</SectionTitle>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -109,7 +147,7 @@ export default function StudioPublish() {
         <SectionTitle>Главы</SectionTitle>
         {s.chapters.length === 0 && <p className="text-sm text-muted-foreground">Глав нет.</p>}
         {s.chapters.length > 0 && <>
-          <p className="text-sm text-muted-foreground">Время взято из готового монтажа, глава начинается с нового абзаца. Названия заполните сами или на следующем шаге через подготовку текстов.</p>
+          <p className="text-sm text-muted-foreground">Время взято из готового монтажа, глава начинается с нового абзаца. Названия впишите сами или подставьте из предложения модели.</p>
           <ol className="space-y-3">{s.chapters.map((c) => <li key={c.scene} className="space-y-1">
             <label className="block space-y-1 text-sm"><Label>{clock(c.start)} · сцена {c.scene}</Label>
               <Input value={draft.titles[c.scene] ?? ""} maxLength={80} placeholder="Название главы" onChange={(e) => set({ titles: { ...draft.titles, [c.scene]: e.target.value } })} /></label>

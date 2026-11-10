@@ -3,7 +3,7 @@ import { ApiError } from "./errors.js";
 
 import type { ConsentLaunch, PriceChallenge, ConsentResolution } from "./priceConsentTypes.js";
 
-type TaskContext = { requireStoryboardConsent?: boolean; verifyStoryboard?:()=>Promise<void>; launch?: ConsentLaunch; onPriceConsent?: (challenge: PriceChallenge) => void; onPriceConsentResolved?: (resolution: ConsentResolution) => void; signal?: AbortSignal; onQueue?: (kind: string) => void; jobId?: string };
+type TaskContext = { requireStoryboardConsent?: boolean; consentMessage?: string; verifyStoryboard?:()=>Promise<void>; launch?: ConsentLaunch; onPriceConsent?: (challenge: PriceChallenge) => void; onPriceConsentResolved?: (resolution: ConsentResolution) => void; signal?: AbortSignal; onQueue?: (kind: string) => void; jobId?: string };
 const storage = new AsyncLocalStorage<TaskContext>();
 export const taskContext = () => storage.getStore();
 export function taskSignal(explicit?: AbortSignal | null): AbortSignal | undefined {
@@ -22,6 +22,9 @@ export function withTaskSignal<T>(signal: AbortSignal | undefined, fn: () => T):
 
 /** Scope only the audio-storyboard generation path, including retries and fallback. */
 export function withStoryboardConsent<T>(fn:()=>T):T { return storage.run({...storage.getStore(),requireStoryboardConsent:true},fn); }
+
+/** То же отдельное согласие на каждую физическую отправку, но со своим текстом для автора. */
+export function withPaidConsent<T>(consentMessage:string,fn:()=>T):T { return storage.run({...storage.getStore(),requireStoryboardConsent:true,consentMessage},fn); }
 
 /** Recheck the audio generation snapshot at every physical dispatch, including retries. */
 export function withStoryboardGuard<T>(verifyStoryboard:(()=>Promise<void>)|undefined, fn:()=>T):T { return storage.run({...storage.getStore(),verifyStoryboard},fn); }
