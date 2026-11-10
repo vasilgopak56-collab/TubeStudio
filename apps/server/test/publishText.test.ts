@@ -13,7 +13,8 @@ const { runTask } = await import("../src/lib/taskContext.js");
 const { priceConsents } = await import("../src/services/priceConsent.js");
 const { resetAmCatalog } = await import("../src/services/anymodel.js");
 const { createChannel } = await import("../src/services/studio/channels.js");
-const { publishState } = await import("../src/services/studio/publishCard.js");
+const { publishState, saveVideoLink } = await import("../src/services/studio/publishCard.js");
+const { listLinks } = await import("../src/services/ytAnalytics.js");
 const { chapterSegments, consentMessage, runPublishText } = await import("../src/services/studio/publishText.js");
 
 const id = "11111111-2222-4333-8444-555555555555", old = "2026-01-01T00:00:00.000Z";
@@ -122,6 +123,28 @@ test("без принятого ролика запрос не уходит", as
   await seed(false);
   await assert.rejects(run("approve"), /примите ролик/);
   assert.deepEqual(posts, []);
+});
+
+test("ссылка на ролик связывает его с проектом, замена и удаление убирают прежнюю связь", async () => {
+  const first = "aaaaaaaaaaa", second = "bbbbbbbbbbb";
+  assert.equal((await saveVideoLink(id, { url: `https://youtu.be/${first}` })).card.video?.id, first);
+  assert.equal((await listLinks())[first], id);
+  const again = await saveVideoLink(id, { url: `https://www.youtube.com/watch?v=${second}` });
+  assert.equal(again.card.video?.id, second);
+  const links = await listLinks();
+  assert.equal(links[first], undefined, "прежний ролик больше не связан");
+  assert.equal(links[second], id);
+  assert.equal((await saveVideoLink(id, { url: null })).card.video, null);
+  assert.equal((await listLinks())[second], undefined);
+  assert.deepEqual(posts, [], "сеть не используется");
+});
+
+test("неверная ссылка ничего не меняет", async () => {
+  await saveVideoLink(id, { url: "ccccccccccc" });
+  await assert.rejects(async () => saveVideoLink(id, { url: "https://example.com/video" }), /не похоже на ссылку/);
+  assert.equal((await publishState(id)).card.video?.id, "ccccccccccc");
+  assert.equal((await listLinks()).ccccccccccc, id);
+  await saveVideoLink(id, { url: null });
 });
 
 test("текст подтверждения честно говорит о неизвестной цене", () => {

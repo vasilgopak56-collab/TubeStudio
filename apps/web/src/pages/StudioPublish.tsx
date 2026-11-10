@@ -12,7 +12,7 @@ import { ChannelPicker, JobBox, NeedChannel, useActiveChannel } from "@/features
 type Chapter = { scene: number; start: number; excerpt: string; title: string };
 type Check = { code: string; level: "ok" | "warn" | "block"; message: string };
 type Proposal = { at: string; model: string; keyword: string; titles: string[]; description: string; tags: string[]; pinnedComments: { type: string; text: string }[]; chapters: { scene: number; excerpt: string; title: string }[] };
-type PublishCard = { title: string | null; description: string | null; tags: string[]; language: string | null; categoryId: string | null; madeForKids: boolean | null; syntheticMedia: boolean | null; thumbnail: { file: string; width: number; height: number; bytes: number } | null };
+type PublishCard = { video: { id: string; linkedAt: string } | null; title: string | null; description: string | null; tags: string[]; language: string | null; categoryId: string | null; madeForKids: boolean | null; syntheticMedia: boolean | null; thumbnail: { file: string; width: number; height: number; bytes: number } | null };
 type PublishState = {
   project: { id: string; title: string };
   montage: { file: string; seconds: number; bytes: number; width: number; height: number; at: string } | null;
@@ -70,6 +70,13 @@ export default function StudioPublish() {
     onSuccess: () => void state.refetch(),
   });
   const dropCover = useMutation({ mutationFn: () => api<PublishState>(`${path}/thumbnail`, { method: "DELETE" }), onSuccess: () => void state.refetch() });
+  const [videoUrl, setVideoUrl] = useState("");
+  const [copied, setCopied] = useState("");
+  const [copyFailed, setCopyFailed] = useState(false);
+  const copy = (what: string, text: string) => {
+    navigator.clipboard.writeText(text).then(() => { setCopyFailed(false); setCopied(what); window.setTimeout(() => setCopied((c) => (c === what ? "" : c)), 2000); }, () => { setCopied(""); setCopyFailed(true); });
+  };
+  const link = useMutation({ mutationFn: (url: string | null) => api<PublishState>(`${path}/video`, { method: "PUT", json: { url } }), onSuccess: () => { setVideoUrl(""); void state.refetch(); } });
   const allowUpload = useMutation({ mutationFn: () => api<{ url: string }>("/yt-oauth/start-upload", { method: "POST", json: { consent: true, projectId } }), onSuccess: (r) => { window.location.href = r.url; } });
   const pickCover = (e: ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) cover.mutate(f); };
   const url = (local: string) => `/files/${encodeURIComponent(projectId)}/${local.split("/").map(encodeURIComponent).join("/")}`;
@@ -79,6 +86,7 @@ export default function StudioPublish() {
   if (!list?.channels.length || !channel) return <div className="space-y-6">{header}<NeedChannel /></div>;
   const s = state.data;
   const set = (patch: Partial<Draft>) => setDraft((d) => (d ? { ...d, ...patch } : d));
+  const unsaved = !!s && !!draft && (draft.title.trim() !== (s.card.title ?? "") || draft.description.trim() !== (s.card.description ?? "") || tagList(draft.tags).join(",") !== s.card.tags.join(",") || s.chapters.some((c) => (draft.titles[c.scene] ?? "").trim() !== c.title));
   const preparing = texts.status === "running";
   const busy = save.isPending || cover.isPending || dropCover.isPending || preparing;
   const applyProposal = (p: Proposal) => setDraft((d) => {
@@ -122,7 +130,8 @@ export default function StudioPublish() {
           <ul className="space-y-2">{s.proposal.titles.map((t) => <li key={t}><button type="button" className={`min-h-11 w-full rounded-md border px-3 py-2 text-left text-sm ${draft.title === t ? "border-primary font-semibold" : "border-border"}`} aria-pressed={draft.title === t} onClick={() => set({ title: t })}>{t}</button></li>)}</ul>
           <Button variant="outline" className="min-h-11" onClick={() => applyProposal(s.proposal!)}>Подставить описание, теги и пустые названия глав</Button>
           <div className="space-y-2"><p className="text-sm font-semibold">Для закреплённого комментария</p>
-            {s.proposal.pinnedComments.map((c) => <div key={c.type} className="flex items-start justify-between gap-3 text-sm"><p><span className="text-muted-foreground">{COMMENT[c.type] ?? c.type}:</span> {c.text}</p><Button variant="outline" size="sm" className="min-h-11 shrink-0" aria-label="Копировать комментарий" onClick={() => void navigator.clipboard.writeText(c.text)}><Copy className="h-4 w-4" /></Button></div>)}
+            {s.proposal.pinnedComments.map((c) => <div key={c.type} className="flex items-start justify-between gap-3 text-sm"><p><span className="text-muted-foreground">{COMMENT[c.type] ?? c.type}:</span> {c.text}</p><Button variant="outline" size="sm" className="min-h-11 shrink-0" aria-label="Копировать комментарий" onClick={() => copy(`pin-${c.type}`, c.text)}>{copied === `pin-${c.type}` ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}</Button></div>)}
+            {copyFailed && <p role="alert" className="text-sm text-accent">Не удалось скопировать: браузер запретил доступ к буферу обмена. Выделите текст вручную.</p>}
           </div>
         </div>}
         <label className="block space-y-1 text-sm"><Label counter={`${[...draft.title].length}/${s.limits.title}`}>Название ролика</Label><Input value={draft.title} onChange={(e) => set({ title: e.target.value })} /></label>
@@ -176,6 +185,29 @@ export default function StudioPublish() {
         </div>
         {cover.error && <ErrorAlert error={cover.error} />}
         {dropCover.error && <ErrorAlert error={dropCover.error} />}
+      </Card>
+
+      <Card className="space-y-4 p-5" data-testid="publish-manual">
+        <SectionTitle>Для ручной загрузки в YouTube Studio</SectionTitle>
+        {unsaved && <p role="alert" className="flex items-center gap-2 text-sm text-crown"><AlertTriangle className="h-4 w-4 shrink-0" />Есть несохранённые правки. Ниже показан последний сохранённый вариант: сначала нажмите «Сохранить».</p>}
+        {!s.card.title && !s.finalDescription && <p className="text-sm text-muted-foreground">Заполните и сохраните название и описание, и они появятся здесь.</p>}
+        {([["title", "Название", s.card.title ?? "", 1], ["description", "Описание с главами", s.finalDescription, 10], ["tags", "Теги", s.card.tags.join(", "), 2]] as const).map(([key, label, text, rows]) => <div key={key} className="space-y-1">
+          <div className="flex items-center justify-between gap-3"><Label>{label}</Label>
+            <Button variant="outline" size="sm" className="min-h-11" disabled={!text} onClick={() => copy(key, text)}><Copy className="h-4 w-4" />{copied === key ? "Скопировано" : "Копировать"}</Button></div>
+          <textarea aria-label={label} className="field w-full resize-y leading-relaxed" rows={rows} readOnly value={text} />
+        </div>)}
+        {copyFailed && <p role="alert" className="text-sm text-accent">Не удалось скопировать: браузер запретил доступ к буферу обмена. Выделите текст вручную.</p>}
+        <div className="space-y-2 border-t border-border pt-4">
+          <SectionTitle>Ссылка на загруженный ролик</SectionTitle>
+          <p className="text-sm text-muted-foreground">После загрузки вставьте сюда ссылку на ролик. По ней программа свяжет его с этим проектом для аналитики.</p>
+          {s.card.video && <p className="flex flex-wrap items-center gap-2 text-sm text-success" role="status"><CheckCircle2 className="h-4 w-4 shrink-0" />Связан с проектом:<a className="text-primary hover:underline" href={`https://youtu.be/${s.card.video.id}`} target="_blank" rel="noreferrer">youtu.be/{s.card.video.id}</a></p>}
+          <label className="block space-y-1 text-sm"><Label>Ссылка на ролик</Label><Input value={videoUrl} placeholder="https://youtu.be/…" onChange={(e) => setVideoUrl(e.target.value)} /></label>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button className="min-h-11" disabled={!videoUrl.trim() || link.isPending} loading={link.isPending} onClick={() => link.mutate(videoUrl)}>{s.card.video ? "Заменить ссылку" : "Сохранить ссылку"}</Button>
+            {s.card.video && <Button variant="outline" className="min-h-11" disabled={link.isPending} onClick={() => link.mutate(null)}><Trash2 className="h-4 w-4" />Убрать связь</Button>}
+          </div>
+          {link.error && <ErrorAlert error={link.error} />}
+        </div>
       </Card>
 
       <Card className="space-y-4 p-5" data-testid="publish-youtube">

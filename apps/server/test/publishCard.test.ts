@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import sharp from "sharp";
-import { CardInput, MAX_CHAPTERS, MAX_THUMBNAIL_BYTES, assessCard, chapterClock, composeDescription, inspectThumbnail, mergeChapters, proposeChapters, type CardFacts, type ChapterRow } from "../src/services/studio/publishCard.js";
+import { CardInput, MAX_CHAPTERS, MAX_THUMBNAIL_BYTES, assessCard, chapterClock, composeDescription, inspectThumbnail, parseVideoId, mergeChapters, proposeChapters, type CardFacts, type ChapterRow } from "../src/services/studio/publishCard.js";
 
 /** Сцены по 5 секунд, новый абзац каждые 6 сцен. */
 const board = (seconds: number): ChapterRow[] => Array.from({ length: Math.floor(seconds / 5) }, (_, i) => ({ n: i + 1, start: i * 5, paragraph: Math.floor(i / 6), text: `Scene ${i + 1} words here` }));
@@ -109,6 +109,12 @@ test("итоговое описание: главы только с заполн
   assert.equal(composeDescription("Text", [{ ...chapters[0], title: "" }, chapters[1]], "en"), "Text");
   assert.equal(composeDescription(null, [], "en"), "");
   assert.equal(chapterClock(3725.9), "1:02:05");
+});
+
+test("номер ролика извлекается из ссылок YouTube, чужие адреса отклоняются", () => {
+  const id = "dQw4w9WgXcQ";
+  for (const good of [id, `https://youtu.be/${id}`, `https://youtu.be/${id}?si=abc`, `https://www.youtube.com/watch?v=${id}&t=10s`, `youtube.com/watch?v=${id}`, `https://m.youtube.com/watch?v=${id}`, `https://www.youtube.com/shorts/${id}`, `https://studio.youtube.com/video/${id}/edit`, `  https://youtu.be/${id}  `]) assert.equal(parseVideoId(good), id, good);
+  for (const bad of ["", "not a link at all", `https://example.com/watch?v=${id}`, `https://youtube.com.evil.test/watch?v=${id}`, "https://www.youtube.com/watch?v=short", "https://www.youtube.com/@channel", "https://studio.youtube.com/channel/UCabc"]) assert.equal(parseVideoId(bad), null, bad);
 });
 
 const image = (width: number, height: number) => sharp({ create: { width, height, channels: 3, background: "#123456" } });

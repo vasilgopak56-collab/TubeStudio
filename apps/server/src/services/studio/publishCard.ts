@@ -7,7 +7,7 @@ import sharp from "sharp";
 import { z } from "zod";
 import { ApiError } from "../../lib/errors.js";
 import { tagsLen } from "../seo.js";
-import { oauthStatus } from "../ytAnalytics.js";
+import { linkVideo, oauthStatus } from "../ytAnalytics.js";
 import { projectFile } from "./montageCheck.js";
 import { exportState } from "./montageExport.js";
 import { montageState } from "./montageRender.js";
@@ -37,8 +37,8 @@ export type ChapterRow = { n: number; start: number; paragraph: number; text: st
 export type Chapter = { scene: number; start: number; excerpt: string; title: string };
 type StoredChapter = { scene: number; excerpt: string; title: string };
 type Thumbnail = { file: string; width: number; height: number; bytes: number };
-export type StoredCard = { title: string | null; description: string | null; tags: string[]; language: string | null; categoryId: string | null; madeForKids: boolean | null; syntheticMedia: boolean | null; thumbnail: Thumbnail | null; chapters: StoredChapter[] };
-const EMPTY: StoredCard = { title: null, description: null, tags: [], language: null, categoryId: null, madeForKids: null, syntheticMedia: null, thumbnail: null, chapters: [] };
+export type StoredCard = { title: string | null; description: string | null; tags: string[]; language: string | null; categoryId: string | null; madeForKids: boolean | null; syntheticMedia: boolean | null; thumbnail: Thumbnail | null; chapters: StoredChapter[]; video: { id: string; linkedAt: string } | null };
+const EMPTY: StoredCard = { title: null, description: null, tags: [], language: null, categoryId: null, madeForKids: null, syntheticMedia: null, thumbnail: null, chapters: [], video: null };
 /** Предложение модели. Сохраняется сразу, чтобы оплаченный результат не пропал, но в карточку попадает только то, что выбрал автор. */
 export type Proposal = {
   at: string; model: string; keyword: string; titles: string[]; description: string; tags: string[];
@@ -58,6 +58,21 @@ export const CardInput = z.object({
   syntheticMedia: z.boolean().nullable(),
   chapters: z.array(z.object({ scene: z.number().int().positive(), title: z.string().trim().max(80, "Название главы длиннее 80 знаков").refine((t) => !/[<>]/.test(t), "YouTube не принимает знаки < и > в описании") }).strict()).max(MAX_CHAPTERS),
 }).strict();
+export const VideoLinkInput = z.object({ url: z.string().trim().min(1).max(300).nullable() }).strict();
+const VIDEO_ID = /^[\w-]{11}$/;
+/** Номер ролика из ссылки YouTube или YouTube Studio либо сам номер. Чужие сайты не принимаются. */
+export function parseVideoId(text: string): string | null {
+  const t = text.trim();
+  if (VIDEO_ID.test(t)) return t;
+  let u: URL;
+  try { u = new URL(/^https?:\/\//i.test(t) ? t : `https://${t}`); } catch { return null; }
+  const host = u.hostname.toLowerCase().replace(/^www\.|^m\./, ""), parts = u.pathname.split("/").filter(Boolean);
+  let id: string | null | undefined;
+  if (host === "youtu.be") id = parts[0];
+  else if (host === "studio.youtube.com") id = parts[0] === "video" ? parts[1] : null;
+  else if (host === "youtube.com" || host === "music.youtube.com") id = parts[0] === "watch" ? u.searchParams.get("v") : ["shorts", "live", "embed"].includes(parts[0]) ? parts[1] : null;
+  return id && VIDEO_ID.test(id) ? id : null;
+}
 export const ThumbnailInput = z.object({ data: z.string().min(1).max(Math.ceil(MAX_THUMBNAIL_BYTES * 1.4)) }).strict();
 
 const excerptOf = (text: string) => {
@@ -106,7 +121,7 @@ export function composeDescription(text: string | null, chapters: Chapter[], lan
 export type CardCheck = { code: string; level: "ok" | "warn" | "block"; message: string };
 export type CardFacts = {
   hasMontage: boolean; busy: boolean; accepted: boolean; facts: "none" | "stale" | "issues" | "passed"; boardChanged: boolean;
-  card: Omit<StoredCard, "chapters">; chapters: Chapter[]; descriptionBytes: number;
+  card: Omit<StoredCard, "chapters" | "video">; chapters: Chapter[]; descriptionBytes: number;
 };
 const FACTS: Record<Exclude<CardFacts["facts"], "passed">, string> = {
   none: "Программа считает факты сценария непроверенными. Ручная проверка ей неизвестна.",
@@ -211,6 +226,21 @@ export function saveCard(projectId: string, raw: unknown) {
       return { scene: c.scene, excerpt: found.excerpt, title: c.title };
     });
     await writeCard(projectId, { ...stored, title: input.title, description: input.description, tags: [...new Set(input.tags)], language: input.language, categoryId: input.categoryId, madeForKids: input.madeForKids, syntheticMedia: input.syntheticMedia, chapters: chaptersToStore });
+    return publishState(projectId);
+  });
+}
+
+/** Ссылка на загруженный вручную ролик. Связывает его с проектом для аналитики; запросов в сеть нет. */
+export function saveVideoLink(projectId: string, raw: unknown) {
+  const { url } = VideoLinkInput.parse(raw);
+  const id = url === null ? null : parseVideoId(url);
+  if (url !== null && !id) throw new ApiError("VALIDATION", "Это не похоже на ссылку на ролик YouTube. Вставьте адрес вида https://youtu.be/… или https://www.youtube.com/watch?v=…");
+  return serial(projectId, async () => {
+    await visualState(projectId);
+    const stored = await readCard(projectId);
+    if (stored.video && stored.video.id !== id) await linkVideo(stored.video.id, null);
+    if (id) await linkVideo(id, projectId);
+    await writeCard(projectId, { ...stored, video: id ? { id, linkedAt: stored.video?.id === id ? stored.video.linkedAt : new Date().toISOString() } : null });
     return publishState(projectId);
   });
 }
