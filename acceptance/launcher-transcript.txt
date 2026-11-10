@@ -1,0 +1,202 @@
+----- первый запуск (код 0)
+TubeStudio 3.1.0. Данные: C:\Users\runneradmin\Desktop\Программы\TubeStudio\TubeStudioData
+Останавливаю TubeStudio 0.12.148-preview.1 (старая версия)…
+Старая версия остановлена.
+Переношу данные из старой версии: C:\Users\runneradmin\Desktop\Программы\TubeStudio\apps\server\data
+Перенесено файлов: 3 (0.0 МБ). Старая папка не изменена.
+Запускаю сервер на http://127.0.0.1:8787 …
+Ярлык TubeStudio на рабочем столе обновлён.
+LINK http://127.0.0.1:8787/?launch=537cf52c06b1ac9e21bba06c58b4ba26070b68be7a0e50be5e0b1c1022686a8a
+Готово: TubeStudio открыта в браузере. Закрыть программу — кнопка «Выход» в меню.
+
+Окно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.
+
+
+
+----- ярлык повторно (код 0)
+TubeStudio 3.1.0. Данные: C:\Users\runneradmin\Desktop\Программы\TubeStudio\TubeStudioData
+TubeStudio уже запущена — открываю браузер.
+LINK http://127.0.0.1:8787/?launch=1735e678719344d8a6b6ba374a8ca4f413ee16fa79fa3a640e71856bafbd930c
+
+
+
+----- остановка (код 0)
+Останавливаю TubeStudio 3.1.0 (по запросу)…
+TubeStudio остановлена.
+
+
+
+----- запуск перед аварией (код 0)
+TubeStudio 3.1.0. Данные: C:\Users\runneradmin\Desktop\Программы\TubeStudio\TubeStudioData
+Запускаю сервер на http://127.0.0.1:8787 …
+Ярлык TubeStudio на рабочем столе обновлён.
+LINK http://127.0.0.1:8787/?launch=a05b0c5efaac6bd7dde8644a7e31f70fccde64130f2d046d8a47554f6ac4f224
+Готово: TubeStudio открыта в браузере. Закрыть программу — кнопка «Выход» в меню.
+
+Окно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.
+
+
+
+----- запуск после аварии (код 0)
+TubeStudio 3.1.0. Данные: C:\Users\runneradmin\Desktop\Программы\TubeStudio\TubeStudioData
+Запускаю сервер на http://127.0.0.1:8787 …
+Ярлык TubeStudio на рабочем столе обновлён.
+LINK http://127.0.0.1:8787/?launch=dc9d94f6c7baf12aa9efce67a65b6d494804519fabd22ad0a0b7b99201f3f481
+Готово: TubeStudio открыта в браузере. Закрыть программу — кнопка «Выход» в меню.
+
+Окно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.
+
+
+
+----- остановка после проверки G (код 0)
+Останавливаю TubeStudio 3.1.0 (по запросу)…
+TubeStudio остановлена.
+
+
+
+----- запуск перед выключением (код 0)
+TubeStudio 3.1.0. Данные: C:\Users\runneradmin\Desktop\Программы\TubeStudio\TubeStudioData
+Запускаю сервер на http://127.0.0.1:8787 …
+Ярлык TubeStudio на рабочем столе обновлён.
+LINK http://127.0.0.1:8787/?launch=14fa46320d2bebf909d1ca87fc6ee2ecb0eff79bef2cfcff34831500f66a3e24
+Готово: TubeStudio открыта в браузере. Закрыть программу — кнопка «Выход» в меню.
+
+Окно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.
+
+
+
+----- запуск после выключения (код 0)
+TubeStudio 3.1.0. Данные: C:\Users\runneradmin\Desktop\Программы\TubeStudio\TubeStudioData
+Запускаю сервер на http://127.0.0.1:8787 …
+Ярлык TubeStudio на рабочем столе обновлён.
+LINK http://127.0.0.1:8787/?launch=90d440644e938c550bdb5f3005c044cf9aec105e34c1d59890f0e98f59b790a0
+Готово: TubeStudio открыта в браузере. Закрыть программу — кнопка «Выход» в меню.
+
+Окно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.
+
+
+
+----- остановка после проверки G2 (код 0)
+Останавливаю TubeStudio 3.1.0 (по запросу)…
+TubeStudio остановлена.
+
+
+
+----- запуск с повреждёнными настройками (код 0)
+TubeStudio 3.1.0. Данные: C:\Users\runneradmin\Desktop\Программы\TubeStudio\TubeStudioData
+Запускаю сервер на http://127.0.0.1:8787 …
+Ярлык TubeStudio на рабочем столе обновлён.
+LINK http://127.0.0.1:8787/?launch=7dbe0ba4aea440173cf4cdd4e9058cab1580a18a40f2157b9e6f51e05eb2732a
+Готово: TubeStudio открыта в браузере. Закрыть программу — кнопка «Выход» в меню.
+
+Окно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.
+
+
+
+----- запуск новой версии (код 0)
+TubeStudio 9.9.9-test. Данные: C:\Users\runneradmin\Desktop\Программы\TubeStudio\TubeStudioData
+Останавливаю TubeStudio 3.1.0 (обновление 3.1.0 → 9.9.9-test)…
+Запускаю сервер на http://127.0.0.1:8787 …
+Ярлык TubeStudio на рабочем столе обновлён.
+LINK http://127.0.0.1:8787/?launch=18a1f385dcee73fb9dcf084cd7a447eda678e50e5abd676f63b7f743e4fedc5d
+Готово: TubeStudio открыта в браузере. Закрыть программу — кнопка «Выход» в меню.
+
+Окно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.
+
+
+
+----- повторный запуск новой версии (код 0)
+TubeStudio 9.9.9-test. Данные: C:\Users\runneradmin\Desktop\Программы\TubeStudio\TubeStudioData
+TubeStudio уже запущена — открываю браузер.
+LINK http://127.0.0.1:8787/?launch=b26c471dabf1fb3c7ec4e9b10e6c6c123e2286a42a58a7d80aabbf42f0b0320a
+Ярлык TubeStudio на рабочем столе обновлён.
+
+Окно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.
+
+
+
+----- остановка новой версии (код 0)
+Останавливаю TubeStudio 3.1.0 (по запросу)…
+TubeStudio остановлена.
+
+
+
+----- запуск для браузера (код 0)
+TubeStudio 3.1.0. Данные: C:\Users\runneradmin\Desktop\Программы\TubeStudio\TubeStudioData
+Запускаю сервер на http://127.0.0.1:8787 …
+Ярлык TubeStudio на рабочем столе обновлён.
+LINK http://127.0.0.1:8787/?launch=4a5c2e8449c5d5d30079128c7cb82c8c19f0ee72461e096b7f1748fadaf7d0b8
+Готово: TubeStudio открыта в браузере. Закрыть программу — кнопка «Выход» в меню.
+
+Окно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.
+
+
+
+----- запуск для Студии (код 0)
+TubeStudio 3.1.0. Данные: C:\Users\runneradmin\Desktop\Программы\TubeStudio\TubeStudioData
+Запускаю сервер на http://127.0.0.1:8787 …
+Ярлык TubeStudio на рабочем столе обновлён.
+LINK http://127.0.0.1:8787/?launch=c8499877d93743c4b030b0e05e275d5ef60c249f19479171cd1e8a96f5ce1440
+Готово: TubeStudio открыта в браузере. Закрыть программу — кнопка «Выход» в меню.
+
+Окно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.
+
+
+
+----- остановка после Студии (код 0)
+Останавливаю TubeStudio 3.1.0 (по запросу)…
+TubeStudio остановлена.
+
+
+
+----- запуск для Визуала (код 0)
+TubeStudio 3.1.0. Данные: C:\Users\runneradmin\Desktop\Программы\TubeStudio\TubeStudioData
+Запускаю сервер на http://127.0.0.1:8787 …
+Ярлык TubeStudio на рабочем столе обновлён.
+LINK http://127.0.0.1:8787/?launch=acaa5f13f8c9ff40a94368e69fc6feaa150074cd5dfd4a42586fac29c99f2b4b
+Готово: TubeStudio открыта в браузере. Закрыть программу — кнопка «Выход» в меню.
+
+Окно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.
+
+
+
+----- остановка после Визуала (код 0)
+Останавливаю TubeStudio 3.1.0 (по запросу)…
+TubeStudio остановлена.
+
+
+
+----- M: первый запуск (код 0)
+TubeStudio 3.1.0. Данные: C:\Users\runneradmin\Desktop\Проверка M\Программы\TubeStudio\TubeStudioData
+Переношу данные из старой версии: C:\Users\runneradmin\Desktop\Проверка M\Программы\TubeStudio\Версия_33\TubeStudio-main\apps\server\data
+Перенесено файлов: 3 (0.0 МБ). Старая папка не изменена.
+Запускаю сервер на http://127.0.0.1:8787 …
+LINK http://127.0.0.1:8787/?launch=e770aa474c3c6bcb6effb6543f3ef59101fcff8931a5afbf161334fd53e07c8e
+Готово: TubeStudio открыта в браузере. Закрыть программу — кнопка «Выход» в меню.
+
+Окно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.
+
+
+
+----- M: остановка (код 0)
+Останавливаю TubeStudio 3.1.0 (по запросу)…
+TubeStudio остановлена.
+
+
+
+----- M: запуск рядом с данными прежней 1.x (код 0)
+TubeStudio 3.1.0. Данные: C:\Users\runneradmin\Desktop\Проверка M\Программы\TubeStudio\TubeStudioData
+Переношу данные из старой версии: C:\Users\runneradmin\Desktop\Проверка M\Программы\TubeStudio\TubeStudio-1.1.0-windows\TubeStudioData
+Перенесено файлов: 7 (0.0 МБ). Старая папка не изменена.
+Запускаю сервер на http://127.0.0.1:8787 …
+LINK http://127.0.0.1:8787/?launch=398be8a28c437c3d312206d965c035f1dc1a751139f5000a7b3a7388514ef4f3
+Готово: TubeStudio открыта в браузере. Закрыть программу — кнопка «Выход» в меню.
+
+Окно закроется само через 10 секунд. TubeStudio продолжит работать в браузере.
+
+
+
+----- M: остановка M2 (код 0)
+Останавливаю TubeStudio 3.1.0 (по запросу)…
+TubeStudio остановлена.
+
