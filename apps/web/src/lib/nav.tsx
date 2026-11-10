@@ -1,6 +1,6 @@
 import {
   Palette, Plug, Calculator, LayoutDashboard, BarChart3, Lightbulb, Bookmark, PenLine, Mic, Search, Image, Clapperboard,
-  ScanText, AudioLines, Gauge, Sparkles, FolderKanban, Settings as SettingsIcon, LifeBuoy, CalendarDays, Fingerprint, FileCode2, Wallet, Telescope, KeySquare, Users, MessageSquareText, ClipboardCheck, Puzzle, Workflow, Film, Activity, Flame, Radar, Upload, type LucideIcon,
+  ScanText, AudioLines, Gauge, Sparkles, FolderKanban, Settings as SettingsIcon, LifeBuoy, CalendarDays, Fingerprint, FileCode2, Wallet, Telescope, KeySquare, Users, MessageSquareText, ClipboardCheck, Puzzle, Workflow, Film, Activity, Flame, Radar, Upload, Scissors, type LucideIcon,
 } from "lucide-react";
 
 export type NavItem = { to: string; label: string; icon: LucideIcon; description: string; stage: number };
@@ -94,6 +94,7 @@ const STUDIO: NavItem[] = [
  { to: "/studio/visual", label: "Визуал", icon: Clapperboard, description: "Картинки и анимация через G-Labs: сцены по озвучке, промпты в стиле канала, проверка, файлы для монтажа", stage: 6 },
  { to: "/studio/montage", label: "Монтаж", icon: Film, description: "Автомонтаж: проверка файлов перед сборкой ролика", stage: 6 },
  { to: "/studio/publish", label: "Публикация", icon: Upload, description: "Карточка ролика перед загрузкой на YouTube: главы, сведения, обложка", stage: 7 },
+ { to: "/studio/shorts", label: "Shorts", icon: Scissors, description: "Вертикальные ролики нарезкой из принятого монтажа", stage: 7 },
 ];
 export const NAV: NavGroup[] = [
  {title:"Студия",collapsible:"studio",items:[item("/"),...STUDIO,item("/projects"),item("/settings")]},
