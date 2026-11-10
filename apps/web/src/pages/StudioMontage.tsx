@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowDown, ArrowUp, CheckCircle2, Clapperboard, Download, Film, Folder, SearchCheck, X, XCircle } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, CheckCircle2, Clapperboard, Download, Film, Folder, Map as MapIcon, SearchCheck, X, XCircle } from "lucide-react";
 import { api } from "@/lib/api";
 import { useJob } from "@/lib/jobs";
 import type { ProjectSummary } from "@/lib/types";
@@ -42,6 +42,41 @@ function Issues({ title, items, danger }: { title: string; items: Issue[]; dange
       <span>{x.message}{x.scenes.length > 0 && <span className="text-muted-foreground"> {x.scenes.length === 1 ? "Сцена" : "Сцены"}: {sceneList(x.scenes)}.</span>}</span>
     </li>)}</ul>
   </div>;
+}
+
+type GraphicStatus = "pending" | "accepted" | "rejected";
+type GraphicItem = { scene: number; text: string; label: string; file: string; status: GraphicStatus };
+type GraphicsState = { scanned: boolean; items: GraphicItem[] };
+const GRAPHIC_STATUS: Record<GraphicStatus, string> = { pending: "ждёт решения", accepted: "подтверждена", rejected: "отклонена" };
+
+/** Карты и таймлайн: программа предлагает сцены по тексту, в ролик идёт только подтверждённое. */
+function GraphicsCard({ projectId, disabled }: { projectId: string; disabled: boolean }) {
+  const q = useQuery({ queryKey: ["montage-graphics", projectId], queryFn: () => api<GraphicsState>(`/studio/montage/projects/${projectId}/graphics`), retry: false });
+  const scan = useMutation({ mutationFn: () => api<GraphicsState>(`/studio/montage/projects/${projectId}/graphics/scan`, { method: "POST" }), onSuccess: () => void q.refetch() });
+  const edit = useMutation({ mutationFn: ({ scene, status }: { scene: number; status: GraphicStatus }) => api<GraphicsState>(`/studio/montage/projects/${projectId}/graphics/${scene}`, { method: "PATCH", json: { status } }), onSuccess: () => void q.refetch() });
+  const items = q.data?.items ?? [];
+  const busy = disabled || scan.isPending || edit.isPending;
+  const accepted = items.filter((i) => i.status === "accepted").length;
+  return <Card className="space-y-4 p-5" data-testid="montage-graphics">
+    <SectionTitle>Графика</SectionTitle>
+    <p className="text-sm text-muted-foreground">Карты и таймлайн по тексту сценария. Подтверждённая графика идёт на весь кадр вместо клипа этой сцены. Бесплатно.</p>
+    <Button variant="outline" className="min-h-11" disabled={busy} loading={scan.isPending} loadingText="Ищу сцены и рисую…" onClick={() => scan.mutate()}><MapIcon className="h-4 w-4" />{q.data?.scanned ? "Найти сцены заново" : "Найти сцены для графики"}</Button>
+    {q.error && <ErrorAlert error={q.error} onRetry={() => void q.refetch()} />}
+    {scan.error && <ErrorAlert error={scan.error} />}
+    {edit.error && <ErrorAlert error={edit.error} />}
+    {q.data?.scanned && items.length === 0 && <p className="text-sm text-muted-foreground">В тексте сценария не нашлось известных мест и дат.</p>}
+    {items.length > 0 && <div className="grid gap-4 md:grid-cols-2">{items.map((g) => <div key={g.scene} className="space-y-2 rounded-lg border p-3" data-testid={`graphic-${g.scene}`}>
+      <img src={`/files/${encodeURIComponent(projectId)}/${g.file.split("/").map(encodeURIComponent).join("/")}`} alt={g.label} loading="lazy" className="aspect-video w-full rounded-md bg-black object-cover" />
+      <p className="text-sm font-semibold">Сцена {g.scene} · {g.label}</p>
+      <p className="text-sm text-muted-foreground" dir="auto">{g.text}</p>
+      <p className={`text-sm ${g.status === "accepted" ? "text-success" : g.status === "rejected" ? "text-accent" : "text-crown"}`}>{GRAPHIC_STATUS[g.status]}</p>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" className="min-h-11" disabled={busy || g.status === "accepted"} onClick={() => edit.mutate({ scene: g.scene, status: "accepted" })}><CheckCircle2 className="h-4 w-4" />Подтвердить</Button>
+        <Button size="sm" variant="outline" className="min-h-11" disabled={busy || g.status === "rejected"} onClick={() => edit.mutate({ scene: g.scene, status: "rejected" })}><X className="h-4 w-4" />Отклонить</Button>
+      </div>
+    </div>)}</div>}
+    {items.length > 0 && <p className="text-sm text-muted-foreground">Подтверждено: {accepted} из {items.length}. Чтобы изменения попали в ролик, нажмите «Собрать заново» ниже.</p>}
+  </Card>;
 }
 
 /** Музыка ролика: папка, порядок треков и какие из них звучат. */
@@ -131,6 +166,8 @@ export default function StudioMontage() {
       {r.blockers.length > 0 && <Issues title="Мешает сборке" items={r.blockers} danger />}
       {r.warnings.length > 0 && <Issues title="Предупреждения" items={r.warnings} />}
     </Card>}
+
+    {projectId && <GraphicsCard projectId={projectId} disabled={rendering || !!external} />}
 
     {projectId && <MusicCard projectId={projectId} disabled={rendering || !!external} />}
 

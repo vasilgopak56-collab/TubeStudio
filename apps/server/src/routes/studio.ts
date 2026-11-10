@@ -14,6 +14,7 @@ import { checkGlabs } from "../services/studio/glabs.js";
 import { checkMontage } from "../services/studio/montageCheck.js";
 import { burnMontage, montageBusy, montageState, renderMontage } from "../services/studio/montageRender.js";
 import { chooseMusicFolder, musicState, saveMusicTracks } from "../services/studio/montageSound.js";
+import { graphicsState, scanGraphics, setGraphicStatus } from "../services/studio/montageGraphics.js";
 import { ImportInput, PromptsInput, REDO_REASONS, RenderInput, buildScenes, editScene, exportBoard, generateCastImage, importPreview, listFolders, runImport, runRender, saveCastImage, saveImportFolders, syncCast, videoSpend, visualBusy, visualState, writePrompts, type ExportKind } from "../services/studio/visual.js";
 
 export const studioRoute = new Hono();
@@ -197,6 +198,13 @@ const musicIdle = (id: string) => { if (montageBusy(id)) throw new ApiError("VAL
 studioRoute.get("/studio/montage/projects/:projectId/music", handle(async (c) => musicState(pid(c))));
 studioRoute.put("/studio/montage/projects/:projectId/music/folder", handle(async (c) => { const id = pid(c); musicIdle(id); return chooseMusicFolder(id, (await body(c)) as never); }));
 studioRoute.put("/studio/montage/projects/:projectId/music/tracks", handle(async (c) => { const id = pid(c); musicIdle(id); return saveMusicTracks(id, (await body(c)) as never); }));
+/** Карты и таймлайн: программа предлагает, автор подтверждает. Платных запросов нет. */
+studioRoute.get("/studio/montage/projects/:projectId/graphics", handle(async (c) => graphicsState(pid(c))));
+studioRoute.post("/studio/montage/projects/:projectId/graphics/scan", handle(async (c) => { const id = pid(c); musicIdle(id); return scanGraphics(id); }));
+studioRoute.patch("/studio/montage/projects/:projectId/graphics/:n", handle(async (c) => {
+  const id = pid(c); musicIdle(id);
+  return setGraphicStatus(id, z.coerce.number().int().min(1).max(5000).parse(c.req.param("n")), (await body(c)) as never);
+}));
 /** Сборка черновика: долгая задача на этом компьютере, платных запросов нет. */
 studioRoute.post("/studio/montage/projects/:projectId/render", handle(async (c) => {
   const id = pid(c), { channelId } = z.object({ channelId: Id }).strict().parse(await body(c));

@@ -6,6 +6,7 @@ import { ApiError } from "../../lib/errors.js";
 import { dataPath } from "../../lib/storage.js";
 import { ffmpegPath } from "../audioFx.js";
 import { factStatus, type FactCheckReport } from "./factCheck.js";
+import { applyGraphics, graphicsState } from "./montageGraphics.js";
 import { buildMontagePlan, type MontagePlan, type MontageScene } from "./montagePlan.js";
 import { visualState } from "./visual.js";
 
@@ -27,7 +28,7 @@ export type MontageCheck = {
 /** Проверка плюс то, что нужно сборке. На страницу уходит только сама проверка. */
 export type MontagePrepared = MontageCheck & { plan: MontagePlan | null; audioFile: string | null };
 type Gen = { file?: string; verdict?: "accepted" | "redo" };
-type Row = { n: number; start: number; end: number; picture: Gen; clip: Gen };
+type Row = { n: number; start: number; end: number; picture: Gen; clip: Gen; graphic?: boolean };
 export type MontageInput = {
   board: { timing: "audio" | "estimate"; stale: boolean; audioFile?: string; rows: Row[] } | null;
   facts: ReturnType<typeof factStatus>;
@@ -124,7 +125,7 @@ export async function assessMontage(input: MontageInput, inspect: Inspect): Prom
     if (pic === "missing" || clip === "missing") missing.push(r.n);
     const picOk = usableVisual(pic), clipOk = usableVisual(clip) && !!clip.seconds && clip.seconds > 0;
     if ((r.picture.file && pic !== "missing" && !picOk) || (r.clip.file && clip !== "missing" && !clipOk)) broken.push(r.n);
-    if (!r.clip.file && r.picture.file) noClip.push(r.n);
+    if (!r.clip.file && r.picture.file && !r.graphic) noClip.push(r.n);
     // В кадр идёт клип, а картинка — только если клипа нет.
     const used = r.clip.file ? (clipOk ? clip : null) : picOk ? pic : null;
     if (used && used.width && used.height && Math.min(used.width, used.height) < MIN_SOURCE_SIDE) lowRes.push(r.n);
@@ -160,5 +161,7 @@ export async function prepareMontage(projectId: string): Promise<MontagePrepared
   const { getProject } = await import("../projects.js");
   const p = await getProject(projectId);
   const sd = [...p.artifacts].reverse().find((a) => a.kind === "script")?.data as { script?: string; studio?: { factCheck?: FactCheckReport | null } } | undefined;
-  return assessMontage({ board: state.board, facts: factStatus(sd?.script, sd?.studio?.factCheck) }, diskInspector(projectId));
+  const { items } = await graphicsState(projectId);
+  const board = state.board && { ...state.board, rows: applyGraphics(state.board.rows, items) };
+  return assessMontage({ board, facts: factStatus(sd?.script, sd?.studio?.factCheck) }, diskInspector(projectId));
 }
