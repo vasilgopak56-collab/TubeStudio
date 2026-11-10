@@ -7,6 +7,7 @@ import sharp from "sharp";
 import { z } from "zod";
 import { ApiError } from "../../lib/errors.js";
 import { tagsLen } from "../seo.js";
+import { oauthStatus } from "../ytAnalytics.js";
 import { projectFile } from "./montageCheck.js";
 import { exportState } from "./montageExport.js";
 import { montageState } from "./montageRender.js";
@@ -182,7 +183,7 @@ export async function currentChapters(projectId: string, stored: StoredChapter[]
 }
 
 export async function publishState(projectId: string) {
-  const [stored, proposal] = await Promise.all([readCard(projectId), readProposal(projectId)]);
+  const [stored, proposal, oauth] = await Promise.all([readCard(projectId), readProposal(projectId), oauthStatus()]);
   const [{ visual, montage, chapters }, exported] = await Promise.all([currentChapters(projectId, stored.chapters), exportState(projectId)]);
   const { chapters: _stored, ...rest } = stored;
   const card = { ...rest, language: stored.language ?? visual.board?.language ?? null };
@@ -190,6 +191,7 @@ export async function publishState(projectId: string) {
   const boardChanged = !!r && !!visual.board && visual.board.updatedAt > r.at;
   const finalDescription = composeDescription(stored.description, chapters, card.language), descriptionBytes = Buffer.byteLength(finalDescription, "utf8");
   return {
+    youtube: { configured: oauth.configured, connected: oauth.connected, channel: oauth.channel ? { id: oauth.channel.id, title: oauth.channel.title } : null, uploadGranted: oauth.uploadGranted, scopeKnown: oauth.scopeKnown },
     proposal, finalDescription, descriptionBytes, limits: { title: MAX_TITLE, descriptionBytes: MAX_DESCRIPTION_BYTES, tags: MAX_TAGS_LENGTH }, tagsLength: tagsLen(stored.tags),
     project: visual.project,
     montage: r ? { file: r.file, seconds: r.seconds, bytes: r.bytes, width: r.width, height: r.height, at: r.at } : null,

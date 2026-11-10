@@ -18,6 +18,7 @@ type PublishState = {
   montage: { file: string; seconds: number; bytes: number; width: number; height: number; at: string } | null;
   accepted: { file: string; at: string } | null;
   card: PublishCard; chapters: Chapter[]; categories: { id: string; name: string }[]; checks: Check[]; ready: boolean;
+  youtube: { configured: boolean; connected: boolean; channel: { id: string; title: string } | null; uploadGranted: boolean; scopeKnown: boolean };
   proposal: Proposal | null; finalDescription: string; descriptionBytes: number; tagsLength: number; limits: { title: number; descriptionBytes: number; tags: number };
 };
 type Draft = { title: string; description: string; tags: string; language: string; categoryId: string; madeForKids: string; syntheticMedia: string; titles: Record<number, string> };
@@ -69,6 +70,7 @@ export default function StudioPublish() {
     onSuccess: () => void state.refetch(),
   });
   const dropCover = useMutation({ mutationFn: () => api<PublishState>(`${path}/thumbnail`, { method: "DELETE" }), onSuccess: () => void state.refetch() });
+  const allowUpload = useMutation({ mutationFn: () => api<{ url: string }>("/yt-oauth/start-upload", { method: "POST", json: { consent: true, projectId } }), onSuccess: (r) => { window.location.href = r.url; } });
   const pickCover = (e: ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) cover.mutate(f); };
   const url = (local: string) => `/files/${encodeURIComponent(projectId)}/${local.split("/").map(encodeURIComponent).join("/")}`;
 
@@ -174,6 +176,22 @@ export default function StudioPublish() {
         </div>
         {cover.error && <ErrorAlert error={cover.error} />}
         {dropCover.error && <ErrorAlert error={dropCover.error} />}
+      </Card>
+
+      <Card className="space-y-4 p-5" data-testid="publish-youtube">
+        <SectionTitle>Подключение YouTube</SectionTitle>
+        {!s.youtube.configured && <p className="text-sm">Сначала настройте подключение Google в разделе <Link to="/my-analytics" className="text-primary hover:underline">Моя аналитика</Link>.</p>}
+        {s.youtube.configured && !s.youtube.connected && <p className="text-sm">Канал не подключён. Подключите его в разделе <Link to="/my-analytics" className="text-primary hover:underline">Моя аналитика</Link>.</p>}
+        {s.youtube.connected && <>
+          <p className="text-sm" role="status">Канал Google: <b>{s.youtube.channel?.title ?? "неизвестен"}</b>. Профиль в программе: <b>{channel.name}</b>. Проверьте, что это один и тот же канал.</p>
+          {s.youtube.uploadGranted
+            ? <p className="flex items-center gap-2 text-sm text-success"><CheckCircle2 className="h-4 w-4 shrink-0" />Загрузка на этот канал разрешена.</p>
+            : <>
+              <p className="text-sm text-muted-foreground">{s.youtube.scopeKnown ? "Сейчас разрешено только чтение." : "Разрешения этого подключения неизвестны."} Откроется окно Google: выберите тот же канал и разрешите загрузку роликов. Чтение и аналитика продолжат работать. Если выбрать другой канал или не дать разрешение, прежнее подключение останется как есть.</p>
+              <Button className="min-h-11" disabled={busy} loading={allowUpload.isPending} onClick={() => allowUpload.mutate()}><Upload className="h-4 w-4" />Разрешить загрузку</Button>
+              {allowUpload.error && <ErrorAlert error={allowUpload.error} />}
+            </>}
+        </>}
       </Card>
     </>}
   </div>;

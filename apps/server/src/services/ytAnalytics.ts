@@ -18,6 +18,8 @@ const AUTH = "https://accounts.google.com/o/oauth2/v2/auth", TOKEN = "https://oa
 const YT = "https://www.googleapis.com/youtube/v3", YTA = "https://youtubeanalytics.googleapis.com/v2/reports";
 export const MONETARY_SCOPE = "https://www.googleapis.com/auth/yt-analytics-monetary.readonly";
 export const SCOPES = ["https://www.googleapis.com/auth/youtube.readonly", "https://www.googleapis.com/auth/yt-analytics.readonly"];
+/** Отдельное право загрузки: запрашивается только по кнопке на странице «Публикация». */
+export const UPLOAD_SCOPE = "https://www.googleapis.com/auth/youtube.upload";
 
 export type Tokens = { access_token: string; refresh_token: string; expires_at: number; scope?: string; channel?: { id: string; title: string; thumbnail?: string; uploads?: string }; connectedAt: string };
 const OAUTH = "oauth.json";
@@ -26,6 +28,9 @@ export const redirectUri = () => `http://127.0.0.1:${config.port}/api/yt-oauth/c
 const states = new Map<string, number>();
 const scopeKnown = (t: Tokens | null) => typeof t?.scope === "string" && !!t.scope.trim();
 const monetaryGranted = (t: Tokens | null) => scopeKnown(t) && t!.scope!.split(/\s+/).includes(MONETARY_SCOPE);
+const uploadGranted = (t: Tokens | null) => scopeKnown(t) && t!.scope!.split(/\s+/).includes(UPLOAD_SCOPE);
+/** Для какого канала запрошено право загрузки и куда вернуть автора. */
+const uploadIntents = new Map<string, { channelId: string; project?: string }>();
 const connectionKey = (t: Tokens | null) => t ? JSON.stringify([t.refresh_token, t.channel?.id, t.connectedAt]) : "none";
 
 // All in-process changes of the active token file are serialized and use private temporary files.
@@ -51,21 +56,31 @@ const loadTokens = () => readJson<Tokens | null>(OAUTH, null);
 
 export async function oauthStatus() {
   const c = client(), t = await loadTokens();
-  return { configured: !!(c.id && c.secret), clientId: c.id ? c.id.slice(0, 12) + "…" : "", connected: !!t?.refresh_token, channel: t?.channel ?? null, connectedAt: t?.connectedAt, redirectUri: redirectUri(), scopes: SCOPES, scopeKnown: scopeKnown(t), monetaryGranted: monetaryGranted(t) };
+  return { configured: !!(c.id && c.secret), clientId: c.id ? c.id.slice(0, 12) + "…" : "", connected: !!t?.refresh_token, channel: t?.channel ?? null, connectedAt: t?.connectedAt, redirectUri: redirectUri(), scopes: SCOPES, scopeKnown: scopeKnown(t), monetaryGranted: monetaryGranted(t), uploadGranted: uploadGranted(t) };
 }
 export async function saveClient(id: string, secret: string) {
   if (!/^[\w.-]+\.apps\.googleusercontent\.com$/.test(id.trim())) throw new ApiError("VALIDATION", "Client ID должен оканчиваться на .apps.googleusercontent.com", 400);
   if (secret.trim().length < 10) throw new ApiError("VALIDATION", "Укажите Client secret", 400);
   await saveEnvVars({ GOOGLE_CLIENT_ID: id, GOOGLE_CLIENT_SECRET: secret });
 }
-export function authUrl(options: { monetary?: boolean; selectAccount?: boolean } = {}) {
+export function authUrl(options: { monetary?: boolean; upload?: boolean; selectAccount?: boolean } = {}) {
   const c = client();
   if (!c.id || !c.secret) throw new ApiError("KEY_MISSING", "Сначала укажите Client ID и Client secret OAuth-клиента Google", 400);
   const state = crypto.randomBytes(12).toString("hex"); states.set(state, Date.now());
   for (const [k, v] of states) if (Date.now() - v > 15 * 60_000) states.delete(k);
-  const q = new URLSearchParams({ client_id: c.id, redirect_uri: redirectUri(), response_type: "code", scope: [...SCOPES, ...(options.monetary ? [MONETARY_SCOPE] : [])].join(" "), access_type: "offline", prompt: options.selectAccount ? "consent select_account" : "consent", include_granted_scopes: "true", state });
+  const q = new URLSearchParams({ client_id: c.id, redirect_uri: redirectUri(), response_type: "code", scope: [...SCOPES, ...(options.monetary ? [MONETARY_SCOPE] : []), ...(options.upload ? [UPLOAD_SCOPE] : [])].join(" "), access_type: "offline", prompt: options.selectAccount ? "consent select_account" : "consent", include_granted_scopes: "true", state });
   return `${AUTH}?${q}`;
 }
+/** Ссылка на право загрузки для уже подключённого канала. Выданные раньше права сохраняются. */
+export async function uploadAuthUrl(project?: string) {
+  const t = await loadTokens();
+  if (!t?.refresh_token || !t.channel) throw new ApiError("KEY_MISSING", "Сначала подключите канал: Моя аналитика → «Подключить YouTube».", 400);
+  const url = new URL(authUrl({ monetary: monetaryGranted(t), upload: true, selectAccount: true }));
+  for (const k of uploadIntents.keys()) if (!states.has(k)) uploadIntents.delete(k);
+  uploadIntents.set(url.searchParams.get("state")!, { channelId: t.channel.id, ...(project ? { project } : {}) });
+  return url.toString();
+}
+export const uploadReturn = (state: string | undefined) => (state ? uploadIntents.get(state)?.project ?? null : null);
 
 async function tokenCall(body: Record<string, string>) {
   const r = await fetchRetry(TOKEN, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams(body) }, { timeoutMs: 30_000, retries: 0 });
@@ -80,7 +95,8 @@ async function tokenCall(body: Record<string, string>) {
 
 export async function handleCallback(q: { code?: string; state?: string; error?: string }) {
   const startedAt = q.state ? states.get(q.state) : undefined;
-  if (q.state) states.delete(q.state); // one-use even when consent is denied
+  const intent = q.state ? uploadIntents.get(q.state) : undefined;
+  if (q.state) { states.delete(q.state); uploadIntents.delete(q.state); } // one-use even when consent is denied
   if (startedAt === undefined || Date.now() - startedAt > 15 * 60_000) throw new ApiError("KEY_MISSING", "Ссылка входа устарела — нажмите «Подключить» ещё раз", 400);
   if (q.error) throw new ApiError("KEY_MISSING", q.error === "access_denied" ? "Вы отменили доступ в окне Google" : "Google не завершил подключение", 400);
   if (!q.code) throw new ApiError("VALIDATION", "Google не вернул код подключения", 400);
@@ -94,6 +110,8 @@ export async function handleCallback(q: { code?: string; state?: string; error?:
   const it = ch.items?.[0];
   if (!it || !/^UC[\w-]{22}$/.test(it.id) || typeof it.snippet?.title !== "string") throw new ApiError("NOT_FOUND", "Google не вернул корректный канал YouTube. Существующее подключение сохранено.", 404);
   tok.channel = { id: it.id, title: it.snippet.title.slice(0, 300), thumbnail: it.snippet.thumbnails?.default?.url, uploads: it.contentDetails?.relatedPlaylists?.uploads };
+  if (intent && it.id !== intent.channelId) throw new ApiError("VALIDATION", `В окне Google выбран другой канал («${tok.channel.title}»). Существующее подключение сохранено. Повторите и выберите тот же канал.`, 400);
+  if (intent && !uploadGranted(tok)) throw new ApiError("KEY_MISSING", "Google не выдал право загрузки: в окне Google нужно отметить загрузку роликов. Существующее подключение сохранено.", 400);
   if (connectionKey(await loadTokens()) !== connectionKey(before)) throw new ApiError("VALIDATION", "Подключение изменилось во время проверки Google. Повторите вход для нужного канала.", 409);
   await commitTokens(tok,before);
   return tok.channel;

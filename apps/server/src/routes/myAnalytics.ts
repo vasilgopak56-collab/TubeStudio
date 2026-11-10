@@ -23,9 +23,17 @@ myAnalyticsRoute.put("/yt-oauth/client", async (c) => {
 myAnalyticsRoute.get("/yt-oauth/start", async (c) => { try { return ok(c, { url: A.authUrl({selectAccount:c.req.query("selectAccount")==="1"}) }); } catch (e) { return fail(c, e); } });
 /** Google возвращает сюда браузер пользователя → сохраняем токен и уводим на страницу аналитики */
 myAnalyticsRoute.get("/yt-oauth/callback", async (c) => {
-  try { await A.handleCallback({ code: c.req.query("code"), state: c.req.query("state"), error: c.req.query("error") }); return c.redirect("/my-analytics?connected=1"); }
-  catch (e) { return c.html(`<!doctype html><meta charset="utf-8"><body style="font-family:sans-serif;padding:40px;background:#111;color:#eee"><h2>Не удалось подключить YouTube</h2><p>${esc((e as Error).message)}</p><p><a style="color:#8cf" href="/my-analytics">Вернуться в TubeStudio</a></p>`, 400); }
+  const project = A.uploadReturn(c.req.query("state"));
+  const back = project ? `/studio/publish?project=${encodeURIComponent(project)}` : "/my-analytics";
+  try { await A.handleCallback({ code: c.req.query("code"), state: c.req.query("state"), error: c.req.query("error") }); return c.redirect(project ? back : "/my-analytics?connected=1"); }
+  catch (e) { return c.html(`<!doctype html><meta charset="utf-8"><body style="font-family:sans-serif;padding:40px;background:#111;color:#eee"><h2>Не удалось подключить YouTube</h2><p>${esc((e as Error).message)}</p><p><a style="color:#8cf" href="${esc(back)}">Вернуться в TubeStudio</a></p>`, 400); }
 });
+myAnalyticsRoute.use("/yt-oauth/start-upload", bodyLimit({maxSize:2048,onError:c=>c.json({ok:false,error:{code:"VALIDATION",message:"Слишком большой запрос"}},413)}));
+myAnalyticsRoute.post("/yt-oauth/start-upload",async c=>{try {
+ const b=await c.req.json().catch(()=>{throw new ApiError("VALIDATION","Некорректный JSON согласия",400);});
+ const {projectId}=z.object({consent:z.literal(true),projectId:z.string().uuid().optional()}).strict().parse(b);
+ return ok(c,{url:await A.uploadAuthUrl(projectId)});
+} catch(e){return fail(c,e);}});
 myAnalyticsRoute.post("/yt-oauth/disconnect", async (c) => { try { await A.disconnect(); return ok(c, await A.oauthStatus()); } catch (e) { return fail(c, e); } });
 
 myAnalyticsRoute.get("/my-analytics/overview", async (c) => { try { const d = Math.min(365, Math.max(7, Number(c.req.query("days")) || 28)); return ok(c, await A.channelOverview(d)); } catch (e) { return fail(c, e); } });

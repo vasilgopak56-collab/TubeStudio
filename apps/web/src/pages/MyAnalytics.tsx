@@ -14,7 +14,7 @@ import Channels from "@/features/channels/Channels";
 import Revenue from "@/features/revenue/Revenue";
 import AbJournal from "@/features/ab/AbJournal";
 
-type Status = { monetaryGranted?: boolean; scopeKnown?: boolean; configured: boolean; clientId: string; connected: boolean; channel: { id: string; title: string; thumbnail?: string } | null; connectedAt?: string; redirectUri: string; scopes: string[] };
+type Status = { uploadGranted?: boolean; monetaryGranted?: boolean; scopeKnown?: boolean; configured: boolean; clientId: string; connected: boolean; channel: { id: string; title: string; thumbnail?: string } | null; connectedAt?: string; redirectUri: string; scopes: string[] };
 type Vid = { id: string; title: string; publishedAt?: string; thumbnail?: string; durationSec: number; views: number; minutes: number; avgDuration: number; avgPct: number; subs: number };
 type Traffic = { source: string; label: string; views: number; minutes: number };
 type Overview = { days: number; range: { startDate: string; endDate: string }; totals: Record<string, number>; daily: { day: string; views: number; estimatedMinutesWatched: number; subscribersGained: number }[]; traffic: Traffic[]; videos: Vid[]; note: string };
@@ -41,7 +41,7 @@ function Setup({ st }: { st: Status }) {
         <SectionTitle icon={<KeyRound className="h-4 w-4" />}>Как подключить (≈ 5 минут, один раз)</SectionTitle>
         <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed">{steps.map((s, i) => <li key={i}>{s}</li>)}</ol>
         <p className="mt-3 text-xs text-muted-foreground">Адрес возврата для клиента типа «Web application» (если выберете его вместо Desktop): <code>{st.redirectUri}</code> <CopyButton text={st.redirectUri} label="" /></p>
-        <p className="mt-2 text-xs text-muted-foreground">Доступ только на чтение: {st.scopes.map((s) => s.split("/").pop()).join(", ")}. Токен хранится у вас на компьютере (data/oauth.json), отключить можно в любой момент.</p>
+        <p className="mt-2 text-xs text-muted-foreground">{st.uploadGranted ? "Чтение и загрузка роликов" : "Доступ только на чтение"}: {st.scopes.map((s) => s.split("/").pop()).join(", ")}. Токен хранится у вас на компьютере (data/oauth.json), отключить можно в любой момент.</p>
       </Card>
       <Card brackets className="space-y-3 p-5">
         <SectionTitle icon={<Plug className="h-4 w-4" />}>OAuth-клиент Google</SectionTitle>
