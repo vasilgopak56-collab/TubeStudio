@@ -161,7 +161,7 @@ export async function inspectThumbnail(buf: Buffer) {
   return { ext: meta.format === "jpeg" ? "jpg" : "png", width: meta.width, height: meta.height, bytes: buf.length };
 }
 
-async function readCard(projectId: string): Promise<StoredCard> {
+export async function readCard(projectId: string): Promise<StoredCard> {
   const raw = await fs.readFile(projectFile(projectId, CARD), "utf8").catch(() => null);
   if (!raw) return { ...EMPTY };
   try { return { ...EMPTY, ...(JSON.parse(raw) as Partial<StoredCard>) }; } catch { return { ...EMPTY }; }

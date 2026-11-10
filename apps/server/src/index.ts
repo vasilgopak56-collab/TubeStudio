@@ -26,6 +26,7 @@ import { nichesRoute } from "./routes/niches.js";
 import { exploreRoute } from "./routes/explore.js";
 import { studioRoute } from "./routes/studio.js";
 import { startCompetitorScheduler, stopCompetitorScheduler, activeCompetitorRefreshes } from "./services/competitors.js";
+import { startSnapshotScheduler, stopSnapshotScheduler, activeSnapshotChecks } from "./services/studio/publishSnapshots.js";
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
@@ -152,7 +153,7 @@ const trackedFetch: typeof app.fetch = async (...args) => {
   finally { activeHandlers--; }
 };
 const server = serve({ fetch: trackedFetch, port: config.port, hostname: config.host }, (i) => {
-  started=true;startCompetitorScheduler();if(process.env.TUBESTUDIO_PORTABLE==="1"&&process.env.TS_NO_SCHEDULER!=="1")startAmCatalogWarmup();log.info({ event: "server_started", host: config.host, port: i.port }, "TubeStudio server started");
+  started=true;startCompetitorScheduler();startSnapshotScheduler();if(process.env.TUBESTUDIO_PORTABLE==="1"&&process.env.TS_NO_SCHEDULER!=="1")startAmCatalogWarmup();log.info({ event: "server_started", host: config.host, port: i.port }, "TubeStudio server started");
   void openSoftControl(i.port,softStop,{version:APP_VERSION,link:()=>`http://127.0.0.1:${i.port}/?launch=${issueLaunchToken()}`}).then(async c=>{if(stopping)await c.close();else control=c;}).catch(()=>console.error("TubeStudio: мягкая остановка недоступна; не используйте принудительное завершение без проверки. См. инструкцию."));
 });
 server.prependListener("request",(_req,res)=>{activeResponses.add(res);const done=()=>activeResponses.delete(res);res.once("finish",done);res.once("close",done);});
@@ -160,11 +161,13 @@ server.on("error", (error) => {
   console.error(`TubeStudio: ошибка сервера (${(error as NodeJS.ErrnoException).code??"неизвестная"}).`);
   void (started?Promise.resolve():lease.release().catch(()=>{})).finally(()=>process.exit(1));
 });
+const stopSchedulers=()=>Promise.all([stopCompetitorScheduler(),stopSnapshotScheduler()]);
 /** What keeps the server busy, excluding `self` requests (the exit request itself). */
 function busyReasons(self=0):string[] {
   const out:string[]=[];
   const jobs=activeJobCount();if(jobs)out.push(`задачи: ${jobs}`);
   if(activeCompetitorRefreshes())out.push("обновление конкурентов");
+  if(activeSnapshotChecks())out.push("замер ролика");
   if(Math.max(0,activeHandlers-self)>0||Math.max(0,activeResponses.size-self)>0)out.push("запросы");
   return out;
 }
@@ -172,7 +175,7 @@ async function exitFromUi(force:boolean){
   if(stopping)return;
   if(!force&&busyReasons().length)return; // something started in the meantime: keep running
   stopping=true;
-  const scheduler=stopCompetitorScheduler();
+  const scheduler=stopSchedulers();
   server.close();if("closeIdleConnections" in server)server.closeIdleConnections();
   await Promise.race([scheduler,new Promise(r=>setTimeout(r,3000))]).catch(()=>{});
   await flushLogs().catch(()=>{});
@@ -181,10 +184,10 @@ async function exitFromUi(force:boolean){
   process.exit(0);
 }
 function softStop(socket:Socket):boolean {
-  if(stopping||!control||activeResponses.size||activeHandlers||activeJobCount()||activeCompetitorRefreshes())return false;
+  if(stopping||!control||activeResponses.size||activeHandlers||activeJobCount()||activeCompetitorRefreshes()||activeSnapshotChecks())return false;
   stopping=true;
   // No automatic force on the soft path. If anything goes wrong the lock stays in place.
-  const scheduler=stopCompetitorScheduler();server.close(()=>{void (async()=>{
+  const scheduler=stopSchedulers();server.close(()=>{void (async()=>{
     await scheduler;if(activeJobCount()||activeResponses.size||activeHandlers)throw Error("BUSY");await flushLogs();
     await control!.close();await lease.release();
     const finish=()=>process.exit(0);socket.once("close",finish);socket.end("STOPPED\n",finish);setTimeout(finish,1000).unref();
@@ -194,7 +197,7 @@ function softStop(socket:Socket):boolean {
 for (const signal of ["SIGINT", "SIGTERM"] as const) process.on(signal, () => {
   if (stopping) return; stopping = true;
   const force = setTimeout(() => { console.error("TubeStudio: остановка не подтверждена; блокировка оставлена. Проверьте задачи и инструкцию восстановления.");process.exit(1); }, 3000); force.unref();
-  const scheduler=stopCompetitorScheduler();
+  const scheduler=stopSchedulers();
   server.close(() => { void (async()=>{
     await scheduler;
     if(activeJobCount()>0||activeHandlers>0) { console.error("TubeStudio: есть незавершённые задачи или обработчики; блокировка оставлена. Проверьте задачи и инструкцию восстановления.");await flushLogs();process.exit(1); }

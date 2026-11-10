@@ -251,6 +251,39 @@ export async function videoReport(id: string, days = 365) {
   return out;
 }
 
+/** Сведения о ролике для планового замера: чей он, открыт ли и свежий счётчик. null — YouTube ролик не отдал. */
+export async function videoFacts(id: string) {
+  if (!/^[\w-]{11}$/.test(id)) throw new ApiError("VALIDATION", "Неверный ID видео", 400);
+  const r = await gget<{ items?: { snippet: { channelId: string; title: string; publishedAt: string }; contentDetails: { duration: string }; status?: { privacyStatus?: string }; statistics?: { viewCount?: string; likeCount?: string; commentCount?: string } }[] }>(`${YT}/videos`, { part: "snippet,contentDetails,statistics,status", id });
+  const v = r.items?.[0];
+  if (!v) return null;
+  const count = (x?: string) => (x === undefined ? null : Number(x));
+  return { channelId: v.snippet.channelId, title: v.snippet.title.slice(0, 300), publishedAt: v.snippet.publishedAt, durationSec: iso(v.contentDetails.duration), privacy: v.status?.privacyStatus ?? "unknown", counters: { views: count(v.statistics?.viewCount), likes: count(v.statistics?.likeCount), comments: count(v.statistics?.commentCount) } };
+}
+
+/** Данные одного замера. totals: null и пустое удержание значат «у YouTube данных ещё нет», а не ноль. */
+export async function videoMilestoneReport(id: string, projectId: string) {
+  const before = await loadTokens();
+  if (!before?.refresh_token || !before.channel) throw new ApiError("KEY_MISSING", "Канал не подключён: Моя аналитика → «Подключить YouTube»", 400);
+  const facts = await videoFacts(id);
+  if (!facts || facts.channelId !== before.channel.id) throw new ApiError("VALIDATION", "Ролик не с подключённого канала. Замер не сохранён.", 409);
+  const end = range(1).endDate, begin = facts.publishedAt.slice(0, 10);
+  const f = { startDate: begin < end ? begin : end, endDate: end, filters: `video==${id}` };
+  const [tot, traffic, ret] = await Promise.all([
+    report({ ...f, metrics: BASE_M }),
+    report({ ...f, metrics: "views,estimatedMinutesWatched", dimensions: "insightTrafficSourceType", sort: "-views" }),
+    report({ ...f, metrics: "audienceWatchRatio,relativeRetentionPerformance", dimensions: "elapsedVideoTimeRatio" }).catch(() => null),
+  ]);
+  if (connectionKey(await loadTokens()) !== connectionKey(before)) throw new ApiError("VALIDATION", "Подключение изменилось во время замера. Замер не сохранён.", 409);
+  const retention: Retention | null = ret && rowsOf(ret).map((x) => ({ ratio: Number(x.elapsedVideoTimeRatio), watch: Number(x.audienceWatchRatio), relative: Number(x.relativeRetentionPerformance) }));
+  return {
+    channel: { id: before.channel.id, title: before.channel.title.slice(0, 300) }, title: facts.title, durationSec: facts.durationSec,
+    period: { startDate: f.startDate, endDate: f.endDate }, counters: facts.counters, totals: rowsOf(tot)[0] ?? null,
+    traffic: rowsOf(traffic).map((x) => ({ source: String(x.insightTrafficSourceType), label: TRAFFIC_RU[String(x.insightTrafficSourceType)] ?? String(x.insightTrafficSourceType), views: Number(x.views), minutes: Number(x.estimatedMinutesWatched) })),
+    retention, compare: retention?.length ? await compareWithPrediction(projectId, retention, facts.durationSec) : null,
+  };
+}
+
 /** Fixed, read-only country report. Never persists OAuth data in a report. */
 export async function geographySource(range: { startDate: string; endDate: string }) {
   const before = await loadTokens();

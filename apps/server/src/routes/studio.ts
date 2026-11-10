@@ -17,6 +17,7 @@ import { chooseMusicFolder, musicState, saveMusicTracks } from "../services/stud
 import { graphicsState, scanGraphics, setGraphicStatus } from "../services/studio/montageGraphics.js";
 import { acceptMontage, exportMontage, exportState, montageExporting } from "../services/studio/montageExport.js";
 import { publishState, removeThumbnail, saveCard, saveThumbnail, saveVideoLink } from "../services/studio/publishCard.js";
+import { snapshotsState } from "../services/studio/publishSnapshots.js";
 import { PublishTextInput, publishTextBusy, runPublishText } from "../services/studio/publishText.js";
 import { ImportInput, PromptsInput, REDO_REASONS, RenderInput, buildScenes, editScene, exportBoard, generateCastImage, importPreview, listFolders, runImport, runRender, saveCastImage, saveImportFolders, syncCast, videoSpend, visualBusy, visualState, writePrompts, type ExportKind } from "../services/studio/visual.js";
 
@@ -207,6 +208,7 @@ studioRoute.post("/studio/publish/projects/:projectId/seo", handle(async (c) => 
 studioRoute.put("/studio/publish/projects/:projectId/thumbnail", handle(async (c) => saveThumbnail(pid(c), await body(c))));
 studioRoute.delete("/studio/publish/projects/:projectId/thumbnail", handle(async (c) => removeThumbnail(pid(c))));
 studioRoute.put("/studio/publish/projects/:projectId/video", handle(async (c) => saveVideoLink(pid(c), await body(c))));
+studioRoute.get("/studio/publish/projects/:projectId/snapshots", handle(async (c) => snapshotsState(pid(c))));
 
 studioRoute.get("/studio/montage/projects/:projectId/check", handle(async (c) => checkMontage(pid(c))));
 studioRoute.get("/studio/montage/projects/:projectId", handle(async (c) => { const id = pid(c); return { ...(await montageState(id)), ...(await exportState(id)) }; }));
