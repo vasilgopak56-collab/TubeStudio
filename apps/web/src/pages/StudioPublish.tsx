@@ -21,6 +21,14 @@ type PublishState = {
   youtube: { configured: boolean; connected: boolean; channel: { id: string; title: string } | null; uploadGranted: boolean; scopeKnown: boolean };
   proposal: Proposal | null; finalDescription: string; descriptionBytes: number; tagsLength: number; limits: { title: number; descriptionBytes: number; tags: number };
 };
+type Snapshot = {
+  takenAt: string; ageHours: number; lateHours: number; period: { startDate: string; endDate: string };
+  counters: { views: number | null; likes: number | null; comments: number | null }; totals: Record<string, number> | null;
+  traffic: { label: string; views: number }[]; retention: unknown[] | null;
+  compare: { error?: string; verdict?: string; at30?: { actual: number; predicted: number } } | null;
+};
+type SnapshotRow = { kind: "48h" | "7d"; dueAt: string | null; skipped: boolean; snapshot: Snapshot | null };
+type SnapshotState = { videoId: string | null; publishedAt: string | null; waiting: string | null; problem: string | null; rows: SnapshotRow[] };
 type Draft = { title: string; description: string; tags: string; language: string; categoryId: string; madeForKids: string; syntheticMedia: string; titles: Record<number, string> };
 
 const clock = (s: number) => { const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = Math.floor(s % 60), p = (n: number) => String(n).padStart(2, "0"); return h ? `${h}:${p(m)}:${p(r)}` : `${p(m)}:${p(r)}`; };
@@ -41,6 +49,43 @@ function fileToBase64(file: File) {
   });
 }
 const LEVEL = { ok: { icon: CheckCircle2, cls: "text-success" }, warn: { icon: AlertTriangle, cls: "text-crown" }, block: { icon: XCircle, cls: "text-accent" } };
+
+const KIND_LABEL: Record<SnapshotRow["kind"], string> = { "48h": "Через 48 часов", "7d": "Через 7 дней" };
+const when = (at: string) => new Date(at).toLocaleString("ru-RU");
+const age = (hours: number) => (hours < 72 ? `${Math.round(hours)} ч` : `${Math.round(hours / 24)} дн.`);
+const num = (v: number | undefined | null) => (v === undefined || v === null ? "нет данных" : Math.round(v).toLocaleString("ru-RU"));
+
+function SnapshotDetails({ s }: { s: Snapshot }) {
+  const t = s.totals;
+  return <div className="space-y-1 text-sm">
+    <p>Снят {when(s.takenAt)}. Ролику было {age(s.ageHours)}{s.lateHours >= 1 ? `, опоздание ${age(s.lateHours)}: программа не работала в срок` : ""}.</p>
+    <p>Счётчик YouTube: просмотры {num(s.counters.views)}, лайки {num(s.counters.likes)}, комментарии {num(s.counters.comments)}.</p>
+    {t
+      ? <p>Аналитика за {s.period.startDate} — {s.period.endDate}: просмотры {num(t.views)}, минуты просмотра {num(t.estimatedMinutesWatched)}, средний процент просмотра {num(t.averageViewPercentage)}%, подписки +{num(t.subscribersGained)} / −{num(t.subscribersLost)}.</p>
+      : <p className="text-muted-foreground">Аналитика: у YouTube данных пока нет. Это не ноль просмотров.</p>}
+    {s.traffic.length > 0 && <p>Источники: {s.traffic.slice(0, 5).map((x) => `${x.label} ${num(x.views)}`).join(", ")}.</p>}
+    {s.retention === null && <p className="text-muted-foreground">Удержание: YouTube не отдал данные.</p>}
+    {s.retention?.length === 0 && <p className="text-muted-foreground">Удержание: данных пока нет.</p>}
+    {s.compare?.error && <p className="text-muted-foreground">Сравнение с прогнозом: {s.compare.error}.</p>}
+    {s.compare?.verdict && <p>Удержание против прогноза: {s.compare.verdict}.{s.compare.at30 ? ` На 30-й секунде: факт ${s.compare.at30.actual}%, прогноз ${s.compare.at30.predicted}%.` : ""}</p>}
+  </div>;
+}
+
+function Snapshots({ path, videoId }: { path: string; videoId: string }) {
+  const q = useQuery({ queryKey: ["publish-snapshots", path, videoId], queryFn: () => api<SnapshotState>(`${path}/snapshots`), retry: false });
+  const d = q.data;
+  return <div className="space-y-3 border-t border-border pt-4" data-testid="publish-snapshots">
+    <SectionTitle>Замеры</SectionTitle>
+    {q.error && <ErrorAlert error={q.error} onRetry={() => void q.refetch()} />}
+    {d?.problem && <p role="alert" className="flex items-start gap-2 text-sm text-accent"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{d.problem}</p>}
+    {d?.waiting && <p className="text-sm text-muted-foreground">{d.waiting}</p>}
+    {d?.rows.map((r) => <div key={r.kind} className="space-y-1"><p className="text-sm font-semibold">{KIND_LABEL[r.kind]}</p>
+      {r.snapshot ? <SnapshotDetails s={r.snapshot} />
+        : r.skipped ? <p className="text-sm text-muted-foreground">Пропущен: программа не работала в этот срок, сразу снят замер за 7 дней.</p>
+        : <p className="text-sm text-muted-foreground">{r.dueAt ? `Запланирован на ${when(r.dueAt)}. Если программа будет выключена, замер пройдёт при следующем запуске.` : "Срок появится, когда YouTube сообщит дату публикации. Программа узнает её сама, пока работает."}</p>}
+    </div>)}
+  </div>;
+}
 
 export default function StudioPublish() {
   const [sp, setSp] = useSearchParams();
@@ -199,7 +244,7 @@ export default function StudioPublish() {
         {copyFailed && <p role="alert" className="text-sm text-accent">Не удалось скопировать: браузер запретил доступ к буферу обмена. Выделите текст вручную.</p>}
         <div className="space-y-2 border-t border-border pt-4">
           <SectionTitle>Ссылка на загруженный ролик</SectionTitle>
-          <p className="text-sm text-muted-foreground">После загрузки вставьте сюда ссылку на ролик. По ней программа свяжет его с этим проектом для аналитики.</p>
+          <p className="text-sm text-muted-foreground">После загрузки вставьте сюда ссылку на ролик. По ней программа свяжет его с этим проектом для аналитики. Сохраняя ссылку, вы соглашаетесь на два автоматических замера в YouTube: через 48 часов и через 7 дней после публикации. Они бесплатны и только читают данные.</p>
           {s.card.video && <p className="flex flex-wrap items-center gap-2 text-sm text-success" role="status"><CheckCircle2 className="h-4 w-4 shrink-0" />Связан с проектом:<a className="text-primary hover:underline" href={`https://youtu.be/${s.card.video.id}`} target="_blank" rel="noreferrer">youtu.be/{s.card.video.id}</a></p>}
           <label className="block space-y-1 text-sm"><Label>Ссылка на ролик</Label><Input value={videoUrl} placeholder="https://youtu.be/…" onChange={(e) => setVideoUrl(e.target.value)} /></label>
           <div className="flex flex-wrap items-center gap-3">
@@ -208,6 +253,7 @@ export default function StudioPublish() {
           </div>
           {link.error && <ErrorAlert error={link.error} />}
         </div>
+        {s.card.video && <Snapshots path={path} videoId={s.card.video.id} />}
       </Card>
 
       <Card className="space-y-4 p-5" data-testid="publish-youtube">
