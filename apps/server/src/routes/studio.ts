@@ -16,6 +16,7 @@ import { burnMontage, montageBusy, montageState, renderMontage } from "../servic
 import { chooseMusicFolder, musicState, saveMusicTracks } from "../services/studio/montageSound.js";
 import { graphicsState, scanGraphics, setGraphicStatus } from "../services/studio/montageGraphics.js";
 import { acceptMontage, exportMontage, exportState, montageExporting } from "../services/studio/montageExport.js";
+import { publishState, removeThumbnail, saveCard, saveThumbnail } from "../services/studio/publishCard.js";
 import { ImportInput, PromptsInput, REDO_REASONS, RenderInput, buildScenes, editScene, exportBoard, generateCastImage, importPreview, listFolders, runImport, runRender, saveCastImage, saveImportFolders, syncCast, videoSpend, visualBusy, visualState, writePrompts, type ExportKind } from "../services/studio/visual.js";
 
 export const studioRoute = new Hono();
@@ -23,7 +24,7 @@ const tooBig = (c: Context) => c.json({ ok: false, error: { code: "VALIDATION", 
 const small = bodyLimit({ maxSize: 1024 * 1024, onError: tooBig });
 /** Эталон персонажа — картинка до 12 МБ (в base64 ~16 МБ). */
 const large = bodyLimit({ maxSize: 17 * 1024 * 1024, onError: (c) => c.json({ ok: false, error: { code: "VALIDATION", message: "Картинка больше 12 МБ — уменьшите её" } }, 413) });
-studioRoute.use("/studio/*", (c, next) => (/\/cast\/[A-Za-z0-9]+\/image$/.test(c.req.path) ? large(c, next) : small(c, next)));
+studioRoute.use("/studio/*", (c, next) => (/\/cast\/[A-Za-z0-9]+\/image$|\/publish\/projects\/[\w-]+\/thumbnail$/.test(c.req.path) ? large(c, next) : small(c, next)));
 const body = async (c: Context): Promise<unknown> => { try { return await c.req.json(); } catch { throw new ApiError("VALIDATION", "Некорректный JSON запроса"); } };
 const handle = (fn: (c: Context) => Promise<unknown>) => async (c: Context) => { try { return ok(c, await fn(c)); } catch (e) { return fail(c, e); } };
 const Id = z.string().uuid("Неверный номер канала");
@@ -192,6 +193,12 @@ studioRoute.get("/studio/visual/projects/:projectId/export/:kind", async (c) => 
 });
 
 /** Автомонтаж: проверка файлов перед сборкой. Только чтение, платных запросов нет. */
+// ---------- публикация (Выпуск 4) ----------
+studioRoute.get("/studio/publish/projects/:projectId", handle(async (c) => publishState(pid(c))));
+studioRoute.put("/studio/publish/projects/:projectId", handle(async (c) => saveCard(pid(c), await body(c))));
+studioRoute.put("/studio/publish/projects/:projectId/thumbnail", handle(async (c) => saveThumbnail(pid(c), await body(c))));
+studioRoute.delete("/studio/publish/projects/:projectId/thumbnail", handle(async (c) => removeThumbnail(pid(c))));
+
 studioRoute.get("/studio/montage/projects/:projectId/check", handle(async (c) => checkMontage(pid(c))));
 studioRoute.get("/studio/montage/projects/:projectId", handle(async (c) => { const id = pid(c); return { ...(await montageState(id)), ...(await exportState(id)) }; }));
 /** Ручное принятие именно того файла, который автор посмотрел. */
