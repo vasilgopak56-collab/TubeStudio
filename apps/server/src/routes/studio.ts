@@ -18,6 +18,7 @@ import { graphicsState, scanGraphics, setGraphicStatus } from "../services/studi
 import { acceptMontage, exportMontage, exportState, montageExporting } from "../services/studio/montageExport.js";
 import { publishState, removeThumbnail, saveCard, saveThumbnail, saveVideoLink } from "../services/studio/publishCard.js";
 import { snapshotsState } from "../services/studio/publishSnapshots.js";
+import { acceptShort, buildShorts, exportShorts, saveShortText, shortsState } from "../services/studio/shortCuts.js";
 import { PublishTextInput, publishTextBusy, runPublishText } from "../services/studio/publishText.js";
 import { ImportInput, PromptsInput, REDO_REASONS, RenderInput, buildScenes, editScene, exportBoard, generateCastImage, importPreview, listFolders, runImport, runRender, saveCastImage, saveImportFolders, syncCast, videoSpend, visualBusy, visualState, writePrompts, type ExportKind } from "../services/studio/visual.js";
 
@@ -242,6 +243,27 @@ studioRoute.post("/studio/montage/projects/:projectId/render", handle(async (c) 
   if (montageBusy(id)) throw new ApiError("VALIDATION", "Сборка этого ролика уже идёт.", 409);
   if (montageExporting(id)) throw new ApiError("VALIDATION", "Идёт сохранение файлов этого ролика. Дождитесь окончания.", 409);
   return job(channelId, "montage-render", (ctx) => renderMontage(id, ctx), id);
+}));
+/** Shorts из принятого монтажа: всё считается на этом компьютере, платных запросов нет. */
+const shortsIdle = (id: string) => {
+  if (montageBusy(id)) throw new ApiError("VALIDATION", "Идёт сборка этого ролика. Дождитесь окончания.", 409);
+  if (montageExporting(id)) throw new ApiError("VALIDATION", "Идёт сохранение файлов этого ролика. Дождитесь окончания.", 409);
+};
+const ShortId = z.string().regex(/^\d+-\d+$/, "Неверный номер Short");
+studioRoute.get("/studio/shorts/projects/:projectId", handle(async (c) => shortsState(pid(c))));
+studioRoute.post("/studio/shorts/projects/:projectId/build", handle(async (c) => {
+  const id = pid(c), i = z.object({ channelId: Id, ids: z.array(z.string()) }).strict().parse(await body(c));
+  await getChannel(i.channelId);
+  shortsIdle(id);
+  return job(i.channelId, "shorts-build", (ctx) => buildShorts(id, { ids: i.ids }, ctx), id);
+}));
+studioRoute.post("/studio/shorts/projects/:projectId/accept", handle(async (c) => { const id = pid(c); shortsIdle(id); return acceptShort(id, await body(c)); }));
+studioRoute.put("/studio/shorts/projects/:projectId/items/:shortId", handle(async (c) => { const id = pid(c); shortsIdle(id); return saveShortText(id, ShortId.parse(c.req.param("shortId")), await body(c)); }));
+studioRoute.post("/studio/shorts/projects/:projectId/export", handle(async (c) => {
+  const id = pid(c), i = z.object({ channelId: Id, folder: z.string().min(1).max(1000) }).strict().parse(await body(c));
+  await getChannel(i.channelId);
+  shortsIdle(id);
+  return job(i.channelId, "shorts-export", (ctx) => exportShorts(id, i.folder, ctx), id);
 }));
 /** Вшивание субтитров в готовый черновик: долгая задача, платных запросов нет. */
 studioRoute.post("/studio/montage/projects/:projectId/burn", handle(async (c) => {

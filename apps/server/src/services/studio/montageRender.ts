@@ -37,7 +37,7 @@ export function partsOf(plan: MontagePlan): RenderPart[] {
 
 const cover = (w: number, h: number) => `scale=${w}:${h}:force_original_aspect_ratio=increase:flags=lanczos,crop=${w}:${h}`;
 const FIT = `${cover(W, H)},setsar=1,format=yuv420p`;
-const VIDEO_CODEC = ["-c:v", "libx264", "-preset", "medium", "-crf", "18", "-video_track_timescale", "24000"];
+export const VIDEO_CODEC = ["-c:v", "libx264", "-preset", "medium", "-crf", "18", "-video_track_timescale", "24000"];
 const ENCODE = ["-an", "-sn", ...VIDEO_CODEC];
 
 /** Входные данные и фильтр куска. Для статичного кадра из клипа input — заранее извлечённый кадр. */
@@ -132,10 +132,10 @@ export async function burnVideo(o: { ffmpeg: string; input: string; dir: string;
 }
 
 // ---------- сборка настоящего проекта ----------
-type Running = { jobId: string | null; since: string; what: "render" | "burn" };
+type Running = { jobId: string | null; since: string; what: "render" | "burn" | "shorts" };
 const running = new Map<string, Running>();
 export const montageBusy = (projectId: string) => running.get(projectId) ?? null;
-function lockMontage<T>(projectId: string, what: Running["what"], fn: () => Promise<T>): Promise<T> {
+export function lockMontage<T>(projectId: string, what: Running["what"], fn: () => Promise<T>): Promise<T> {
   if (running.has(projectId)) throw new ApiError("VALIDATION", "Сборка этого ролика уже идёт.", 409);
   running.set(projectId, { jobId: taskContext()?.jobId ?? null, since: new Date().toISOString(), what });
   return fn().finally(() => running.delete(projectId));

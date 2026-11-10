@@ -26,12 +26,14 @@ export const toVtt = (cues: Cue[]) => `WEBVTT\n\n${cues.map((c) => `${vttTime(c.
 
 /** Текст не должен стать командой оформления ASS. */
 const assText = (s: string) => s.replace(/\\/g, "/").replace(/\{/g, "(").replace(/\}/g, ")").replace(/\s*\n\s*/g, "\\N");
-/** Белый Arial Bold с чёрной обводкой внизу кадра, размеры заданы для 1920×1080. */
-export function toAss(cues: Cue[]) {
-  return ["[Script Info]", "ScriptType: v4.00+", "PlayResX: 1920", "PlayResY: 1080", "WrapStyle: 0", "ScaledBorderAndShadow: yes", "",
+export type AssLayout = { width: number; height: number; size: number; outline: number; align: number; marginH: number; marginV: number };
+const WIDE_LAYOUT: AssLayout = { width: 1920, height: 1080, size: 56, outline: 4, align: 2, marginH: 120, marginV: 60 };
+/** Белый Arial Bold с чёрной обводкой. По умолчанию внизу кадра 1920×1080. */
+export function toAss(cues: Cue[], l: AssLayout = WIDE_LAYOUT) {
+  return ["[Script Info]", "ScriptType: v4.00+", `PlayResX: ${l.width}`, `PlayResY: ${l.height}`, "WrapStyle: 0", "ScaledBorderAndShadow: yes", "",
     "[V4+ Styles]",
     "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
-    "Style: Default,Arial,56,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,4,0,2,120,120,60,1", "",
+    `Style: Default,Arial,${l.size},&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,${l.outline},0,${l.align},${l.marginH},${l.marginH},${l.marginV},1`, "",
     "[Events]",
     "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
     ...cues.map((c) => `Dialogue: 0,${assTime(c.start)},${assTime(c.end)},Default,,0,0,0,,${assText(c.text)}`), ""].join("\n");

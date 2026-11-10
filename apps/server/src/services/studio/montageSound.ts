@@ -21,7 +21,7 @@ const DUCK = "threshold=0.016:ratio=2:attack=20:release=400";
 export const CROSSFADE_SEC = 2;
 const FADE_IN_SEC = 2, FADE_OUT_SEC = 3;
 const MIN_TRACK_SEC = 10;
-const LOUDNORM = `I=${TARGET_LUFS}:TP=${TARGET_PEAK}:LRA=20`;
+export const LOUDNORM = `I=${TARGET_LUFS}:TP=${TARGET_PEAK}:LRA=20`;
 const FOLDER = "montage/music", META = "montage/music.json";
 const AUDIO_FILE = /\.(mp3|wav|m4a|aac|ogg|flac)$/i;
 
@@ -55,7 +55,7 @@ export function parseLoudnorm(log: string): Loudness | null {
   try { return JSON.parse(log.slice(from, to + 1)) as Loudness; } catch { return null; }
 }
 const finite = (s: string | undefined) => { const n = Number(s); return s !== undefined && Number.isFinite(n) ? n : null; };
-async function measure(bin: string, file: string, signal?: AbortSignal) {
+export async function measure(bin: string, file: string, signal?: AbortSignal) {
   const report = parseLoudnorm(await runFfmpeg(bin, ["-i", file, "-map", "0:a:0", "-af", `loudnorm=${LOUDNORM}:print_format=json`, "-f", "null", "-"], signal, "info"));
   return { lufs: finite(report?.input_i), peak: finite(report?.input_tp) };
 }
