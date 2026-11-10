@@ -17,7 +17,12 @@ type MontageCheck = {
 };
 type RenderResult = { file: string; at: string; seconds: number; width: number; height: number; bytes: number; parts: number; reused: number; lufs?: number; peak?: number; music?: number; subtitles?: { files: { srt: string; vtt: string } | null; cues: number; problem: string | null } };
 type BurnResult = { file: string; at: string; seconds: number; bytes: number; source: string };
-type MontageState = { running: { jobId: string | null; since: string; what?: "render" | "burn" } | null; result: RenderResult | null; burned: (BurnResult & { stale: boolean }) | null };
+type ExportResult = { folder: string; at: string; files: string[] };
+type MontageState = {
+  running: { jobId: string | null; since: string; what?: "render" | "burn" } | null; result: RenderResult | null; burned: (BurnResult & { stale: boolean }) | null;
+  accepted: { file: string; at: string } | null; facts: "none" | "stale" | "issues" | "passed"; exported: ExportResult | null;
+};
+const FACTS_NOTE: Record<MontageState["facts"], string> = { none: "Программа считает факты сценария непроверенными. Ручная проверка ей неизвестна.", stale: "Сценарий меняли после проверки фактов.", issues: "После проверки фактов остались неисправленные места.", passed: "" };
 type MusicTrack = { name: string; file: string; seconds: number; lufs: number; use: boolean };
 type MusicState = { folder: string | null; tracks: MusicTrack[]; skipped?: string[] };
 
@@ -127,18 +132,25 @@ export default function StudioMontage() {
   const check = useQuery({ queryKey: ["montage-check", projectId], queryFn: () => api<MontageCheck>(`/studio/montage/projects/${projectId}/check`), enabled: false, retry: false, gcTime: 0 });
   const render = useJob<RenderResult>("");
   const burn = useJob<BurnResult>("");
-  const rendering = render.status === "running" || burn.status === "running";
+  const saving = useJob<ExportResult>("");
+  const [picking, setPicking] = useState(false);
+  const rendering = render.status === "running" || burn.status === "running" || saving.status === "running";
   const state = useQuery({
     queryKey: ["montage-state", projectId], queryFn: () => api<MontageState>(`/studio/montage/projects/${projectId}`), enabled: !!projectId, retry: false,
     refetchInterval: (q) => (q.state.data?.running ? 3000 : false),
   });
-  useEffect(() => { if (render.status === "done" || render.status === "error" || burn.status === "done" || burn.status === "error") void state.refetch(); }, [render.status, burn.status]);
+  useEffect(() => { if ([render.status, burn.status, saving.status].some((s) => s === "done" || s === "error")) void state.refetch(); }, [render.status, burn.status, saving.status]);
+  const accept = useMutation({ mutationFn: (file: string) => api(`/studio/montage/projects/${projectId}/accept`, { method: "POST", json: { file } }), onSuccess: () => void state.refetch() });
   const stop = useMutation({ mutationFn: (jobId: string) => api(`/jobs/${jobId}/cancel`, { method: "POST" }), onSuccess: () => void state.refetch() });
   const external = !rendering ? state.data?.running ?? null : null;
   const draft = state.data?.result ?? null;
   const burned = state.data?.burned ?? null;
   const url = (local: string) => `/files/${encodeURIComponent(projectId)}/${local.split("/").map(encodeURIComponent).join("/")}`;
   const subs = draft?.subtitles ?? null;
+  const accepted = state.data?.accepted ?? null;
+  const facts = state.data?.facts ?? "passed";
+  const exported = state.data?.exported ?? null;
+  const saveTo = (folder: string) => void saving.start({ channelId: channel!.id, folder }, `/studio/montage/projects/${projectId}/export`);
 
   if (loading) return null;
   const header = <ToolHeader icon={Film} title="Монтаж" eyebrow="// ВЫПУСК 3" subtitle="Проверка файлов перед сборкой ролика" right={channel ? <ChannelPicker /> : undefined} />;
@@ -204,6 +216,29 @@ export default function StudioMontage() {
         <video key={burned.file} controls preload="metadata" className="aspect-video w-full rounded-md bg-black" src={url(burned.file)} data-testid="montage-burned" />
         <p className="text-sm text-muted-foreground">{mmss(burned.seconds)} · {(burned.bytes / 1024 ** 3).toFixed(2)} ГБ · собрано {new Date(burned.at).toLocaleString("ru-RU")}</p>
       </div>}
+    </Card>}
+
+    {projectId && draft && <Card className="space-y-4 p-5" data-testid="montage-accept">
+      <SectionTitle>Принятие и сохранение</SectionTitle>
+      {picking && <FolderPicker title="Куда сохранить файлы ролика" onClose={() => setPicking(false)} onPick={(p) => { setPicking(false); saveTo(p); }} />}
+      {!accepted && <>
+        <p className="text-sm text-muted-foreground">Посмотрите и послушайте черновик целиком. Принять можно только этот вариант: после новой сборки его нужно будет принять снова.</p>
+        {facts !== "passed" && <p className="flex items-center gap-2 text-sm text-crown"><AlertTriangle className="h-4 w-4 shrink-0" />{FACTS_NOTE[facts]}</p>}
+        <Button className="min-h-11" disabled={rendering || !!external} loading={accept.isPending} onClick={() => accept.mutate(draft.file)}><CheckCircle2 className="h-4 w-4" />Принять ролик</Button>
+      </>}
+      {accepted && <>
+        <p className="flex items-center gap-2 text-sm text-success" role="status"><CheckCircle2 className="h-4 w-4 shrink-0" />Ролик принят {new Date(accepted.at).toLocaleString("ru-RU")}</p>
+        <p className="text-sm text-muted-foreground">Будет сохранено: видео{subs?.files ? ", субтитры SRT" : ""}{burned && !burned.stale ? ", видео со вшитыми субтитрами" : ""}.{burned?.stale ? " Видео со вшитыми субтитрами устарело и не сохранится, сначала соберите его заново." : ""}{!burned ? " Видео со вшитыми субтитрами ещё не собрано." : ""} Файлы с такими именами не перезаписываются.</p>
+        {exported && <p className="break-all font-mono text-xs text-muted-foreground">{exported.folder}</p>}
+        {!rendering && !external && <div className="flex flex-wrap gap-2">
+          {exported && <Button className="min-h-11" onClick={() => saveTo(exported.folder)}><Download className="h-4 w-4" />Сохранить в эту папку</Button>}
+          <Button className="min-h-11" variant={exported ? "outline" : "primary"} onClick={() => setPicking(true)}><Folder className="h-4 w-4" />{exported ? "Выбрать другую папку" : "Сохранить на компьютер"}</Button>
+        </div>}
+      </>}
+      <JobBox job={saving} onCancel={saving.cancel} />
+      {saving.status === "error" && saving.error && <ErrorAlert error={saving.error} />}
+      {accept.error && <ErrorAlert error={accept.error} />}
+      {exported && !rendering && <div className="text-sm text-muted-foreground"><p>Сохранено {new Date(exported.at).toLocaleString("ru-RU")}:</p><ul className="list-disc pl-5">{exported.files.map((f) => <li key={f} className="break-all">{f}</li>)}</ul></div>}
     </Card>}
   </div>;
 }

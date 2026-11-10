@@ -15,6 +15,7 @@ import { checkMontage } from "../services/studio/montageCheck.js";
 import { burnMontage, montageBusy, montageState, renderMontage } from "../services/studio/montageRender.js";
 import { chooseMusicFolder, musicState, saveMusicTracks } from "../services/studio/montageSound.js";
 import { graphicsState, scanGraphics, setGraphicStatus } from "../services/studio/montageGraphics.js";
+import { acceptMontage, exportMontage, exportState, montageExporting } from "../services/studio/montageExport.js";
 import { ImportInput, PromptsInput, REDO_REASONS, RenderInput, buildScenes, editScene, exportBoard, generateCastImage, importPreview, listFolders, runImport, runRender, saveCastImage, saveImportFolders, syncCast, videoSpend, visualBusy, visualState, writePrompts, type ExportKind } from "../services/studio/visual.js";
 
 export const studioRoute = new Hono();
@@ -192,7 +193,17 @@ studioRoute.get("/studio/visual/projects/:projectId/export/:kind", async (c) => 
 
 /** Автомонтаж: проверка файлов перед сборкой. Только чтение, платных запросов нет. */
 studioRoute.get("/studio/montage/projects/:projectId/check", handle(async (c) => checkMontage(pid(c))));
-studioRoute.get("/studio/montage/projects/:projectId", handle(async (c) => montageState(pid(c))));
+studioRoute.get("/studio/montage/projects/:projectId", handle(async (c) => { const id = pid(c); return { ...(await montageState(id)), ...(await exportState(id)) }; }));
+/** Ручное принятие именно того файла, который автор посмотрел. */
+studioRoute.post("/studio/montage/projects/:projectId/accept", handle(async (c) => { const id = pid(c); musicIdle(id); return acceptMontage(id, (await body(c)) as never); }));
+/** Сохранение принятого ролика в папку автора. */
+studioRoute.post("/studio/montage/projects/:projectId/export", handle(async (c) => {
+  const id = pid(c), i = z.object({ channelId: Id, folder: z.string().min(1).max(1000) }).strict().parse(await body(c));
+  await getChannel(i.channelId);
+  musicIdle(id);
+  if (montageExporting(id)) throw new ApiError("VALIDATION", "Файлы этого ролика уже сохраняются.", 409);
+  return job(i.channelId, "montage-export", (ctx) => exportMontage(id, i.folder, ctx), id);
+}));
 /** Музыка ролика: своя папка у каждого проекта, треки копируются в проект. */
 const musicIdle = (id: string) => { if (montageBusy(id)) throw new ApiError("VALIDATION", "Идёт сборка этого ролика. Дождитесь окончания.", 409); };
 studioRoute.get("/studio/montage/projects/:projectId/music", handle(async (c) => musicState(pid(c))));
@@ -211,6 +222,7 @@ studioRoute.post("/studio/montage/projects/:projectId/render", handle(async (c) 
   await getChannel(channelId);
   if (visualBusy(id)) throw new ApiError("VALIDATION", "В этом проекте идёт работа «Визуала». Дождитесь окончания.", 409);
   if (montageBusy(id)) throw new ApiError("VALIDATION", "Сборка этого ролика уже идёт.", 409);
+  if (montageExporting(id)) throw new ApiError("VALIDATION", "Идёт сохранение файлов этого ролика. Дождитесь окончания.", 409);
   return job(channelId, "montage-render", (ctx) => renderMontage(id, ctx), id);
 }));
 /** Вшивание субтитров в готовый черновик: долгая задача, платных запросов нет. */
@@ -218,6 +230,7 @@ studioRoute.post("/studio/montage/projects/:projectId/burn", handle(async (c) =>
   const id = pid(c), { channelId } = z.object({ channelId: Id }).strict().parse(await body(c));
   await getChannel(channelId);
   if (montageBusy(id)) throw new ApiError("VALIDATION", "Сборка этого ролика уже идёт.", 409);
+  if (montageExporting(id)) throw new ApiError("VALIDATION", "Идёт сохранение файлов этого ролика. Дождитесь окончания.", 409);
   return job(channelId, "montage-burn", (ctx) => burnMontage(id, ctx), id);
 }));
 
