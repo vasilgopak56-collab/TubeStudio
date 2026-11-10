@@ -35,6 +35,8 @@ import {AssistantAppendAsk,AssistantAppendSend,previewAssistantAppend,appendAssi
 import {ConnectionInput,createModelConnection,listModelConnections,ConnectionRemovalAsk,ConnectionRemovalSend,previewConnectionRemoval,removeModelConnection} from '../services/modelConnections.js';
 import {assistantHelpAnswer,assistantQuote,runAssistantAction} from '../services/assistantActions.js';
 import {assistantMaxTokens} from '../services/assistant.js';
+import {reservePublishTexts,runPublishTextsAction} from '../services/assistantPublishTexts.js';
+import {linkJobToChannel} from '../services/studio/channels.js';
 import {Hono} from 'hono';
 import {bodyLimit} from 'hono/body-limit';
 import {z} from 'zod';
@@ -51,6 +53,8 @@ assistantRoute.post('/assistant/conversations',async c=>{try{return ok(c,await c
 assistantRoute.get('/assistant/conversations/:id',async c=>{try{return ok(c,await loadAssistant(z.string().uuid().parse(c.req.param('id'))));}catch(e){return fail(c,e);}});
 assistantRoute.post('/assistant/preview',async c=>{try{const p=await previewAssistant(AssistantAsk.parse(await body(c)));return ok(c,{...p,quoteUsd:await assistantQuote(p.selection,p.characters,assistantMaxTokens(p.input))});}catch(e){return fail(c,e);}});
 assistantRoute.post('/assistant/help',async c=>{try{return ok(c,assistantHelpAnswer(await body(c)));}catch(e){return fail(c,e);}});
+/** Платное действие: запись попытки, затем задача, внутри которой окно цены разрешает один запрос. */
+assistantRoute.post('/assistant/actions/publish-texts',async c=>{try{const a=await reservePublishTexts(await body(c));const jobId=startJob(ctx=>runPublishTextsAction(a,ctx));await linkJobToChannel(jobId,a.channelId,'publish-seo',a.projectId).catch(()=>{});return ok(c,{jobId});}catch(e){return fail(c,e);}});
 assistantRoute.post('/assistant/actions',async c=>{try{return ok(c,await runAssistantAction(await body(c)));}catch(e){return fail(c,e);}});
 assistantRoute.post('/assistant/ask',async c=>{try{const p=await reserveAssistant(AssistantSend.parse(await body(c)));return ok(c,{jobId:startJob(ctx=>runAssistant(p,ctx))});}catch(e){return fail(c,e);}});
 assistantRoute.post('/assistant/manual-skill-preview',async c=>{try{return ok(c,await previewManualSkill(ManualSkillAsk.parse(await body(c))));}catch(e){return fail(c,e);}});

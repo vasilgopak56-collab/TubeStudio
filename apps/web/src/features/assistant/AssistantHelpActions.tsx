@@ -2,17 +2,39 @@ import {useEffect,useRef,useState} from 'react';
 import {useLocation,useNavigate} from 'react-router-dom';
 import {api} from '@/lib/api';
 import {Button,Input,Select,ErrorAlert} from '@/components/ui';
+import {useJob,type PriceChallenge} from '@/lib/jobs';
+import {JobBox,useActiveChannel} from '@/features/studio/common';
 
 /** **жирный** внутри шагов справки. Своя копия, чтобы панель не тянула всю страницу справки. */
 function Rich({text}:{text:string}){return <>{text.split(/(\*\*[^*]+\*\*)/g).filter(Boolean).map((p,i)=>p.startsWith('**')?<b key={i}>{p.slice(2,-2)}</b>:<span key={i}>{p}</span>)}</>;}
 
 export type ActionProposal={kind:string;route?:string};
-type ActionKind='open-page'|'montage-check'|'publish-readiness';
+type ActionKind='open-page'|'montage-check'|'publish-readiness'|'publish-texts';
 type ActionResult={kind:ActionKind;title:string;ok:boolean;navigate?:string;lines:{level:'ok'|'warn'|'block';message:string}[]};
 type HelpSection={id:string;title:string;route:string;short:string;steps:string[];cost:string};
-const TITLES:Record<ActionKind,string>={'open-page':'Открыть страницу','montage-check':'Проверить ролик перед монтажом','publish-readiness':'Показать готовность карточки публикации'};
+const TITLES:Record<ActionKind,string>={'open-page':'Открыть страницу','montage-check':'Проверить ролик перед монтажом','publish-readiness':'Показать готовность карточки публикации','publish-texts':'Подготовить тексты публикации'};
 const KNOWN=(k:string):k is ActionKind=>k in TITLES;
-const SECTION_CHECK:Record<string,ActionKind>={'studio-montage':'montage-check','studio-publish':'publish-readiness'};
+const SECTION_ACTIONS:Record<string,ActionKind[]>={'studio-montage':['montage-check'],'studio-publish':['publish-readiness','publish-texts']};
+
+/** Платное действие: одна задача, внутри — то же окно цены, что на странице «Публикация». Закрытие панели задачу не останавливает. */
+function PublishTextsCard({projects,defaultProject,disabled}:{projects:{id:string;title:string}[];defaultProject:string;disabled?:boolean}){
+ const {channel}=useActiveChannel();
+ const job=useJob<unknown>('/assistant/actions/publish-texts');
+ const [project,setProject]=useState(defaultProject),[approved,setApproved]=useState(false);
+ const running=job.status==='running';
+ useEffect(()=>{if(!running)setProject(defaultProject);},[defaultProject]);
+ const decide=(c:PriceChallenge,d:'approve'|'deny')=>{if(d==='approve')setApproved(true);job.decideConsent(c,d);};
+ return <section className="space-y-2 rounded-lg border border-primary/40 p-3 text-sm" aria-label={'Действие: '+TITLES['publish-texts']}>
+  <h4 className="font-semibold">Действие: {TITLES['publish-texts']}</h4>
+  <p className="text-xs">Платно: один запрос к текстовой модели AnyModel из Настроек. Ориентир цены покажет окно подтверждения; без вашего «Подтвердить» запрос не уйдёт. Автоповтора и резервных моделей нет. Готовые тексты заменят прежнее предложение модели на странице «Публикация», сама карточка не меняется.</p>
+  <p className="text-xs text-muted-foreground">Канал: {channel?.name??'не выбран'}</p>
+  <label className="block text-xs">Ролик<Select aria-label="Ролик для текстов публикации" value={project} disabled={running||disabled} onChange={e=>{setProject(e.target.value);setApproved(false);}}><option value="">Выберите проект</option>{projects.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</Select></label>
+  {!running&&<Button size="sm" disabled={disabled||!project||!channel} onClick={()=>{setApproved(false);void job.start({projectId:project,channelId:channel!.id,confirmed:true},undefined,{serverConsent:true});}}>Выполнить</Button>}
+  <JobBox job={{...job,decideConsent:decide}} onCancel={()=>void job.cancel()} note="Обычно занимает меньше минуты."/>
+  {job.status==='done'&&<p className="text-success">✓ Готово. Тексты лежат на странице «Публикация» в блоке «Предложение модели». Проверьте их перед тем, как подставлять.</p>}
+  {job.status==='error'&&approved&&<p className="text-accent">Цена была подтверждена, поэтому запрос мог быть отправлен и оплачен. Через Помощника повтор не запускается: проверьте страницу «Публикация» и при необходимости повторите там.</p>}
+ </section>;
+}
 const mark={ok:'✓',warn:'!',block:'✕'} as const;
 
 /** Одно действие из списка Помощника. Выполняется только по нажатию владельца; сервер повторно проверяет список. */
@@ -23,6 +45,7 @@ export function AssistantActionCard({proposal,projects,defaultProject,pageTitle,
  useEffect(()=>{setProject(defaultProject);},[defaultProject]);
  useEffect(()=>{setResult(null);setError(null);},[project]);
  if(!KNOWN(proposal.kind))return <div className="rounded-lg border border-accent/50 p-3 text-sm" aria-label="Недоступное действие">Помощник предложил действие, которого нет в списке. Оно не выполняется.</div>;
+ if(proposal.kind==='publish-texts')return <PublishTextsCard projects={projects} defaultProject={defaultProject} disabled={disabled}/>;
  const kind=proposal.kind,needsProject=kind!=='open-page';
  if(kind==='open-page'&&!proposal.route)return <div className="rounded-lg border border-accent/50 p-3 text-sm">Помощник не указал страницу. Ничего не открыто.</div>;
  async function run(){
@@ -68,7 +91,7 @@ export function AssistantHelpActions({projects,defaultProject}:{projects:{id:str
    {s.steps.length>0&&<ol className="list-decimal space-y-1 pl-5">{s.steps.map((t,i)=><li key={i}><Rich text={t}/></li>)}</ol>}
    {s.cost&&<p className="text-xs text-muted-foreground">Цена: {s.cost}</p>}
    {s.route!=='/help'&&s.route!==location.pathname&&<AssistantActionCard proposal={{kind:'open-page',route:s.route}} pageTitle={s.title} projects={projects} defaultProject={defaultProject}/>}
-   {SECTION_CHECK[s.id]&&<AssistantActionCard proposal={{kind:SECTION_CHECK[s.id]}} projects={projects} defaultProject={defaultProject}/>}
+   {(SECTION_ACTIONS[s.id]??[]).map(kind=><AssistantActionCard key={kind} proposal={{kind}} projects={projects} defaultProject={defaultProject}/>)}
   </article>)}
  </section>;
 }
