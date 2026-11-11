@@ -236,3 +236,45 @@ test("ключ образца и запрос из названия", () => {
   assert.equal(radar.scriptMatches("Тёмная психология | dark psychology", "ru"), true);
   assert.equal(radar.scriptMatches("Dark psychology", "ru"), false);
 });
+
+// ---------- окно цены на весь прогон Радара ----------
+test("окно цены: отказ — Радар не запускается (ни ИИ, ни YouTube); подтверждение — одно окно на прогон", async () => {
+  const f = fakeFetcher(world());
+  let yt = 0;
+  setYtFetcher(((...a: Parameters<typeof f>) => { yt++; return f(...a); }) as typeof f);
+  const c = await profile("Окно цены");
+  let aiCalls = 0;
+  const ai: RadarAi = {
+    ready: async () => true,
+    plan: async () => [{ step: "все шаги", provider: "anthropic", model: "same-model", kind: "text", count: 7, inputChars: 1000, maxTokens: 500 }],
+    queries: async () => { aiCalls++; return ["silent people psychology"]; },
+    typeCheck: async (_ch, _s, batch) => { aiCalls++; return batch.map((b) => ({ channelId: b.channelId, verdict: "yes" as const })); },
+    versions: async () => { aiCalls++; return []; },
+  };
+  const { runTask } = await import("../src/lib/taskContext.js");
+  const { priceConsents } = await import("../src/services/priceConsent.js");
+  const launch = (d: "approve" | "deny") => {
+    const owner = crypto.randomUUID(), windows: string[] = [];
+    return { windows, t: { launch: { owner, requestId: crypto.randomUUID(), route: "/api/studio/channels/x/radar" }, onPriceConsent: (x: any) => { windows.push(x.message); queueMicrotask(() => priceConsents.decide(owner, x.id, x.scopeHash, d)); } } };
+  };
+  await assert.rejects(radar.runRadar(c.id, ctx, ai), (e: any) => e.code === "BUDGET_CONSENT_REQUIRED");
+  const no = launch("deny");
+  await assert.rejects(runTask(no.t, () => radar.runRadar(c.id, ctx, ai)), (e: any) => e.code === "BUDGET_CONSENT_DENIED");
+  assert.equal(aiCalls, 0, "нейросеть не вызывалась");
+  assert.equal(yt, 0, "квота YouTube не тратится");
+  assert.equal(radar.radarRunning(c.id), false, "после отказа Радар можно запустить снова");
+  const yes = launch("approve");
+  await runTask(yes.t, () => radar.runRadar(c.id, ctx, ai));
+  assert.equal(yes.windows.length, 1);
+  assert.match(yes.windows[0], /^Подтвердите Радар: до 7 запросов к моделям same-model/);
+  assert.ok(aiCalls >= 1 && aiCalls <= 7, String(aiCalls));
+});
+
+test("максимум Радара: 7 запросов к быстрой модели — по лимитам самого Радара", async () => {
+  config.keys.anthropic = "fake-radar-only";
+  try {
+    const plan = await radar.llmRadarAi.plan!();
+    assert.equal(plan.reduce((n, x) => n + x.count, 0), 7);
+    assert.ok(plan.every((x) => x.provider === "anthropic" && x.kind === "text"));
+  } finally { config.keys.anthropic = ""; }
+});

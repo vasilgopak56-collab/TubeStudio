@@ -164,6 +164,8 @@ export type RadarAi = {
   queries: (ch: Channel, sampleTitles: string[]) => Promise<string[]>;
   typeCheck: (ch: Channel, sample: { titles: string[]; thumbs: LlmImage[] }, batch: TypeCandidate[]) => Promise<{ channelId: string; verdict: TypeVerdict["verdict"]; format?: string; reason?: string; model?: string }[]>;
   versions: (ch: Channel, items: { videoId: string; title: string; channelName: string; format?: string }[]) => Promise<{ videoId: string; title: string; angle: string; model?: string }[]>;
+  /** Верхняя граница платных запросов одного прогона для окна цены. Без неё окно не показывается (тестовые подмены). */
+  plan?: () => Promise<import("../paidRun.js").PlannedCall[]>;
 };
 const LANG: Record<string, string> = { en: "English", ru: "Russian", de: "German", es: "Spanish", fr: "French", pt: "Portuguese", it: "Italian", uk: "Ukrainian", pl: "Polish", tr: "Turkish" };
 const langName = (code: string) => LANG[code.slice(0, 2)] ?? code;
@@ -173,6 +175,17 @@ const profileText = (ch: Channel) => [
 ].filter(Boolean).join("\n");
 
 export const llmRadarAi: RadarAi = {
+  async plan() {
+    // Лимиты Радара: 1 запрос на поисковые фразы, «тот же тип» до 30 + до 60 каналов по 20 (2 + 3 запроса), 1 на «вашу версию». Всё — быстрая модель.
+    const { firstModel } = await import("../llm.js");
+    const m = await firstModel({ fast: true });
+    const typeCalls = Math.ceil(30 / LIMITS.typeBatch) + Math.ceil(LIMITS.typeChannels / LIMITS.typeBatch);
+    return [
+      { step: "поисковые фразы", provider: m.provider, model: m.model, kind: "text" as const, count: 1, inputChars: 4000, maxTokens: 900 },
+      { step: "«тот же тип» (с обложками)", provider: m.provider, model: m.model, kind: "text" as const, count: typeCalls, inputChars: 8000, maxTokens: 2500 },
+      { step: "«ваша версия»", provider: m.provider, model: m.model, kind: "text" as const, count: 1, inputChars: 6000, maxTokens: 3000 },
+    ];
+  },
   async ready() {
     const { hasAnymodel } = await import("../anymodel.js");
     const { getSettings } = await import("../settings.js");
@@ -310,7 +323,20 @@ export const radarRunning = (channelId: string) => running.has(channelId);
 export async function runRadar(channelId: string, ctx: Pick<JobCtx, "progress" | "partial">, ai: RadarAi = llmRadarAi): Promise<RunSummary> {
   if (running.has(channelId)) throw new ApiError("VALIDATION", "Радар для этого канала уже идёт — дождитесь окончания", 409);
   running.add(channelId);
-  try { return await runUnlocked(channelId, ctx, ai); } finally { running.delete(channelId); }
+  try {
+    // Одно окно цены на весь прогон. Отказ — Радар не запускается совсем, квота YouTube тоже не тратится.
+    // Без ключа ИИ или при исчерпанном бюджете канала окна нет: шаги ИИ и так пропускаются, поиск бесплатный.
+    let ready = false;
+    try { ready = !!ai.plan && await ai.ready(); } catch { ready = false; }
+    if (ready) { try { await assertChannelBudget(channelId); } catch { ready = false; } }
+    if (ready && ai.plan) {
+      ctx.progress("Жду подтверждения цены", 1);
+      const { requestPaidRun, withPaidLimit } = await import("../paidRun.js");
+      const limit = await requestPaidRun("Подтвердите Радар", await ai.plan(), { channelId });
+      return await withPaidLimit(limit, () => runUnlocked(channelId, ctx, ai));
+    }
+    return await runUnlocked(channelId, ctx, ai);
+  } finally { running.delete(channelId); }
 }
 
 async function runUnlocked(channelId: string, ctx: Pick<JobCtx, "progress" | "partial">, ai: RadarAi): Promise<RunSummary> {
