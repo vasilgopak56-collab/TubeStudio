@@ -1,0 +1,10 @@
+Chocolatey v2.7.5
+Installing the following packages:
+ffmpeg
+By installing, you accept licenses for the packages.
+Failed to fetch results from V2 feed at 'https://community.chocolatey.org/api/v2/Packages(Id='ffmpeg',Version='9.0.2')' with following message : Response status code does not indicate success: 504 (Gateway Timeout).
+Need to add specific handling for exception type NuGetResolverInputException
+Unable to find package 'ffmpeg'. Existing packages must be restored before performing an install or update.
+
+Chocolatey installed 0/0 packages. 
+ See the log for details (C:\ProgramData\chocolatey\logs\chocolatey.log).
