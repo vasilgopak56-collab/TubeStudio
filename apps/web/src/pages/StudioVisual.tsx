@@ -388,6 +388,7 @@ export default function StudioVisual() {
   });
   const draft = useMutation({ mutationFn: (onlyEmpty: boolean) => api<{ result: PromptsResult }>(`/studio/visual/projects/${projectId}/prompts`, { method: "POST", json: { channelId: channel!.id, free: true, onlyEmpty } }), onSuccess: reload });
   const edit = useMutation({ mutationFn: ({ n, e }: { n: number; e: Edit }) => api(`/studio/visual/projects/${projectId}/scenes/${n}`, { method: "PATCH", json: e }), onSuccess: reload });
+  const animateAll = useMutation({ mutationFn: () => api(`/studio/visual/projects/${projectId}/animate-all`, { method: "POST" }), onSuccess: reload });
   const stop = useMutation({ mutationFn: (jobId: string) => api(`/jobs/${jobId}/cancel`, { method: "POST" }), onSuccess: reload });
   const [note, setNote] = useState("");
   const [onlyEmpty, setOnlyEmpty] = useState(false);
@@ -490,8 +491,9 @@ export default function StudioVisual() {
           <div className="flex flex-wrap items-center gap-3">
             <Button className="min-h-11" disabled={!glabsOk || !c.clipPending || !!busy || jobRunning} onClick={() => runRender("clips")}><Clapperboard className="h-4 w-4" />{c.clipWaiting ? `Продолжить клипы (${c.clipPending})` : `Сделать клипы (${c.clipPending})`}</Button>
             <span className="text-sm">Клипов {c.clips} из {c.animate}{c.clipBlocked ? ` · ждут картинку: ${c.clipBlocked}` : ""}</span>
+            <Button variant="outline" className="min-h-11" disabled={c.animate >= c.total || !!busy || jobRunning || animateAll.isPending} loading={animateAll.isPending} loadingText="Отмечаю…" onClick={() => animateAll.mutate()}>Оживить все сцены ({c.total})</Button>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">Клипы расходуют видеоквоту аккаунтов G-Labs и делаются дольше картинок. Клип делается из готовой картинки, которую вы не отправили на переделку.</p>
+          {animateAll.error && <ErrorAlert error={animateAll.error} />}          <p className="mt-2 text-xs text-muted-foreground">Клипы расходуют видеоквоту аккаунтов G-Labs и делаются дольше картинок. Клип делается из готовой картинки, которую вы не отправили на переделку.</p>
         </StepCard>
 
         <StepCard n={6} title="ФАЙЛЫ ДЛЯ МОНТАЖА" description="Всё сохраняется в папку проекта: visual/001.png, 001_anim.mp4… Эти файлы и scenes.json возьмёт автомонтаж (Выпуск 3).">

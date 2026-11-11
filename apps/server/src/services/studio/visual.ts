@@ -334,6 +334,21 @@ export async function editScene(projectId: string, n: number, raw: z.input<typeo
   });
 }
 
+/** «Оживить все сцены»: отметка «Оживить» у каждой сцены. Без запросов к ИИ: описание движения модель уже написала, промпт клипа собирается кодом. */
+export async function animateAll(projectId: string) {
+  const p = await loadProject(projectId);
+  const art = boardOf(p);
+  if (!art) throw new ApiError("NOT_FOUND", "Раскадровка не найдена", 404);
+  const ch = await getChannel((art.data as Board).channelId);
+  const kit = await styleKit(ch).catch(() => (art.data as Board).style);
+  return mutateBoard(p.id, art.id, (d) => {
+    for (const r of d.rows) {
+      r.animate = true;
+      if (kit?.anchor) r.video = motionPrompt(r.motion, kit);
+    }
+  });
+}
+
 // ---------- 3–4. картинки и клипы в G-Labs ----------
 export const RenderInput = z.object({
   channelId: z.string().uuid(), what: z.enum(["images", "clips"]), scenes: z.array(z.number().int().min(1)).max(2000).optional(),

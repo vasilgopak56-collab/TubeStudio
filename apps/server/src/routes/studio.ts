@@ -20,7 +20,7 @@ import { publishState, removeThumbnail, saveCard, saveThumbnail, saveVideoLink }
 import { snapshotsState } from "../services/studio/publishSnapshots.js";
 import { acceptShort, buildShorts, exportShorts, saveShortText, shortsState } from "../services/studio/shortCuts.js";
 import { PublishTextInput, publishTextBusy, runPublishText } from "../services/studio/publishText.js";
-import { ImportInput, PromptsInput, REDO_REASONS, RenderInput, buildScenes, editScene, exportBoard, generateCastImage, importPreview, listFolders, runImport, runRender, saveCastImage, saveImportFolders, syncCast, videoSpend, visualBusy, visualState, writePrompts, type ExportKind } from "../services/studio/visual.js";
+import { ImportInput, PromptsInput, REDO_REASONS, RenderInput, animateAll, buildScenes, editScene, exportBoard, generateCastImage, importPreview, listFolders, runImport, runRender, saveCastImage, saveImportFolders, syncCast, videoSpend, visualBusy, visualState, writePrompts, type ExportKind } from "../services/studio/visual.js";
 
 export const studioRoute = new Hono();
 const tooBig = (c: Context) => c.json({ ok: false, error: { code: "VALIDATION", message: "Слишком большой запрос" } }, 413);
@@ -175,6 +175,12 @@ studioRoute.post("/studio/visual/projects/:projectId/prompts", handle(async (c) 
   if (i.free) return { result: await writePrompts(id, i) };
   if (visualBusy(id)) throw new ApiError("VALIDATION", "В этом проекте уже идёт работа «Визуала». Дождитесь окончания.", 409);
   return job(i.channelId, "visual-prompts", (ctx) => writePrompts(id, i, ctx), id);
+}));
+/** Оживить все сцены: только отметки, запросов к ИИ и G-Labs нет. */
+studioRoute.post("/studio/visual/projects/:projectId/animate-all", handle(async (c) => {
+  const id = pid(c);
+  if (visualBusy(id)) throw new ApiError("VALIDATION", "В этом проекте уже идёт работа «Визуала». Дождитесь окончания.", 409);
+  return animateAll(id);
 }));
 studioRoute.patch("/studio/visual/projects/:projectId/scenes/:n", handle(async (c) => {
   const n = z.coerce.number().int().min(1).max(5000).parse(c.req.param("n"));

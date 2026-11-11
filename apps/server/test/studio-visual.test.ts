@@ -403,3 +403,25 @@ test("ориентир: сумма по всем пачкам растёт с ч
   assert.match(PC.promptsMessage({ model: "m", requests: 3, scenes: 30, usd: null }), /Цена этой модели неизвестна/);
   assert.match(PC.promptsMessage({ model: "m", requests: 3, scenes: 30, usd: 0.4 }), /примерно \$0\.40 или меньше/);
 });
+
+test("«Оживить все сцены»: отметка у каждой сцены, промпт клипа из уже написанного движения, без запросов к ИИ и G-Labs", async () => {
+  const p = await projects.createProject({ title: "1816 — оживить все", channelId, artifact: { kind: "script", title: "Сценарий", data: { script: SCRIPT } } as any });
+  await V.buildScenes(p.id, { channelId });
+  VP.setPromptAi(async ({ user }) => {
+    const scenes = JSON.parse(user.slice(user.indexOf("SCENES:") + 8)) as { n: number }[];
+    return { model: "fake-director", data: { scenes: scenes.map((s) => ({ n: s.n, concept: `Scene ${s.n}: a frozen village street at dawn, a farmer kneels by a dead field`, motion: `Camera drifts left, scene ${s.n} snow falls`, key: false })) } };
+  });
+  await approved(() => V.writePrompts(p.id, { channelId, free: false }));
+  const before = (await V.visualState(p.id)).board!;
+  assert.ok(before.rows.some((r) => !r.animate), "до кнопки оживляются не все");
+  let asked = 0;
+  VP.setPromptAi(async () => { asked++; throw new Error("ИИ не должен вызываться"); });
+  w.calls.length = 0;
+  await V.animateAll(p.id);
+  const st = (await V.visualState(p.id)).board!;
+  assert.ok(st.rows.every((r) => r.animate), "все сцены отмечены");
+  for (const r of st.rows) { assert.ok(r.video.startsWith(`Camera drifts left, scene ${r.n} snow falls.`), `сцена ${r.n}: движение модели в промпте клипа`); assert.match(r.video, /No dialogue, no narration, no music\.$/); }
+  assert.deepEqual(st.rows.map((r) => r.concept), before.rows.map((r) => r.concept), "описания картинок не меняются");
+  assert.equal(V.exportBody(st, "motion.txt").trim().split("\n").length, st.rows.length, "в TXT анимации строка на каждую сцену");
+  assert.equal(asked, 0); assert.equal(w.calls.length, 0, "G-Labs не вызывается");
+});
