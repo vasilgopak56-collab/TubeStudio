@@ -99,7 +99,9 @@ async function raw(c: LlmCall, json: boolean): Promise<Raw> {
   const steps = c.noFallback ? planned.filter((s) => s.p === "anymodel" && s.m === c.model).slice(0, 1) : planned;
   if (!steps.length) throw new ApiError("KEY_MISSING", `Модель ${c.model ?? ""} недоступна: проверьте ключ AnyModel и что он включён в Настройках. Другая модель не запускалась.`, 400);
   const live = steps.filter((s) => (skipUntil.get(`${s.p}:${s.m}`) ?? 0) < Date.now());
-  for (const step of live.length ? live : steps) {
+  // Под ограничителем платного запуска — только первая модель, та, что в окне цены: без пропусков и резервных моделей.
+  const limited = !!taskContext()?.paidLimit;
+  for (const step of limited ? steps.slice(0, 1) : live.length ? live : steps) {
     try { return step.p === "anymodel" ? await callAnymodel(c, step.m) : step.p === "anthropic" ? await callAnthropic(c, step.m) : await callGemini(c, step.m, json); }
     catch (e) { rethrowCancelled(e); rethrowFinancial(e);
       last = e;
@@ -110,6 +112,10 @@ async function raw(c: LlmCall, json: boolean): Promise<Raw> {
       if (e.code === "KEY_MISSING") skipUntil.set(k, Date.now() + 10 * 60_000);
       else if (/бесплатном тарифе/.test(e.message)) skipUntil.set(k, Date.now() + 60 * 60_000);
       else if (e.status === 503) skipUntil.set(k, Date.now() + 2 * 60_000);
+      if (limited) {
+        log.warn({ event: "llm_no_fallback", provider: step.p, model: step.m, code: e.code });
+        throw new ApiError(e.code, `Модель ${step.m} не ответила: ${e.message.slice(0, 200)}. Запрос к другой модели не отправлялся: после подтверждения цены резервные модели не запускаются.`, e.status, e.retryable, e.details);
+      }
       log.warn({ event: "llm_fallback", provider: step.p, model: step.m, code: e.code });
     }
   }
@@ -173,7 +179,13 @@ export async function geminiGrounded(system: string, user: string, maxTokens = 6
       return { text: r.text, model: st.anymodel.search, sources: r.sources };
     } catch (e) { rethrowCancelled(e); rethrowFinancial(e);
       if (e instanceof ApiError && e.code === "BUDGET_LIMIT") throw e;
-      log.warn({ event: "search_fallback", errorType: (e as Error).name });
+      const code = e instanceof ApiError ? e.code : (e as Error).name, reason = String((e as Error).message ?? "").slice(0, 200);
+      // Под ограничителем платного запуска поиск через Gemini напрямую не запускается: его нет в окне цены.
+      if (taskContext()?.paidLimit) {
+        log.warn({ event: "search_no_fallback", code, reason });
+        throw new ApiError(e instanceof ApiError ? e.code : "UPSTREAM", `Поиск AnyModel не ответил: ${reason}. Поиск через Gemini напрямую не запускался: после подтверждения цены резервные модели не запускаются.`, e instanceof ApiError ? e.status : 502, false, e instanceof ApiError ? e.details : undefined);
+      }
+      log.warn({ event: "search_fallback", errorType: (e as Error).name, code, reason });
     }
   }
   return directGrounded(system, user, maxTokens);
