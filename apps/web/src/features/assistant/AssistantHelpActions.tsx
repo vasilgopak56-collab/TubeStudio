@@ -9,12 +9,12 @@ import {JobBox,useActiveChannel} from '@/features/studio/common';
 function Rich({text}:{text:string}){return <>{text.split(/(\*\*[^*]+\*\*)/g).filter(Boolean).map((p,i)=>p.startsWith('**')?<b key={i}>{p.slice(2,-2)}</b>:<span key={i}>{p}</span>)}</>;}
 
 export type ActionProposal={kind:string;route?:string};
-type ActionKind='open-page'|'montage-check'|'publish-readiness'|'publish-texts'|'fact-check';
+type ActionKind='open-page'|'montage-check'|'publish-readiness'|'publish-texts'|'fact-check'|'radar';
 type ActionResult={kind:ActionKind;title:string;ok:boolean;navigate?:string;lines:{level:'ok'|'warn'|'block';message:string}[]};
 type HelpSection={id:string;title:string;route:string;short:string;steps:string[];cost:string};
-const TITLES:Record<ActionKind,string>={'open-page':'Открыть страницу','montage-check':'Проверить ролик перед монтажом','publish-readiness':'Показать готовность карточки публикации','publish-texts':'Подготовить тексты публикации','fact-check':'Проверить факты сценария'};
+const TITLES:Record<ActionKind,string>={'open-page':'Открыть страницу','montage-check':'Проверить ролик перед монтажом','publish-readiness':'Показать готовность карточки публикации','publish-texts':'Подготовить тексты публикации','fact-check':'Проверить факты сценария','radar':'Запустить Радар'};
 const KNOWN=(k:string):k is ActionKind=>k in TITLES;
-const SECTION_ACTIONS:Record<string,ActionKind[]>={'studio-script':['fact-check'],'studio-montage':['montage-check'],'studio-publish':['publish-readiness','publish-texts']};
+const SECTION_ACTIONS:Record<string,ActionKind[]>={'studio-script':['fact-check'],'studio-ideas':['radar'],'studio-montage':['montage-check'],'studio-publish':['publish-readiness','publish-texts']};
 
 /** Платное действие: одна задача, внутри — то же окно цены, что на странице «Публикация». Закрытие панели задачу не останавливает. */
 function PublishTextsCard({projects,defaultProject,disabled}:{projects:{id:string;title:string}[];defaultProject:string;disabled?:boolean}){
@@ -56,6 +56,25 @@ function FactCheckCard({projects,defaultProject,disabled}:{projects:{id:string;t
   {job.status==='error'&&approved&&<p className="text-accent">Цена была подтверждена, поэтому запросы могли быть отправлены и оплачены. Через Помощника повтор не запускается: проверьте страницу «Сценарий» и при необходимости повторите там.</p>}
  </section>;
 }
+type RadarDone={ideas:number;notes:string[];stopped?:string};
+/** Радар текущего канала. Внутри — то же окно цены с ограничителем, что у кнопки Радара на странице «Идеи для канала». */
+function RadarCard({disabled}:{disabled?:boolean}){
+ const {channel}=useActiveChannel();
+ const job=useJob<RadarDone>('/assistant/actions/radar');
+ const [approved,setApproved]=useState(false);
+ const running=job.status==='running';
+ const decide=(c:PriceChallenge,d:'approve'|'deny')=>{if(d==='approve')setApproved(true);job.decideConsent(c,d);};
+ const r=job.status==='done'?job.data:undefined;
+ return <section className="space-y-2 rounded-lg border border-primary/40 p-3 text-sm" aria-label={'Действие: '+TITLES['radar']}>
+  <h4 className="font-semibold">Действие: {TITLES['radar']}</h4>
+  <p className="text-xs">Платно, если подключён ИИ: до 7 запросов к быстрой модели AnyModel, как у кнопки Радара на странице «Идеи для канала». Окно подтверждения покажет ориентир цены; без вашего «Подтвердить» Радар не запустится и квота YouTube не потратится. Без ключа ИИ или при исчерпанном бюджете канала окна нет: Радар идёт бесплатно, но тратит квоту YouTube. Автоповтора и резервных моделей нет.</p>
+  <p className="text-xs text-muted-foreground">Канал: {channel?.name??'не выбран'}</p>
+  {!running&&<Button size="sm" disabled={disabled||!channel} onClick={()=>{setApproved(false);void job.start({channelId:channel!.id,confirmed:true},undefined,{serverConsent:true});}}>Выполнить</Button>}
+  <JobBox job={{...job,decideConsent:decide}} onCancel={()=>void job.cancel()} note="Обычно занимает несколько минут."/>
+  {r&&<div className="space-y-1"><p className="text-success">✓ Готово: идей в списке {r.ideas}. Сами идеи — на странице «Идеи для канала».</p>{r.stopped&&<p className="text-crown">! {r.stopped}</p>}{r.notes.map((n,i)=><p key={i} className="text-xs text-muted-foreground">{n}</p>)}</div>}
+  {job.status==='error'&&approved&&<p className="text-accent">Цена была подтверждена, поэтому запросы могли быть отправлены и оплачены. Через Помощника повтор не запускается: проверьте страницу «Идеи для канала» и при необходимости повторите там.</p>}
+ </section>;
+}
 const mark={ok:'✓',warn:'!',block:'✕'} as const;
 
 /** Одно действие из списка Помощника. Выполняется только по нажатию владельца; сервер повторно проверяет список. */
@@ -68,6 +87,7 @@ export function AssistantActionCard({proposal,projects,defaultProject,pageTitle,
  if(!KNOWN(proposal.kind))return <div className="rounded-lg border border-accent/50 p-3 text-sm" aria-label="Недоступное действие">Помощник предложил действие, которого нет в списке. Оно не выполняется.</div>;
  if(proposal.kind==='publish-texts')return <PublishTextsCard projects={projects} defaultProject={defaultProject} disabled={disabled}/>;
  if(proposal.kind==='fact-check')return <FactCheckCard projects={projects} defaultProject={defaultProject} disabled={disabled}/>;
+ if(proposal.kind==='radar')return <RadarCard disabled={disabled}/>;
  const kind=proposal.kind,needsProject=kind!=='open-page';
  if(kind==='open-page'&&!proposal.route)return <div className="rounded-lg border border-accent/50 p-3 text-sm">Помощник не указал страницу. Ничего не открыто.</div>;
  async function run(){
