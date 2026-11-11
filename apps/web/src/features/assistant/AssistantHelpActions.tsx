@@ -1,5 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
 import {useLocation,useNavigate} from 'react-router-dom';
+import {useQuery} from '@tanstack/react-query';
 import {api} from '@/lib/api';
 import {Button,Input,Select,ErrorAlert} from '@/components/ui';
 import {useJob,type PriceChallenge} from '@/lib/jobs';
@@ -9,12 +10,12 @@ import {JobBox,useActiveChannel} from '@/features/studio/common';
 function Rich({text}:{text:string}){return <>{text.split(/(\*\*[^*]+\*\*)/g).filter(Boolean).map((p,i)=>p.startsWith('**')?<b key={i}>{p.slice(2,-2)}</b>:<span key={i}>{p}</span>)}</>;}
 
 export type ActionProposal={kind:string;route?:string};
-type ActionKind='open-page'|'montage-check'|'publish-readiness'|'publish-texts'|'fact-check'|'radar'|'script-write';
+type ActionKind='open-page'|'montage-check'|'publish-readiness'|'publish-texts'|'fact-check'|'radar'|'script-write'|'montage-render'|'shorts-build';
 type ActionResult={kind:ActionKind;title:string;ok:boolean;navigate?:string;lines:{level:'ok'|'warn'|'block';message:string}[]};
 type HelpSection={id:string;title:string;route:string;short:string;steps:string[];cost:string};
-const TITLES:Record<ActionKind,string>={'open-page':'Открыть страницу','montage-check':'Проверить ролик перед монтажом','publish-readiness':'Показать готовность карточки публикации','publish-texts':'Подготовить тексты публикации','fact-check':'Проверить факты сценария','radar':'Запустить Радар','script-write':'Написать сценарий'};
+const TITLES:Record<ActionKind,string>={'open-page':'Открыть страницу','montage-check':'Проверить ролик перед монтажом','publish-readiness':'Показать готовность карточки публикации','publish-texts':'Подготовить тексты публикации','fact-check':'Проверить факты сценария','radar':'Запустить Радар','script-write':'Написать сценарий','montage-render':'Собрать монтаж','shorts-build':'Собрать Shorts'};
 const KNOWN=(k:string):k is ActionKind=>k in TITLES;
-const SECTION_ACTIONS:Record<string,ActionKind[]>={'studio-script':['fact-check','script-write'],'studio-ideas':['radar'],'studio-montage':['montage-check'],'studio-publish':['publish-readiness','publish-texts']};
+const SECTION_ACTIONS:Record<string,ActionKind[]>={'studio-script':['fact-check','script-write'],'studio-ideas':['radar'],'studio-montage':['montage-check','montage-render'],'studio-publish':['publish-readiness','publish-texts'],'studio-shorts':['shorts-build']};
 
 /** Платное действие: одна задача, внутри — то же окно цены, что на странице «Публикация». Закрытие панели задачу не останавливает. */
 function PublishTextsCard({projects,defaultProject,disabled}:{projects:{id:string;title:string}[];defaultProject:string;disabled?:boolean}){
@@ -96,6 +97,51 @@ function ScriptWriteCard({projects,defaultProject,disabled}:{projects:{id:string
   {job.status==='error'&&approved&&<p className="text-accent">Цена была подтверждена, поэтому запросы могли быть отправлены и оплачены. Через Помощника повтор не запускается: проверьте страницу «Сценарий» и при необходимости повторите там.</p>}
  </section>;
 }
+type MontageDone={seconds:number;width:number;height:number;subtitles?:{problem:string|null}};
+/** Бесплатная сборка черновика монтажа: та же, что кнопкой «Собрать» на странице «Монтаж». Закрытие панели сборку не останавливает. */
+function MontageRenderCard({projects,defaultProject,disabled}:{projects:{id:string;title:string}[];defaultProject:string;disabled?:boolean}){
+ const {channel}=useActiveChannel();
+ const job=useJob<MontageDone>('/assistant/actions/montage-render');
+ const [project,setProject]=useState(defaultProject);
+ const running=job.status==='running';
+ useEffect(()=>{if(!running)setProject(defaultProject);},[defaultProject]);
+ const r=job.status==='done'?job.data:undefined;
+ return <section className="space-y-2 rounded-lg border p-3 text-sm" aria-label={'Действие: '+TITLES['montage-render']}>
+  <h4 className="font-semibold">Действие: {TITLES['montage-render']}</h4>
+  <p className="text-xs text-muted-foreground">Бесплатно: собирается на этом компьютере, как кнопкой «Собрать» на странице «Монтаж», с теми же проверками файлов. Первая сборка может занять больше часа. Принять ролик и сохранить файлы можно только на странице «Монтаж» после просмотра.</p>
+  <label className="block text-xs">Ролик<Select aria-label="Ролик для сборки монтажа" value={project} disabled={running||disabled} onChange={e=>setProject(e.target.value)}><option value="">Выберите проект</option>{projects.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</Select></label>
+  {!running&&<Button size="sm" disabled={disabled||!project||!channel} onClick={()=>void job.start({projectId:project,channelId:channel!.id,confirmed:true})}>Выполнить</Button>}
+  <JobBox job={job} onCancel={()=>void job.cancel()} note="Можно закрыть панель: сборка продолжится."/>
+  {r&&<div className="space-y-1"><p className="text-success">✓ Готово: черновик {r.width}×{r.height}, {Math.floor(r.seconds/60)}:{String(Math.floor(r.seconds%60)).padStart(2,'0')}. Посмотрите его и примите на странице «Монтаж».</p>{r.subtitles?.problem&&<p className="text-crown">! Субтитры не подготовлены: {r.subtitles.problem}</p>}</div>}
+ </section>;
+}
+type ShortsInfo={blocker:string|null;fragments:{id:string;start:number;end:number;seconds:number;text:string}[];limits:{pick:number}};
+/** Бесплатная сборка Shorts: та же, что кнопкой «Собрать отмеченные» на странице «Shorts». Куски отмечает владелец. */
+function ShortsBuildCard({projects,defaultProject,disabled}:{projects:{id:string;title:string}[];defaultProject:string;disabled?:boolean}){
+ const {channel}=useActiveChannel();
+ const job=useJob<{items:unknown[]}>('/assistant/actions/shorts-build');
+ const [project,setProject]=useState(defaultProject),[picked,setPicked]=useState<string[]>([]);
+ const running=job.status==='running';
+ useEffect(()=>{if(!running)setProject(defaultProject);},[defaultProject]);
+ useEffect(()=>{setPicked([]);},[project]);
+ const info=useQuery({queryKey:['assistant-shorts',project],queryFn:()=>api<ShortsInfo>(`/studio/shorts/projects/${project}`),enabled:!!project,retry:false,refetchOnWindowFocus:false});
+ const limit=info.data?.limits.pick??5;
+ const toggle=(id:string)=>setPicked(p=>p.includes(id)?p.filter(x=>x!==id):p.length<limit?[...p,id]:p);
+ const clock=(s:number)=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+ const done=job.status==='done'?job.data?.items.length??0:null;
+ return <section className="space-y-2 rounded-lg border p-3 text-sm" aria-label={'Действие: '+TITLES['shorts-build']}>
+  <h4 className="font-semibold">Действие: {TITLES['shorts-build']}</h4>
+  <p className="text-xs text-muted-foreground">Бесплатно: собирается на этом компьютере из принятого монтажа, как на странице «Shorts». Отметьте до {limit} кусков. Принять Shorts и сохранить файлы можно только на странице «Shorts» после просмотра.</p>
+  <label className="block text-xs">Ролик<Select aria-label="Ролик для Shorts" value={project} disabled={running||disabled} onChange={e=>setProject(e.target.value)}><option value="">Выберите проект</option>{projects.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</Select></label>
+  {info.error!=null&&<ErrorAlert error={info.error}/>}
+  {info.data?.blocker&&<p className="text-accent">✕ {info.data.blocker}</p>}
+  {info.data&&!info.data.blocker&&info.data.fragments.length===0&&<p className="text-xs">Подходящих кусков не нашлось.</p>}
+  {info.data&&!info.data.blocker&&info.data.fragments.length>0&&<ul className="max-h-64 space-y-1 overflow-y-auto">{info.data.fragments.map(f=>{const on=picked.includes(f.id);return <li key={f.id}><label className="flex items-start gap-2 text-xs"><input type="checkbox" className="mt-0.5" checked={on} disabled={running||disabled||(!on&&picked.length>=limit)} onChange={()=>toggle(f.id)}/><span><b>{clock(f.start)}–{clock(f.end)} · {Math.round(f.seconds)} с</b> <span className="text-muted-foreground" dir="auto">{f.text}</span></span></label></li>;})}</ul>}
+  {!running&&<Button size="sm" disabled={disabled||!project||!channel||!picked.length||!!info.data?.blocker} onClick={()=>void job.start({projectId:project,channelId:channel!.id,ids:picked,confirmed:true})}>Выполнить ({picked.length})</Button>}
+  <JobBox job={job} onCancel={()=>void job.cancel()} note="Можно закрыть панель: сборка продолжится."/>
+  {done!==null&&<p className="text-success">✓ Готово: собрано Shorts {done}. Посмотрите и примите их на странице «Shorts».</p>}
+ </section>;
+}
 const mark={ok:'✓',warn:'!',block:'✕'} as const;
 
 /** Одно действие из списка Помощника. Выполняется только по нажатию владельца; сервер повторно проверяет список. */
@@ -110,6 +156,8 @@ export function AssistantActionCard({proposal,projects,defaultProject,pageTitle,
  if(proposal.kind==='fact-check')return <FactCheckCard projects={projects} defaultProject={defaultProject} disabled={disabled}/>;
  if(proposal.kind==='radar')return <RadarCard disabled={disabled}/>;
  if(proposal.kind==='script-write')return <ScriptWriteCard projects={projects} defaultProject={defaultProject} disabled={disabled}/>;
+ if(proposal.kind==='montage-render')return <MontageRenderCard projects={projects} defaultProject={defaultProject} disabled={disabled}/>;
+ if(proposal.kind==='shorts-build')return <ShortsBuildCard projects={projects} defaultProject={defaultProject} disabled={disabled}/>;
  const kind=proposal.kind,needsProject=kind!=='open-page';
  if(kind==='open-page'&&!proposal.route)return <div className="rounded-lg border border-accent/50 p-3 text-sm">Помощник не указал страницу. Ничего не открыто.</div>;
  async function run(){
