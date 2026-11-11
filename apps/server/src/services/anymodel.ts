@@ -8,6 +8,7 @@ import {recordOperation} from "./usage.js";
 import { config } from "../config.js";
 import { ApiError } from "../lib/errors.js";
 import { fetchRetry, sleep } from "../lib/http.js";
+import { log } from "../lib/logging.js";
 
 export type AmBilling = { unit: string; base_tokens?: number; scales?: Record<string, Record<string, number>>; coefficient: { input: number; output: number } };
 export type AmModel = { id: string; kind?: string; owned_by?: string; billing?: AmBilling; context_length?: number; capabilities?: { vision?: boolean; search?: boolean; reasoning?: boolean; audioInput?: boolean } };
@@ -94,6 +95,21 @@ export function amImageTokens(model: string, size = "1024x1024", quality = "medi
 export type AmMsgImage = { mime: string; b64: string };
 /** Объём текстового вызова. Ответ есть, а расход не сообщён: оценка с запасом (2 символа на токен), запись помечается как оценка.
  *  С картинками или без текста ответа оценить нельзя — операция остаётся неизвестной. */
+/** Как устроен ответ — для журнала при пустом тексте. Только имена полей, типы, длины и числа токенов; сам текст не попадает. */
+export function answerShape(j: any) {
+  const kind = (v: unknown) => v === null ? "null" : Array.isArray(v) ? "array" : typeof v;
+  const len = (v: unknown) => typeof v === "string" ? v.length : Array.isArray(v) ? v.length : undefined;
+  const keys = (v: unknown) => v && typeof v === "object" && !Array.isArray(v) ? Object.keys(v).slice(0, 30) : undefined;
+  const c = j?.choices?.[0], m = c?.message, u = j?.usage;
+  const nums = (v: unknown) => v && typeof v === "object" ? Object.fromEntries(Object.entries(v).filter(([, x]) => typeof x === "number").slice(0, 20)) : undefined;
+  return {
+    top: keys(j), choices: Array.isArray(j?.choices) ? j.choices.length : kind(j?.choices), finish: c?.finish_reason ?? null, choiceKeys: keys(c), messageKeys: keys(m),
+    content: { type: kind(m?.content), length: len(m?.content), parts: Array.isArray(m?.content) ? m.content.slice(0, 10).map((p: any) => ({ type: p?.type ?? kind(p), keys: keys(p), text: len(p?.text) })) : undefined },
+    fields: m && typeof m === "object" ? Object.fromEntries(Object.entries(m).filter(([k]) => k !== "content").slice(0, 20).map(([k, v]) => [k, { type: kind(v), length: len(v) }])) : undefined,
+    usage: nums(u), completionDetails: nums(u?.completion_tokens_details),
+  };
+}
+
 function textVolume(usage: any, o: { system: string; user: string; images?: AmMsgImage[] }, reply: string): OperationVolume {
   // AnyModel иногда присылает нули при непустом ответе, хотя баланс списывается: это не бесплатный вызов.
   const known = Number.isFinite(usage?.prompt_tokens) && Number.isFinite(usage?.completion_tokens) && (usage.prompt_tokens + usage.completion_tokens > 0 || !reply.trim());
@@ -115,7 +131,10 @@ export const amChat = queued("llm", async function amChat(o: { model: string; sy
   const text: string = typeof msg?.content === "string" ? msg.content : Array.isArray(msg?.content) ? msg.content.map((p: any) => p.text ?? "").join("") : "";
   await recordOperation(dispatch.prices[0],textVolume(j.usage,o,text),taskContext()?.jobId);
   if(dispatch.prices[1])await recordOperation(dispatch.prices[1],{count:j.usage?.web_search_requests??0,known:Number.isFinite(j.usage?.web_search_requests)},taskContext()?.jobId);
-  if (!text.trim()) throw new ApiError("UPSTREAM", `AnyModel (${o.model}): пустой ответ (${j.choices?.[0]?.finish_reason ?? "?"})`, 502, true);
+  if (!text.trim()) {
+    log.warn({ event: "anymodel_empty_answer", model: o.model, shape: answerShape(j) });
+    throw new ApiError("UPSTREAM", `AnyModel (${o.model}): пустой ответ (${j.choices?.[0]?.finish_reason ?? "?"})`, 502, true);
+  }
   const sources = (msg?.annotations ?? []).filter((a: any) => a.type === "url_citation").map((a: any) => ({ title: a.url_citation?.title ?? a.url_citation?.url, url: a.url_citation?.url }));
   return { text, usage: { input: j.usage?.prompt_tokens ?? 0, output: j.usage?.completion_tokens ?? 0, searches: j.usage?.web_search_requests ?? 0 }, sources, finish: j.choices?.[0]?.finish_reason as string | undefined };
 });
