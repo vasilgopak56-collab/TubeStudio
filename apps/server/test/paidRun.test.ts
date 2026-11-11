@@ -88,3 +88,26 @@ test('план сценария: верхняя граница растёт с �
  assert.ok(full.every(c=>c.provider==='anthropic'),'модели — те, что сработают первыми');
  assert.ok(full.some(c=>c.step.startsWith('акты')));
 });
+
+test('проверка фактов: максимум по числу предложений, без окна и при отказе нет ни одного запроса',async()=>{
+ const F=await import('../src/services/studio/factCheck.js');
+ const {runFactCheck}=await import('../src/services/studio/scriptFlow.js');
+ const text=Array.from({length:30},(_,i)=>`In ${1800+i} the river froze for ${i+2} weeks.`).join(' ');
+ const plan=await F.factCheckPlan(text,'same-model');
+ const texts=plan.filter(c=>c.kind==='text');
+ assert.equal(texts.find(c=>c.step==='выписать утверждения')?.count,1);
+ assert.equal(texts.find(c=>c.step==='по знаниям модели')?.count,Math.ceil(30/12));
+ const ch=await createChannel({name:'Facts limit',niche:'history',language:'en'});
+ let calls=0;
+ F.setFactAi({extract:async()=>{calls++;return {items:[],model:'x'};},verifyWeb:async()=>{calls++;return {items:[],model:'w',sources:[]};},verifyModel:async()=>{calls++;return {items:[],model:'m',sources:[]};}});
+ const ctx={progress:()=>{},partial:()=>{},signal:new AbortController().signal};
+ try{
+  await assert.rejects(runFactCheck({channelId:ch.id,text},ctx),(e:any)=>e.code==='BUDGET_CONSENT_REQUIRED');
+  await assert.rejects(runTask(launch('deny'),()=>runFactCheck({channelId:ch.id,text},ctx)),(e:any)=>e.code==='BUDGET_CONSENT_DENIED');
+  assert.equal(calls,0);
+  const windows:string[]=[];
+  await runTask(launch('approve',windows),()=>runFactCheck({channelId:ch.id,text},ctx));
+  assert.equal(windows.length,1);assert.match(windows[0],/^Подтвердите проверку фактов: до \d+ запросов/);
+  assert.equal(calls,1,'утверждений нет — дальше запросов нет');
+ }finally{F.setFactAi(null);}
+});

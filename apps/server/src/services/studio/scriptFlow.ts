@@ -297,7 +297,8 @@ export async function runFactCheck(raw: z.input<typeof FactCheckJobInput>, ctx: 
   const s = await getSettings();
   if (input.text?.trim()) {
     const author = ch.models.author || s.anymodel.script;
-    const r = await checkFacts({ text: input.text, channel: ch, topic: ch.niche || "YouTube video", model: ch.models.critic || pickCritic(author, s.anymodel) }, ctx);
+    const model = ch.models.critic || pickCritic(author, s.anymodel);
+    const r = await factsLimited(input.text, model, ch, ctx, () => checkFacts({ text: input.text!, channel: ch, topic: ch.niche || "YouTube video", model }, ctx));
     return { report: r.report, script: r.script, lint: lintForChannel(r.script, ch) };
   }
   const { getProject, updateArtifactData } = await import("../projects.js");
@@ -309,10 +310,11 @@ export async function runFactCheck(raw: z.input<typeof FactCheckJobInput>, ctx: 
   const original = d.script ?? "";
   if (!original.trim()) throw new ApiError("VALIDATION", "В проекте нет текста сценария", 400);
   const author = d.studio?.models?.author || d.model || ch.models.author || s.anymodel.script;
-  const r = await checkFacts({
-    text: original, channel: ch, topic: d.input?.topic || p.title, model: ch.models.critic || pickCritic(author, s.anymodel),
+  const model = ch.models.critic || pickCritic(author, s.anymodel);
+  const r = await factsLimited(original, model, ch, ctx, () => checkFacts({
+    text: original, channel: ch, topic: d.input?.topic || p.title, model,
     hints: d.plan?.claims_to_verify ?? [], reference: dossierBrief(d.facts),
-  }, ctx);
+  }, ctx));
   const lint = lintForChannel(r.script, ch, d.studio?.minutes);
   const beforeFacts = r.script !== original ? original : undefined;
   await updateArtifactData(p.id, a.id, (cur: Record<string, any> | undefined) => {
@@ -320,6 +322,16 @@ export async function runFactCheck(raw: z.input<typeof FactCheckJobInput>, ctx: 
     return { ...(cur ?? {}), script: r.script, studio: { ...(cur?.studio ?? {}), channelId: cur?.studio?.channelId ?? ch.id, lint, factCheck: r.report, beforeFacts } };
   });
   return { report: r.report, script: r.script, lint, beforeFacts, projectId: p.id, artifactId: a.id };
+}
+
+/** Кнопка «Проверить факты»: одно окно цены на весь запуск и ограничитель запросов. Без «Подтвердить» ничего не уходит. */
+async function factsLimited<T>(text: string, model: string, ch: Channel, ctx: JobCtx, run: () => Promise<T>): Promise<T> {
+  await assertChannelBudget(ch.id);
+  ctx.progress("Жду подтверждения цены", 1);
+  const { requestPaidRun, withPaidLimit } = await import("../paidRun.js");
+  const { factCheckPlan } = await import("./factCheck.js");
+  const limit = await requestPaidRun("Подтвердите проверку фактов", await factCheckPlan(text, model), { channelId: ch.id, text: text.length, model });
+  return withPaidLimit(limit, run);
 }
 
 /** Проверка без ИИ — для кнопки «Проверить» и вставленного текста. */

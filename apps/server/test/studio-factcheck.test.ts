@@ -164,9 +164,19 @@ test("маршрут: проверка фактов сценария проек�
   const { studioRoute } = await import("../src/routes/studio.js");
   const { getJob } = await import("../src/lib/jobs.js");
   const { createProject, getProject, updateArtifactData } = await import("../src/services/projects.js");
+  // Кнопка «Проверить факты» идёт через окно цены: запуск как из интерфейса, «Подтвердить» нажимается автоматически.
+  const { Hono } = await import("hono");
+  const { priceConsentScope } = await import("../src/routes/priceConsent.js");
+  const { priceConsents } = await import("../src/services/priceConsent.js");
+  config.keys.anthropic = "fake-factcheck-only";
+  const app = new Hono(); app.use("*", priceConsentScope); app.route("/api", studioRoute);
+  const owner = crypto.randomUUID(), windows: string[] = [];
   const call = async (method: string, url: string, body?: unknown) => {
-    const r = await studioRoute.request(url, { method, headers: { "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
-    return { status: r.status, json: await r.json() as any };
+    const r = await app.request("/api" + url, { method, headers: { "content-type": "application/json", "x-ts-launch-id": owner }, body: body === undefined ? undefined : JSON.stringify(body) });
+    const json = await r.json() as any;
+    const jobId = json?.data?.jobId;
+    if (jobId) void (async () => { for (let i = 0; i < 200; i++) { const e = getJob(jobId)?.events.find((x: any) => x.type === "price-consent") as any; if (e) { windows.push(e.consent.message); priceConsents.decide(owner, e.consent.id, e.consent.scopeHash, "approve"); return; } if (getJob(jobId)?.done) return; await new Promise((r) => setTimeout(r, 5)); } })();
+    return { status: r.status, json };
   };
   const wait = async (id: string) => { for (let i = 0; i < 200; i++) { const j = getJob(id); if (j?.done) return j.events.at(-1) as any; await new Promise((r) => setTimeout(r, 20)); } throw new Error("задача не закончилась"); };
   const ch = (await call("POST", "/studio/channels", { name: "Space", language: "en" })).json.data;
@@ -210,4 +220,7 @@ test("маршрут: проверка фактов сценария проек�
   assert.equal(raceDone.type, "error");
   assert.match(raceDone.error.message, /изменили во время проверки/);
   assert.equal(((await getProject(p.id)).artifacts[0].data as any).script, "Совсем другой текст сценария, который автор успел сохранить.");
+  assert.equal(windows.length, 3, "одно окно цены на каждый запуск");
+  assert.ok(windows.every((w) => /^Подтвердите проверку фактов: до \d+ запросов/.test(w)));
+  config.keys.anthropic = "";
 });

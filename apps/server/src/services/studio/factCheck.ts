@@ -246,6 +246,22 @@ function cleanFix(fix: string | null, quote: string): { fix: string | null; note
 }
 
 const BATCH = 12, MAX_ITEMS = 120;
+/** Верхняя граница запросов проверки фактов по числу предложений текста. Модели — те, что сработают первыми; резервные не запускаются. */
+export async function factCheckPlan(text: string, model: string): Promise<import("../paidRun.js").PlannedCall[]> {
+  const { firstModel, groundedModels } = await import("../llm.js");
+  const sentences = splitScript(text.replace(/\r\n?/g, "\n")).blocks.reduce((n, b) => n + b.sents.length, 0);
+  const batches = Math.max(1, Math.ceil(Math.min(sentences, MAX_ITEMS) / BATCH));
+  const critic = await firstModel({ model }), fast = await firstModel({ fast: true });
+  const web = await groundedModels(), webText = web.find((x) => x.kind === "text"), webSearch = web.find((x) => x.kind === "search");
+  const call = (step: string, m: { provider: string; model: string } | undefined, count: number, inputChars: number, maxTokens: number, kind: "text" | "search" = "text") =>
+    m ? [{ step, provider: m.provider, model: m.model, kind, count, inputChars, maxTokens }] : [];
+  return [
+    ...call("выписать утверждения", critic, 1, Math.min(text.length, 90_000) + 4000, 12_000),
+    ...call("поиск Google", webText, batches, 6000, 8000), ...call("поиск", webSearch, batches, 0, 0, "search"),
+    ...call("разбор ответа поиска", fast, batches, 20_000, 8000),
+    ...call("по знаниям модели", critic, batches, 8000, 8000),
+  ];
+}
 export type FactCheckInput = {
   text: string; channel: Pick<Channel, "id" | "language">; topic: string;
   /** Модель для поиска утверждений и для проверки без поиска (другой семьи, чем автор). */
