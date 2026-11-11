@@ -38,6 +38,7 @@ import {assistantMaxTokens} from '../services/assistant.js';
 import {reservePublishTexts,runPublishTextsAction} from '../services/assistantPublishTexts.js';
 import {reserveFactCheck,runFactCheckAction} from '../services/assistantFactCheck.js';
 import {reserveRadar,runRadarAction} from '../services/assistantRadar.js';
+import {reserveScriptWrite,runScriptWriteAction} from '../services/assistantScriptWrite.js';
 import {linkJobToChannel} from '../services/studio/channels.js';
 import {Hono} from 'hono';
 import {bodyLimit} from 'hono/body-limit';
@@ -59,6 +60,7 @@ assistantRoute.post('/assistant/help',async c=>{try{return ok(c,assistantHelpAns
 assistantRoute.post('/assistant/actions/publish-texts',async c=>{try{const a=await reservePublishTexts(await body(c));const jobId=startJob(ctx=>runPublishTextsAction(a,ctx));await linkJobToChannel(jobId,a.channelId,'publish-seo',a.projectId).catch(()=>{});return ok(c,{jobId});}catch(e){return fail(c,e);}});
 assistantRoute.post('/assistant/actions/fact-check',async c=>{try{const a=await reserveFactCheck(await body(c));const jobId=startJob(ctx=>runFactCheckAction(a,ctx));await linkJobToChannel(jobId,a.channelId,'factcheck',a.projectId).catch(()=>{});return ok(c,{jobId});}catch(e){return fail(c,e);}});
 assistantRoute.post('/assistant/actions/radar',async c=>{try{const a=await reserveRadar(await body(c));const jobId=startJob(ctx=>runRadarAction(a,ctx));await linkJobToChannel(jobId,a.channelId,'radar').catch(()=>{});return ok(c,{jobId});}catch(e){return fail(c,e);}});
+assistantRoute.post('/assistant/actions/script-write',async c=>{try{const a=await reserveScriptWrite(await body(c));const jobId=startJob(ctx=>runScriptWriteAction(a,ctx));await linkJobToChannel(jobId,a.channelId,'script',a.projectId).catch(()=>{});return ok(c,{jobId});}catch(e){return fail(c,e);}});
 assistantRoute.post('/assistant/actions',async c=>{try{return ok(c,await runAssistantAction(await body(c)));}catch(e){return fail(c,e);}});
 assistantRoute.post('/assistant/ask',async c=>{try{const p=await reserveAssistant(AssistantSend.parse(await body(c)));return ok(c,{jobId:startJob(ctx=>runAssistant(p,ctx))});}catch(e){return fail(c,e);}});
 assistantRoute.post('/assistant/manual-skill-preview',async c=>{try{return ok(c,await previewManualSkill(ManualSkillAsk.parse(await body(c))));}catch(e){return fail(c,e);}});
