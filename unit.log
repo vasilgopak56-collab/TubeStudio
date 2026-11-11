@@ -1,0 +1,10 @@
+
+> tubestudio@3.10.0 test:unit
+> node scripts/test-unit.mjs
+
+Unit files: 170
+# tests 1933
+# pass 1929
+# fail 0
+# skipped 4
+# cancelled 0
