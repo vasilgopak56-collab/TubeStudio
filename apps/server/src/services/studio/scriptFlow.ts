@@ -87,6 +87,53 @@ export async function runStudioScript(raw: StudioScriptInputT, ctx: JobCtx): Pro
   const input = StudioScriptInput.parse(raw);
   const ch = await getChannel(input.channelId);
   await assertChannelBudget(ch.id);
+  // Одно окно цены на весь запуск: верхняя граница запросов, модели и ориентир. Без «Подтвердить» ничего не уходит.
+  ctx.progress("Жду подтверждения цены", 1);
+  const { requestPaidRun, withPaidLimit } = await import("../paidRun.js");
+  const limit = await requestPaidRun("Подтвердите сценарий", await scriptRunPlan(input, ch), { channelId: ch.id, topic: input.topic, projectId: input.projectId ?? null });
+  return withPaidLimit(limit, () => runStudioScriptLimited(input, ctx));
+}
+
+/** Верхняя граница запросов одного запуска сценария по включённым шагам и длине. Модели — те, что сработают первыми; резервные не запускаются. */
+export async function scriptRunPlan(input: StudioScriptInputT, ch: Channel): Promise<import("../paidRun.js").PlannedCall[]> {
+  const { getSettings } = await import("../settings.js");
+  const { firstModel, groundedModels } = await import("../llm.js");
+  const { expectedActs } = await import("../script.js");
+  const s = await getSettings();
+  const lang = ch.language.slice(0, 2);
+  const wpm = (DEFAULT_WPM as Record<string, number>)[lang] ?? 140;
+  const words = Math.max(150, Math.round((input.minutes ?? ch.lengthMin) * wpm));
+  const nActs = expectedActs(words), text = words * 7;
+  const author = await firstModel({ role: "script", model: ch.models.author || undefined });
+  const fast = await firstModel({ fast: true });
+  const base = await firstModel({});
+  const criticName = input.critic || input.factCheck ? (ch.models.critic || pickCritic(author.model, s.anymodel)) : null;
+  const critic = criticName ? await firstModel({ model: criticName }) : null;
+  const web = input.research || input.factCheck ? await groundedModels() : [];
+  const webText = web.find((x) => x.kind === "text"), webSearch = web.find((x) => x.kind === "search");
+  const factBatches = Math.min(10, Math.ceil(words / 15 / 12) + 1);
+  const call = (step: string, m: { provider: string; model: string } | null | undefined, count: number, inputChars: number, maxTokens: number, kind: "text" | "search" = "text") =>
+    m ? [{ step, provider: m.provider, model: m.model, kind, count, inputChars, maxTokens }] : [];
+  return [
+    ...(input.donorUrl ? call("донор", fast, 1, 62_000, 2500) : []),
+    ...(input.research ? [...call("ресёрч: поиск Google", webText, 1, 3000, 6000), ...call("ресёрч: поиск", webSearch, 1, 0, 0, "search"), ...call("ресёрч: сводка", base, 1, 30_000, 6000)] : []),
+    ...call("план", author, 1, 12_000, 5000),
+    ...call("акты (с одним переспросом)", author, nActs * 2, 14_000, Math.min(30_000, Math.ceil(words / nActs) * 6 + 4000)),
+    ...call("живой голос", base, Math.ceil(words / 1400) + 1, 12_000, Math.min(30_000, 1400 * 8 + 3000)),
+    ...(input.critic ? call("критик и повторная оценка", critic, 2, text + 4000, 4000) : []),
+    ...call("правка автором", author, 1, text + 4000, Math.min(30_000, words * 6 + 4000)),
+    ...(input.factCheck ? [
+      ...call("факты: выписать утверждения", critic, 1, text, 12_000),
+      ...call("факты: поиск Google", webText, factBatches, 6000, 8000), ...call("факты: поиск", webSearch, factBatches, 0, 0, "search"),
+      ...call("факты: разбор ответа поиска", fast, factBatches, 20_000, 8000),
+      ...call("факты: по знаниям модели", critic, factBatches, 8000, 8000),
+    ] : []),
+  ];
+}
+
+async function runStudioScriptLimited(input: StudioScriptInputT, ctx: JobCtx): Promise<StudioScriptResult> {
+  const ch = await getChannel(input.channelId);
+  await assertChannelBudget(ch.id);
   const { getSettings } = await import("../settings.js");
   const { generateJson, generateText } = await import("../llm.js");
   const s = await getSettings();

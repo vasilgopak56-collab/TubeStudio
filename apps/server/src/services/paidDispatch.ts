@@ -15,6 +15,7 @@ const probe = (p: PriceSnapshot): OperationVolume => p.kind === "text" || p.kind
  */
 export function paidDispatch(prepare: () => Promise<PriceSnapshot | PriceSnapshot[]>, consent?: {contextHash:string; message:string}) {
   let prices: PriceSnapshot[] = [];
+  let attempts = 0;
   return {
     get prices() { return prices; },
     async beforeAttempt() {
@@ -47,11 +48,26 @@ export function paidDispatch(prepare: () => Promise<PriceSnapshot | PriceSnapsho
         captured = await captureAndCheck();
         priceConsents.consume(permit, spec(captured));
       }
+      checkPaidLimit(captured, ++attempts);
       await taskContext()?.verifyStoryboard?.();
       // Record the tariff of the actual last attempt, not of an earlier failed attempt.
       prices = captured;
     },
   };
+}
+
+/** Ограничитель запуска: один физический запрос на вызов, только подтверждённые модели и тарифы, не больше подтверждённого числа. */
+export function checkPaidLimit(captured: PriceSnapshot[], attempt: number) {
+  const limit = taskContext()?.paidLimit;
+  if (!limit) return;
+  if (attempt > 1) throw new ApiError("BUDGET_CONSENT_LIMIT", "Сервис не ответил или ответил ошибкой. Повтор запроса не отправлен: он мог бы быть оплачен второй раз. Готовое сохранено там, где этап успел закончиться.", 402);
+  for (const p of captured) {
+    const v = limit.allowed.get(`${p.provider}|${p.model}|${p.kind}`);
+    if (v === undefined) throw new ApiError("BUDGET_CONSENT_LIMIT", `Программа хотела переключиться на модель ${p.model}, которой нет в подтверждённом окне цены. Запрос не отправлен.`, 402);
+    if (v !== p.priceVersion) throw new ApiError("BUDGET_CONSENT_LIMIT", `Тариф модели ${p.model} изменился после подтверждения. Запрос не отправлен.`, 402);
+  }
+  if (limit.used + 1 > limit.max) throw new ApiError("BUDGET_CONSENT_LIMIT", `Достигнут подтверждённый максимум: ${limit.max} запросов. Новый запрос не отправлен.`, 402);
+  limit.used++;
 }
 
 /** The exact request is immutable before consent; secrets are only hashed, never sent to the UI. */

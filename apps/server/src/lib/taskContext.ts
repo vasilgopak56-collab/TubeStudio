@@ -3,7 +3,9 @@ import { ApiError } from "./errors.js";
 
 import type { ConsentLaunch, PriceChallenge, ConsentResolution } from "./priceConsentTypes.js";
 
-type TaskContext = { requireStoryboardConsent?: boolean; consentMessage?: string; verifyStoryboard?:()=>Promise<void>; launch?: ConsentLaunch; onPriceConsent?: (challenge: PriceChallenge) => void; onPriceConsentResolved?: (resolution: ConsentResolution) => void; signal?: AbortSignal; onQueue?: (kind: string) => void; jobId?: string };
+type TaskContext = { requireStoryboardConsent?: boolean; consentMessage?: string; verifyStoryboard?:()=>Promise<void>; launch?: ConsentLaunch; onPriceConsent?: (challenge: PriceChallenge) => void; onPriceConsentResolved?: (resolution: ConsentResolution) => void; signal?: AbortSignal; onQueue?: (kind: string) => void; jobId?: string; paidLimit?: PaidLimit };
+/** Ограничитель платного запуска: сколько физических запросов подтверждено и какие модели/тарифы. Ключ — provider|model|kind, значение — версия тарифа. */
+export type PaidLimit = { max: number; used: number; allowed: Map<string, string> };
 const storage = new AsyncLocalStorage<TaskContext>();
 export const taskContext = () => storage.getStore();
 export function taskSignal(explicit?: AbortSignal | null): AbortSignal | undefined {

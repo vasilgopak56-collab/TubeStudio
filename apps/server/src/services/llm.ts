@@ -75,6 +75,20 @@ async function plan(fast?: boolean, role?: "script", model?: string) {
   return order;
 }
 
+/** Какая модель сработает первой для такого вызова (для окна цены). Резервные под ограничителем не запускаются. */
+export async function firstModel(o: { fast?: boolean; role?: "script"; model?: string; noFallback?: boolean }): Promise<{ provider: string; model: string }> {
+  const planned = await plan(o.fast, o.role, o.model);
+  const steps = o.noFallback ? planned.filter((s) => s.p === "anymodel" && s.m === o.model) : planned;
+  if (!steps.length) throw new ApiError("KEY_MISSING", `Модель ${o.model ?? ""} недоступна. Запрос не отправлен.`, 400);
+  return { provider: steps[0].p, model: steps[0].m };
+}
+/** Модели веб-поиска Google: AnyModel с поиском или Gemini напрямую. */
+export async function groundedModels(): Promise<{ provider: string; model: string; kind: "text" | "search" }[]> {
+  const st = await getSettings();
+  if (hasAnymodel() && st.anymodel.enabled && st.anymodel.search) return [{ provider: "anymodel", model: st.anymodel.search, kind: "text" }, { provider: "anymodel", model: "web-search", kind: "search" }];
+  return config.keys.gemini ? [{ provider: "gemini", model: st.models.gemini, kind: "text" }, { provider: "gemini", model: st.models.gemini, kind: "search" }] : [];
+}
+
 /** Временно пропускаем модели без баланса / недоступные на тарифе, чтобы не терять время */
 const skipUntil = new Map<string, number>();
 
@@ -130,6 +144,8 @@ export function extractJson(text: string): unknown {
 /** Генерация JSON по zod-схеме: до 2 повторов с текстом ошибки (generate → validate → fix) */
 export async function generateJson<T>(c: LlmCall, schema: z.ZodType<T, unknown>, retries = 2): Promise<{ data: T; model: string }> {
   let user = c.user, lastErr = "";
+  // Под ограничителем платного запуска неверный ответ не переспрашивается: каждый повтор — новый платный запрос.
+  if (taskContext()?.paidLimit) retries = 0;
   for (let i = 0; i <= retries; i++) {
     const r = await raw({ ...c, user, system: `${c.system}\n\nReturn ONLY valid JSON. No markdown fences, no commentary.` }, true);
     try {
