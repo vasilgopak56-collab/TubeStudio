@@ -1,0 +1,229 @@
+
+> tubestudio@3.12.0 build
+> npm run build:assistant-knowledge && npm run build -w apps/web && npm run build -w apps/server && npm run build -w apps/mcp
+
+
+> tubestudio@3.12.0 build:assistant-knowledge
+> node --import tsx scripts/build-assistant-knowledge.ts
+
+Exported 72 help entries
+
+> build
+> vite build
+
+[36mvite v7.3.7 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32m✓[39m 1817 modules transformed.
+rendering chunks...
+computing gzip size...
+[2mdist/[22m[32mindex.html                                              [39m[1m[2m    0.47 kB[22m[1m[22m[2m │ gzip:   0.30 kB[22m
+[2mdist/[22m[32massets/inter-vietnamese-400-normal-DMkecbls.woff2       [39m[1m[2m    4.97 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-vietnamese-700-normal-DlLaEgI2.woff2       [39m[1m[2m    5.10 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-vietnamese-500-normal-DOriooB6.woff2       [39m[1m[2m    5.11 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-vietnamese-800-normal-Cm7tD1pz.woff2       [39m[1m[2m    5.18 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-greek-ext-400-normal-DGGRlc-M.woff2        [39m[1m[2m    5.26 kB[22m[1m[22m
+[2mdist/[22m[32massets/space-mono-vietnamese-400-normal-B0PMp_xB.woff   [39m[1m[2m    5.41 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-greek-ext-500-normal-C4iEst2y.woff2        [39m[1m[2m    5.43 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-greek-ext-700-normal-qfdV9bQt.woff2        [39m[1m[2m    5.44 kB[22m[1m[22m
+[2mdist/[22m[32massets/space-mono-vietnamese-700-normal-D-KrLuLr.woff   [39m[1m[2m    5.45 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-greek-ext-800-normal-B--PVpEC.woff2        [39m[1m[2m    5.55 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-vietnamese-400-normal-Bbgyi5SW.woff        [39m[1m[2m    6.50 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-vietnamese-500-normal-mJboJaSs.woff        [39m[1m[2m    6.60 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-vietnamese-700-normal-BZaoP0fm.woff        [39m[1m[2m    6.63 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-vietnamese-800-normal-DDlpr_Ee.woff        [39m[1m[2m    6.64 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-greek-ext-400-normal-KugGGMne.woff         [39m[1m[2m    7.06 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-greek-ext-500-normal-2j5mBUwD.woff         [39m[1m[2m    7.19 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-greek-ext-800-normal-DUe57HfS.woff         [39m[1m[2m    7.20 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-greek-ext-700-normal-BoQ6DsYi.woff         [39m[1m[2m    7.22 kB[22m[1m[22m
+[2mdist/[22m[32massets/space-mono-vietnamese-400-normal-BNOj0Qhp.woff2  [39m[1m[2m    7.27 kB[22m[1m[22m
+[2mdist/[22m[32massets/space-mono-vietnamese-700-normal-DWQgDHuA.woff2  [39m[1m[2m    7.33 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-cyrillic-400-normal-obahsSVq.woff2         [39m[1m[2m    7.71 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-greek-400-normal-B4URO6DV.woff2            [39m[1m[2m    7.78 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-greek-800-normal-CLIouy3y.woff2            [39m[1m[2m    7.89 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-cyrillic-500-normal-BasfLYem.woff2         [39m[1m[2m    7.90 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-cyrillic-700-normal-CjBOestx.woff2         [39m[1m[2m    7.90 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-greek-700-normal-C3JjAnD8.woff2            [39m[1m[2m    7.92 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-greek-500-normal-BIZE56-Y.woff2            [39m[1m[2m    7.92 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-cyrillic-800-normal-C7MGvYyJ.woff2         [39m[1m[2m    7.99 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-cyrillic-400-normal-HOLc17fK.woff          [39m[1m[2m    9.78 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-cyrillic-700-normal-DrXBdSj3.woff          [39m[1m[2m    9.91 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-greek-400-normal-q2sYcFCs.woff             [39m[1m[2m    9.92 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-cyrillic-500-normal-CxZf_p3X.woff          [39m[1m[2m    9.94 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-cyrillic-800-normal-CCHyn08d.woff          [39m[1m[2m    9.94 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-greek-800-normal-BU00tryP.woff             [39m[1m[2m    9.96 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-greek-700-normal-BUv2fZ6O.woff             [39m[1m[2m    9.98 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-greek-500-normal-Xzm54t5V.woff             [39m[1m[2m    9.98 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-cyrillic-ext-400-normal-BQZuk6qB.woff2     [39m[1m[2m   10.23 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-cyrillic-ext-500-normal-B0yAr1jD.woff2     [39m[1m[2m   10.43 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-cyrillic-ext-800-normal-BZOjs1Xv.woff2     [39m[1m[2m   10.44 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-cyrillic-ext-700-normal-BjwYoWNd.woff2     [39m[1m[2m   10.50 kB[22m[1m[22m
+[2mdist/[22m[32massets/space-mono-latin-400-normal-_3DlpgIW.woff        [39m[1m[2m   12.31 kB[22m[1m[22m
+[2mdist/[22m[32massets/space-mono-latin-700-normal-D7A851RN.woff        [39m[1m[2m   12.42 kB[22m[1m[22m
+[2mdist/[22m[32massets/space-mono-latin-ext-700-normal-B_E7P90g.woff    [39m[1m[2m   12.48 kB[22m[1m[22m
+[2mdist/[22m[32massets/space-mono-latin-ext-400-normal-D4cJI_B-.woff    [39m[1m[2m   12.61 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-cyrillic-ext-400-normal-DQukG94-.woff      [39m[1m[2m   13.34 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-cyrillic-ext-700-normal-LO58E6JB.woff      [39m[1m[2m   13.41 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-cyrillic-ext-500-normal-BmqWE9Dz.woff      [39m[1m[2m   13.45 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-cyrillic-ext-800-normal-Ca-gJeZY.woff      [39m[1m[2m   13.48 kB[22m[1m[22m
+[2mdist/[22m[32massets/space-mono-latin-ext-700-normal-B2s3bDs2.woff2   [39m[1m[2m   15.81 kB[22m[1m[22m
+[2mdist/[22m[32massets/space-mono-latin-ext-400-normal-DTLbW2xa.woff2   [39m[1m[2m   15.83 kB[22m[1m[22m
+[2mdist/[22m[32massets/space-mono-latin-400-normal-Rg4St2Dn.woff2       [39m[1m[2m   16.52 kB[22m[1m[22m
+[2mdist/[22m[32massets/space-mono-latin-700-normal-mWgeinG7.woff2       [39m[1m[2m   16.72 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-latin-400-normal-C38fXH4l.woff2            [39m[1m[2m   23.66 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-latin-500-normal-Cerq10X2.woff2            [39m[1m[2m   24.27 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-latin-700-normal-Yt3aPRUw.woff2            [39m[1m[2m   24.36 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-latin-800-normal-BYj_oED-.woff2            [39m[1m[2m   24.40 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-latin-400-normal-CyCys3Eg.woff             [39m[1m[2m   30.70 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-latin-500-normal-BL9OpVg8.woff             [39m[1m[2m   31.28 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-latin-800-normal-D1mf63XC.woff             [39m[1m[2m   31.30 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-latin-700-normal-BLAVimhd.woff             [39m[1m[2m   31.32 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-latin-ext-400-normal-C1nco2VV.woff2        [39m[1m[2m   35.00 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-latin-ext-500-normal-CV4jyFjo.woff2        [39m[1m[2m   36.02 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-latin-ext-800-normal-DZJjya6U.woff2        [39m[1m[2m   36.13 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-latin-ext-700-normal-Ca8adRJv.woff2        [39m[1m[2m   36.24 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-latin-ext-400-normal-77YHD8bZ.woff         [39m[1m[2m   47.56 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-latin-ext-500-normal-BxGbmqWO.woff         [39m[1m[2m   48.49 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-latin-ext-800-normal-BOMpwxm3.woff         [39m[1m[2m   48.59 kB[22m[1m[22m
+[2mdist/[22m[32massets/inter-latin-ext-700-normal-TidjK2hL.woff         [39m[1m[2m   48.63 kB[22m[1m[22m
+[2mdist/[22m[35massets/index-BPiIz0Q3.css                               [39m[1m[2m   63.12 kB[22m[1m[22m[2m │ gzip:  11.36 kB[22m
+[2mdist/[22m[36massets/types-3tGEZvTS.js                                [39m[1m[2m    0.07 kB[22m[1m[22m[2m │ gzip:   0.09 kB[22m
+[2mdist/[22m[36massets/chevron-left-YlxRJMHB.js                         [39m[1m[2m    0.13 kB[22m[1m[22m[2m │ gzip:   0.14 kB[22m
+[2mdist/[22m[36massets/chevron-right-C2kvjqLE.js                        [39m[1m[2m    0.13 kB[22m[1m[22m[2m │ gzip:   0.14 kB[22m
+[2mdist/[22m[36massets/play-DYnKs0fC.js                                 [39m[1m[2m    0.13 kB[22m[1m[22m[2m │ gzip:   0.14 kB[22m
+[2mdist/[22m[36massets/loader-circle-DMOGVbsr.js                        [39m[1m[2m    0.14 kB[22m[1m[22m[2m │ gzip:   0.15 kB[22m
+[2mdist/[22m[36massets/plus-BsPZiICM.js                                 [39m[1m[2m    0.15 kB[22m[1m[22m[2m │ gzip:   0.15 kB[22m
+[2mdist/[22m[36massets/arrow-right-CuBw3Rbt.js                          [39m[1m[2m    0.16 kB[22m[1m[22m[2m │ gzip:   0.16 kB[22m
+[2mdist/[22m[36massets/clock-yyUjdrTF.js                                [39m[1m[2m    0.18 kB[22m[1m[22m[2m │ gzip:   0.17 kB[22m
+[2mdist/[22m[36massets/skip-forward-Q9P1VaQo.js                         [39m[1m[2m    0.19 kB[22m[1m[22m[2m │ gzip:   0.18 kB[22m
+[2mdist/[22m[36massets/smartphone-8dh8MMkq.js                           [39m[1m[2m    0.20 kB[22m[1m[22m[2m │ gzip:   0.18 kB[22m
+[2mdist/[22m[36massets/rotate-ccw-Sb-3AWUe.js                           [39m[1m[2m    0.20 kB[22m[1m[22m[2m │ gzip:   0.18 kB[22m
+[2mdist/[22m[36massets/trending-up-DfTQA6bS.js                          [39m[1m[2m    0.20 kB[22m[1m[22m[2m │ gzip:   0.18 kB[22m
+[2mdist/[22m[36massets/bookmark-check-c6X98kYA.js                       [39m[1m[2m    0.21 kB[22m[1m[22m[2m │ gzip:   0.18 kB[22m
+[2mdist/[22m[36massets/pause-DaUc7tfg.js                                [39m[1m[2m    0.21 kB[22m[1m[22m[2m │ gzip:   0.16 kB[22m
+[2mdist/[22m[36massets/music-DZFQOfDH.js                                [39m[1m[2m    0.22 kB[22m[1m[22m[2m │ gzip:   0.18 kB[22m
+[2mdist/[22m[36massets/sticky-note-BaLY4Xzk.js                          [39m[1m[2m    0.22 kB[22m[1m[22m[2m │ gzip:   0.18 kB[22m
+[2mdist/[22m[36massets/merge-B4qHHG5M.js                                [39m[1m[2m    0.22 kB[22m[1m[22m[2m │ gzip:   0.19 kB[22m
+[2mdist/[22m[36massets/folder-B7917xhr.js                               [39m[1m[2m    0.23 kB[22m[1m[22m[2m │ gzip:   0.19 kB[22m
+[2mdist/[22m[36massets/handoff-Cplq-jqL.js                              [39m[1m[2m    0.23 kB[22m[1m[22m[2m │ gzip:   0.17 kB[22m
+[2mdist/[22m[36massets/history-16S0hGpL.js                              [39m[1m[2m    0.24 kB[22m[1m[22m[2m │ gzip:   0.19 kB[22m
+[2mdist/[22m[36massets/database-BPyPDogg.js                             [39m[1m[2m    0.24 kB[22m[1m[22m[2m │ gzip:   0.20 kB[22m
+[2mdist/[22m[36massets/video-BWKMou3h.js                                [39m[1m[2m    0.25 kB[22m[1m[22m[2m │ gzip:   0.21 kB[22m
+[2mdist/[22m[36massets/external-link-DT0CbXb8.js                        [39m[1m[2m    0.25 kB[22m[1m[22m[2m │ gzip:   0.20 kB[22m
+[2mdist/[22m[36massets/settings-2-mF5gRMgc.js                           [39m[1m[2m    0.25 kB[22m[1m[22m[2m │ gzip:   0.19 kB[22m
+[2mdist/[22m[36massets/archive-D994r2lQ.js                              [39m[1m[2m    0.25 kB[22m[1m[22m[2m │ gzip:   0.21 kB[22m
+[2mdist/[22m[36massets/eye-0KfH5gjR.js                                  [39m[1m[2m    0.25 kB[22m[1m[22m[2m │ gzip:   0.20 kB[22m
+[2mdist/[22m[36massets/zap-B6kq6peG.js                                  [39m[1m[2m    0.26 kB[22m[1m[22m[2m │ gzip:   0.20 kB[22m
+[2mdist/[22m[36massets/download-Bs-yUxOD.js                             [39m[1m[2m    0.26 kB[22m[1m[22m[2m │ gzip:   0.21 kB[22m
+[2mdist/[22m[36massets/pencil-DYQPYvpU.js                               [39m[1m[2m    0.27 kB[22m[1m[22m[2m │ gzip:   0.22 kB[22m
+[2mdist/[22m[36massets/list-checks-DEf_kEqE.js                          [39m[1m[2m    0.28 kB[22m[1m[22m[2m │ gzip:   0.19 kB[22m
+[2mdist/[22m[36massets/folder-open-BjnwWNoX.js                          [39m[1m[2m    0.29 kB[22m[1m[22m[2m │ gzip:   0.22 kB[22m
+[2mdist/[22m[36massets/thumbs-up-DWvVneMn.js                            [39m[1m[2m    0.30 kB[22m[1m[22m[2m │ gzip:   0.24 kB[22m
+[2mdist/[22m[36massets/visualStyles-CrE0AacN.js                         [39m[1m[2m    0.31 kB[22m[1m[22m[2m │ gzip:   0.27 kB[22m
+[2mdist/[22m[36massets/shield-check-DMxbAwZ5.js                         [39m[1m[2m    0.32 kB[22m[1m[22m[2m │ gzip:   0.25 kB[22m
+[2mdist/[22m[36massets/refresh-cw-C22XAeu8.js                           [39m[1m[2m    0.32 kB[22m[1m[22m[2m │ gzip:   0.23 kB[22m
+[2mdist/[22m[36massets/save-b-jgfoqP.js                                 [39m[1m[2m    0.33 kB[22m[1m[22m[2m │ gzip:   0.23 kB[22m
+[2mdist/[22m[36massets/file-text-D5BKcNJY.js                            [39m[1m[2m    0.33 kB[22m[1m[22m[2m │ gzip:   0.21 kB[22m
+[2mdist/[22m[36massets/trash-2-qZFEHriW.js                              [39m[1m[2m    0.36 kB[22m[1m[22m[2m │ gzip:   0.25 kB[22m
+[2mdist/[22m[36massets/layout-list-DhGcpqRS.js                          [39m[1m[2m    0.36 kB[22m[1m[22m[2m │ gzip:   0.22 kB[22m
+[2mdist/[22m[36massets/image-plus-44FkGobF.js                           [39m[1m[2m    0.36 kB[22m[1m[22m[2m │ gzip:   0.25 kB[22m
+[2mdist/[22m[36massets/scan-search-6F60NFGf.js                          [39m[1m[2m    0.38 kB[22m[1m[22m[2m │ gzip:   0.25 kB[22m
+[2mdist/[22m[36massets/construction-QzPqozQM.js                         [39m[1m[2m    0.42 kB[22m[1m[22m[2m │ gzip:   0.26 kB[22m
+[2mdist/[22m[36massets/Chip-B90xfBh6.js                                 [39m[1m[2m    0.42 kB[22m[1m[22m[2m │ gzip:   0.28 kB[22m
+[2mdist/[22m[36massets/rotate-cw-CN3W30zX.js                            [39m[1m[2m    0.42 kB[22m[1m[22m[2m │ gzip:   0.28 kB[22m
+[2mdist/[22m[36massets/eye-off-DbJ7q4Js.js                              [39m[1m[2m    0.43 kB[22m[1m[22m[2m │ gzip:   0.27 kB[22m
+[2mdist/[22m[36massets/NotFound-DUMWQ4PV.js                             [39m[1m[2m    0.44 kB[22m[1m[22m[2m │ gzip:   0.31 kB[22m
+[2mdist/[22m[36massets/draft-oJzNLHGj.js                                [39m[1m[2m    0.46 kB[22m[1m[22m[2m │ gzip:   0.30 kB[22m
+[2mdist/[22m[36massets/calendar-plus-Dtw74o-I.js                        [39m[1m[2m    0.47 kB[22m[1m[22m[2m │ gzip:   0.28 kB[22m
+[2mdist/[22m[36massets/user-DdOF3uN7.js                                 [39m[1m[2m    0.47 kB[22m[1m[22m[2m │ gzip:   0.29 kB[22m
+[2mdist/[22m[36massets/star-B6pzAen7.js                                 [39m[1m[2m    0.47 kB[22m[1m[22m[2m │ gzip:   0.29 kB[22m
+[2mdist/[22m[36massets/volume-2-BTflKMd3.js                             [39m[1m[2m    0.48 kB[22m[1m[22m[2m │ gzip:   0.32 kB[22m
+[2mdist/[22m[36massets/wand-sparkles-CNXCDnGy.js                        [39m[1m[2m    0.51 kB[22m[1m[22m[2m │ gzip:   0.29 kB[22m
+[2mdist/[22m[36massets/Anomalies-Dd1Rch5k.js                            [39m[1m[2m    0.62 kB[22m[1m[22m[2m │ gzip:   0.38 kB[22m
+[2mdist/[22m[36massets/map-BycsM0SH.js                                  [39m[1m[2m    0.64 kB[22m[1m[22m[2m │ gzip:   0.35 kB[22m
+[2mdist/[22m[36massets/circle-minus-B6iENeoj.js                         [39m[1m[2m    0.69 kB[22m[1m[22m[2m │ gzip:   0.34 kB[22m
+[2mdist/[22m[36massets/newspaper-B6XoFH_c.js                            [39m[1m[2m    0.76 kB[22m[1m[22m[2m │ gzip:   0.38 kB[22m
+[2mdist/[22m[36massets/format-09zYFS2c.js                               [39m[1m[2m    0.81 kB[22m[1m[22m[2m │ gzip:   0.46 kB[22m
+[2mdist/[22m[36massets/StepCard-DCZwCbln.js                             [39m[1m[2m    0.82 kB[22m[1m[22m[2m │ gzip:   0.49 kB[22m
+[2mdist/[22m[36massets/image-DGs50yPS.js                                [39m[1m[2m    0.83 kB[22m[1m[22m[2m │ gzip:   0.56 kB[22m
+[2mdist/[22m[36massets/Placeholder-BBVs0sxT.js                          [39m[1m[2m    0.86 kB[22m[1m[22m[2m │ gzip:   0.58 kB[22m
+[2mdist/[22m[36massets/sliders-horizontal-DbO3VWBf.js                   [39m[1m[2m    0.87 kB[22m[1m[22m[2m │ gzip:   0.41 kB[22m
+[2mdist/[22m[36massets/meta-qs6NWiOm.js                                 [39m[1m[2m    0.89 kB[22m[1m[22m[2m │ gzip:   0.50 kB[22m
+[2mdist/[22m[36massets/constants-B9VAeHZ3.js                            [39m[1m[2m    0.89 kB[22m[1m[22m[2m │ gzip:   0.50 kB[22m
+[2mdist/[22m[36massets/BarChart-Ci5W3WO1.js                             [39m[1m[2m    0.98 kB[22m[1m[22m[2m │ gzip:   0.55 kB[22m
+[2mdist/[22m[36massets/type-BrSAXo8y.js                                 [39m[1m[2m    1.17 kB[22m[1m[22m[2m │ gzip:   0.58 kB[22m
+[2mdist/[22m[36massets/tag-D_bTbRKT.js                                  [39m[1m[2m    1.19 kB[22m[1m[22m[2m │ gzip:   0.60 kB[22m
+[2mdist/[22m[36massets/swords-CcnceBf2.js                               [39m[1m[2m    1.22 kB[22m[1m[22m[2m │ gzip:   0.50 kB[22m
+[2mdist/[22m[36massets/user-plus-BVYjbI5q.js                            [39m[1m[2m    1.22 kB[22m[1m[22m[2m │ gzip:   0.60 kB[22m
+[2mdist/[22m[36massets/storyboardEditorTransfer-BVycNUnC.js             [39m[1m[2m    1.74 kB[22m[1m[22m[2m │ gzip:   0.96 kB[22m
+[2mdist/[22m[36massets/LineChart-CYVslO0x.js                            [39m[1m[2m    1.74 kB[22m[1m[22m[2m │ gzip:   0.90 kB[22m
+[2mdist/[22m[36massets/VoiceProvenance-H-rSYGQx.js                      [39m[1m[2m    1.98 kB[22m[1m[22m[2m │ gzip:   0.91 kB[22m
+[2mdist/[22m[36massets/StylePicker-BD2BRVmS.js                          [39m[1m[2m    2.34 kB[22m[1m[22m[2m │ gzip:   1.16 kB[22m
+[2mdist/[22m[36massets/ToolHeader-G1pkFpcp.js                           [39m[1m[2m    2.48 kB[22m[1m[22m[2m │ gzip:   1.08 kB[22m
+[2mdist/[22m[36massets/Projects-DVXPojkS.js                             [39m[1m[2m    2.86 kB[22m[1m[22m[2m │ gzip:   1.54 kB[22m
+[2mdist/[22m[36massets/UiKit-0MjV0eUl.js                                [39m[1m[2m    3.63 kB[22m[1m[22m[2m │ gzip:   1.62 kB[22m
+[2mdist/[22m[36massets/FiltersPanel-D-Wrn5QQ.js                         [39m[1m[2m    3.71 kB[22m[1m[22m[2m │ gzip:   1.64 kB[22m
+[2mdist/[22m[36massets/Saved-E89uWxhh.js                                [39m[1m[2m    4.98 kB[22m[1m[22m[2m │ gzip:   2.30 kB[22m
+[2mdist/[22m[36massets/Packaging-D2fZH0RP.js                            [39m[1m[2m    8.23 kB[22m[1m[22m[2m │ gzip:   3.11 kB[22m
+[2mdist/[22m[36massets/Extension-CtQhbEyp.js                            [39m[1m[2m    8.68 kB[22m[1m[22m[2m │ gzip:   3.36 kB[22m
+[2mdist/[22m[36massets/Mcp-FcHE0BUi.js                                  [39m[1m[2m    9.08 kB[22m[1m[22m[2m │ gzip:   3.55 kB[22m
+[2mdist/[22m[36massets/VoiceProfile-f_CgGBy1.js                         [39m[1m[2m    9.91 kB[22m[1m[22m[2m │ gzip:   3.99 kB[22m
+[2mdist/[22m[36massets/PromptStudio-CzXfwbRb.js                         [39m[1m[2m   10.21 kB[22m[1m[22m[2m │ gzip:   4.01 kB[22m
+[2mdist/[22m[36massets/AiDetector-QShxjhvn.js                           [39m[1m[2m   10.77 kB[22m[1m[22m[2m │ gzip:   3.99 kB[22m
+[2mdist/[22m[36massets/Video-BTGBEQ0O.js                                [39m[1m[2m   10.92 kB[22m[1m[22m[2m │ gzip:   4.03 kB[22m
+[2mdist/[22m[36massets/StudioShorts-CAizmcBc.js                         [39m[1m[2m   11.57 kB[22m[1m[22m[2m │ gzip:   4.43 kB[22m
+[2mdist/[22m[36massets/Seo-DSA989XR.js                                  [39m[1m[2m   12.31 kB[22m[1m[22m[2m │ gzip:   4.69 kB[22m
+[2mdist/[22m[36massets/Scorecard-DgMumlim.js                            [39m[1m[2m   12.32 kB[22m[1m[22m[2m │ gzip:   4.76 kB[22m
+[2mdist/[22m[36massets/Channels-BH5Q4Mus.js                             [39m[1m[2m   12.39 kB[22m[1m[22m[2m │ gzip:   4.18 kB[22m
+[2mdist/[22m[36massets/Ideas-DK8Hkp1N.js                                [39m[1m[2m   12.64 kB[22m[1m[22m[2m │ gzip:   4.88 kB[22m
+[2mdist/[22m[36massets/Calendar-D3QnNGpa.js                             [39m[1m[2m   12.65 kB[22m[1m[22m[2m │ gzip:   4.62 kB[22m
+[2mdist/[22m[36massets/StudioScript-mk253Uz3.js                         [39m[1m[2m   12.86 kB[22m[1m[22m[2m │ gzip:   4.58 kB[22m
+[2mdist/[22m[36massets/VideoScorecard-CN4lPG_g.js                       [39m[1m[2m   13.44 kB[22m[1m[22m[2m │ gzip:   4.76 kB[22m
+[2mdist/[22m[36massets/ScriptRater-D0t-SDMQ.js                          [39m[1m[2m   13.73 kB[22m[1m[22m[2m │ gzip:   4.67 kB[22m
+[2mdist/[22m[36massets/VisualStyles-jOgXsRkX.js                         [39m[1m[2m   14.04 kB[22m[1m[22m[2m │ gzip:   4.92 kB[22m
+[2mdist/[22m[36massets/AnyModel-BJMWjflQ.js                             [39m[1m[2m   15.56 kB[22m[1m[22m[2m │ gzip:   5.58 kB[22m
+[2mdist/[22m[36massets/Pipeline-GsKaoyO8.js                             [39m[1m[2m   16.07 kB[22m[1m[22m[2m │ gzip:   5.58 kB[22m
+[2mdist/[22m[36massets/AdBreaks-BMuu56fl.js                             [39m[1m[2m   16.70 kB[22m[1m[22m[2m │ gzip:   5.95 kB[22m
+[2mdist/[22m[36massets/Coach-D9rnuUSv.js                                [39m[1m[2m   17.10 kB[22m[1m[22m[2m │ gzip:   5.70 kB[22m
+[2mdist/[22m[36massets/Keywords-RJxtAdwa.js                             [39m[1m[2m   17.49 kB[22m[1m[22m[2m │ gzip:   5.90 kB[22m
+[2mdist/[22m[36massets/DailyIdeas-D5c8sJCV.js                           [39m[1m[2m   17.67 kB[22m[1m[22m[2m │ gzip:   5.69 kB[22m
+[2mdist/[22m[36massets/Dashboard-BQLcNCmT.js                            [39m[1m[2m   17.68 kB[22m[1m[22m[2m │ gzip:   5.90 kB[22m
+[2mdist/[22m[36massets/Voice-CkXX9djd.js                                [39m[1m[2m   17.91 kB[22m[1m[22m[2m │ gzip:   6.50 kB[22m
+[2mdist/[22m[36massets/SeoAudit-a_wxA5qa.js                             [39m[1m[2m   17.93 kB[22m[1m[22m[2m │ gzip:   5.90 kB[22m
+[2mdist/[22m[36massets/Comments-Dw_ZMhJT.js                             [39m[1m[2m   18.52 kB[22m[1m[22m[2m │ gzip:   5.78 kB[22m
+[2mdist/[22m[36massets/Topics-CcbUH_m3.js                               [39m[1m[2m   18.62 kB[22m[1m[22m[2m │ gzip:   6.61 kB[22m
+[2mdist/[22m[36massets/Humanizer-DH6wwraG.js                            [39m[1m[2m   18.80 kB[22m[1m[22m[2m │ gzip:   6.65 kB[22m
+[2mdist/[22m[36massets/StudioMontage-D0yc4O2P.js                        [39m[1m[2m   18.94 kB[22m[1m[22m[2m │ gzip:   6.03 kB[22m
+[2mdist/[22m[36massets/ProjectDetail-2r4-Acf3.js                        [39m[1m[2m   19.11 kB[22m[1m[22m[2m │ gzip:   6.11 kB[22m
+[2mdist/[22m[36massets/Transcripts-obMZ__uk.js                          [39m[1m[2m   20.63 kB[22m[1m[22m[2m │ gzip:   6.60 kB[22m
+[2mdist/[22m[36massets/Profit-CkMvfcdS.js                               [39m[1m[2m   20.69 kB[22m[1m[22m[2m │ gzip:   6.78 kB[22m
+[2mdist/[22m[36massets/Niches-W9fRnbrF.js                               [39m[1m[2m   21.26 kB[22m[1m[22m[2m │ gzip:   6.94 kB[22m
+[2mdist/[22m[36massets/StudioVoice-D2Rv0Qow.js                          [39m[1m[2m   23.42 kB[22m[1m[22m[2m │ gzip:   7.66 kB[22m
+[2mdist/[22m[36massets/StudioPublish-Dnl_wkZs.js                        [39m[1m[2m   23.61 kB[22m[1m[22m[2m │ gzip:   7.62 kB[22m
+[2mdist/[22m[36massets/Analysis-CzSu3uSl.js                             [39m[1m[2m   27.72 kB[22m[1m[22m[2m │ gzip:   9.02 kB[22m
+[2mdist/[22m[36massets/Director-iWqVJgPn.js                             [39m[1m[2m   30.24 kB[22m[1m[22m[2m │ gzip:   9.90 kB[22m
+[2mdist/[22m[36massets/Competitors-ClvOPI0P.js                          [39m[1m[2m   30.65 kB[22m[1m[22m[2m │ gzip:   9.06 kB[22m
+[2mdist/[22m[36massets/Script-Cuv_UZAT.js                               [39m[1m[2m   35.16 kB[22m[1m[22m[2m │ gzip:  11.42 kB[22m
+[2mdist/[22m[36massets/DonorWorkflow-C70a0YFo.js                        [39m[1m[2m   35.22 kB[22m[1m[22m[2m │ gzip:  10.91 kB[22m
+[2mdist/[22m[36massets/Settings-BERSeVJZ.js                             [39m[1m[2m   46.20 kB[22m[1m[22m[2m │ gzip:  13.44 kB[22m
+[2mdist/[22m[36massets/AudioStoryboard-C9gMrh9h.js                      [39m[1m[2m   47.42 kB[22m[1m[22m[2m │ gzip:  13.08 kB[22m
+[2mdist/[22m[36massets/StudioVisual-CGZaAzgA.js                         [39m[1m[2m   47.86 kB[22m[1m[22m[2m │ gzip:  14.54 kB[22m
+[2mdist/[22m[36massets/Storyboard-CkXFcNco.js                           [39m[1m[2m   48.96 kB[22m[1m[22m[2m │ gzip:  12.83 kB[22m
+[2mdist/[22m[36massets/Thumbnail-BCvMJvbj.js                            [39m[1m[2m   57.21 kB[22m[1m[22m[2m │ gzip:  19.70 kB[22m
+[2mdist/[22m[36massets/Research-DeD-Yrf7.js                             [39m[1m[2m   69.85 kB[22m[1m[22m[2m │ gzip:  19.02 kB[22m
+[2mdist/[22m[36massets/MyAnalytics-Dtu6tryv.js                          [39m[1m[2m  106.81 kB[22m[1m[22m[2m │ gzip:  25.04 kB[22m
+[2mdist/[22m[36massets/Help-CdPK5nQA.js                                 [39m[1m[2m  488.21 kB[22m[1m[22m[2m │ gzip: 126.34 kB[22m
+[2mdist/[22m[36massets/index-70m_rGw0.js                                [39m[1m[33m1,626.36 kB[39m[22m[2m │ gzip: 406.06 kB[22m
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[32m✓ built in 5.43s[39m
+
+> build
+> tsc -p tsconfig.json
+
+
+> @tubestudio/mcp@3.12.0 build
+> tsc -p tsconfig.json
+
