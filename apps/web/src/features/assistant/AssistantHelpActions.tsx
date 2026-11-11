@@ -9,12 +9,12 @@ import {JobBox,useActiveChannel} from '@/features/studio/common';
 function Rich({text}:{text:string}){return <>{text.split(/(\*\*[^*]+\*\*)/g).filter(Boolean).map((p,i)=>p.startsWith('**')?<b key={i}>{p.slice(2,-2)}</b>:<span key={i}>{p}</span>)}</>;}
 
 export type ActionProposal={kind:string;route?:string};
-type ActionKind='open-page'|'montage-check'|'publish-readiness'|'publish-texts';
+type ActionKind='open-page'|'montage-check'|'publish-readiness'|'publish-texts'|'fact-check';
 type ActionResult={kind:ActionKind;title:string;ok:boolean;navigate?:string;lines:{level:'ok'|'warn'|'block';message:string}[]};
 type HelpSection={id:string;title:string;route:string;short:string;steps:string[];cost:string};
-const TITLES:Record<ActionKind,string>={'open-page':'Открыть страницу','montage-check':'Проверить ролик перед монтажом','publish-readiness':'Показать готовность карточки публикации','publish-texts':'Подготовить тексты публикации'};
+const TITLES:Record<ActionKind,string>={'open-page':'Открыть страницу','montage-check':'Проверить ролик перед монтажом','publish-readiness':'Показать готовность карточки публикации','publish-texts':'Подготовить тексты публикации','fact-check':'Проверить факты сценария'};
 const KNOWN=(k:string):k is ActionKind=>k in TITLES;
-const SECTION_ACTIONS:Record<string,ActionKind[]>={'studio-montage':['montage-check'],'studio-publish':['publish-readiness','publish-texts']};
+const SECTION_ACTIONS:Record<string,ActionKind[]>={'studio-script':['fact-check'],'studio-montage':['montage-check'],'studio-publish':['publish-readiness','publish-texts']};
 
 /** Платное действие: одна задача, внутри — то же окно цены, что на странице «Публикация». Закрытие панели задачу не останавливает. */
 function PublishTextsCard({projects,defaultProject,disabled}:{projects:{id:string;title:string}[];defaultProject:string;disabled?:boolean}){
@@ -35,6 +35,27 @@ function PublishTextsCard({projects,defaultProject,disabled}:{projects:{id:strin
   {job.status==='error'&&approved&&<p className="text-accent">Цена была подтверждена, поэтому запрос мог быть отправлен и оплачен. Через Помощника повтор не запускается: проверьте страницу «Публикация» и при необходимости повторите там.</p>}
  </section>;
 }
+type FactCheckDone={report:{summary:{total:number;false:number;misleading:number;unverified:number};changed:number;removed:number;remaining:number;passed:boolean}};
+/** Платное действие: проверка фактов сценария ролика. Внутри — то же окно цены с ограничителем, что у кнопки на странице «Сценарий». */
+function FactCheckCard({projects,defaultProject,disabled}:{projects:{id:string;title:string}[];defaultProject:string;disabled?:boolean}){
+ const {channel}=useActiveChannel();
+ const job=useJob<FactCheckDone>('/assistant/actions/fact-check');
+ const [project,setProject]=useState(defaultProject),[approved,setApproved]=useState(false);
+ const running=job.status==='running';
+ useEffect(()=>{if(!running)setProject(defaultProject);},[defaultProject]);
+ const decide=(c:PriceChallenge,d:'approve'|'deny')=>{if(d==='approve')setApproved(true);job.decideConsent(c,d);};
+ const r=job.status==='done'?job.data?.report:undefined;
+ return <section className="space-y-2 rounded-lg border border-primary/40 p-3 text-sm" aria-label={'Действие: '+TITLES['fact-check']}>
+  <h4 className="font-semibold">Действие: {TITLES['fact-check']}</h4>
+  <p className="text-xs">Платно: несколько запросов к моделям AnyModel, как у кнопки «Проверить факты — платно» на странице «Сценарий». Окно подтверждения покажет «до N запросов» и ориентир цены; без вашего «Подтвердить» ничего не уйдёт. Автоповтора и резервных моделей нет. Проверяется сценарий выбранного ролика, исправленный текст сохраняется в ролик.</p>
+  <p className="text-xs text-muted-foreground">Канал: {channel?.name??'не выбран'}</p>
+  <label className="block text-xs">Ролик<Select aria-label="Ролик для проверки фактов" value={project} disabled={running||disabled} onChange={e=>{setProject(e.target.value);setApproved(false);}}><option value="">Выберите проект</option>{projects.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</Select></label>
+  {!running&&<Button size="sm" disabled={disabled||!project||!channel} onClick={()=>{setApproved(false);void job.start({projectId:project,channelId:channel!.id,confirmed:true},undefined,{serverConsent:true});}}>Выполнить</Button>}
+  <JobBox job={{...job,decideConsent:decide}} onCancel={()=>void job.cancel()} note="Обычно занимает несколько минут."/>
+  {job.status==='done'&&<p className="text-success">✓ Готово{r?`: проверено утверждений ${r.summary.total}, неверных ${r.summary.false}, неточных ${r.summary.misleading}, не подтверждено ${r.summary.unverified}; исправлено предложений ${r.changed}, убрано ${r.removed}, осталось с неточностью ${r.remaining}`:''}. Отчёт и исправленный текст — на странице «Сценарий» этого ролика. Проверьте их.</p>}
+  {job.status==='error'&&approved&&<p className="text-accent">Цена была подтверждена, поэтому запросы могли быть отправлены и оплачены. Через Помощника повтор не запускается: проверьте страницу «Сценарий» и при необходимости повторите там.</p>}
+ </section>;
+}
 const mark={ok:'✓',warn:'!',block:'✕'} as const;
 
 /** Одно действие из списка Помощника. Выполняется только по нажатию владельца; сервер повторно проверяет список. */
@@ -46,6 +67,7 @@ export function AssistantActionCard({proposal,projects,defaultProject,pageTitle,
  useEffect(()=>{setResult(null);setError(null);},[project]);
  if(!KNOWN(proposal.kind))return <div className="rounded-lg border border-accent/50 p-3 text-sm" aria-label="Недоступное действие">Помощник предложил действие, которого нет в списке. Оно не выполняется.</div>;
  if(proposal.kind==='publish-texts')return <PublishTextsCard projects={projects} defaultProject={defaultProject} disabled={disabled}/>;
+ if(proposal.kind==='fact-check')return <FactCheckCard projects={projects} defaultProject={defaultProject} disabled={disabled}/>;
  const kind=proposal.kind,needsProject=kind!=='open-page';
  if(kind==='open-page'&&!proposal.route)return <div className="rounded-lg border border-accent/50 p-3 text-sm">Помощник не указал страницу. Ничего не открыто.</div>;
  async function run(){
