@@ -88,8 +88,23 @@ export async function modelPrompts(o: {
   ch: Pick<Channel, "name" | "language" | "niche" | "audience" | "format" | "visual">; kit: StyleKit; scenes: PromptScene[]; previous?: string; note?: string;
 }): Promise<{ items: z.infer<typeof Out>["scenes"]; model: string }> {
   const { generateJson } = await import("../llm.js");
+  const user = promptUser(o);
+  const maxTokens = promptMaxTokens(o.scenes.length);
+  if (promptAi) { const r = await promptAi({ system: PROMPT_SYSTEM, user, maxTokens }); return { items: Out.parse(r.data).scenes, model: r.model }; }
+  // Промпты пишет модель сценариста, без подмены резервной: при сбое задание останавливается, готовые части сохранены.
+  // Неверный ответ не переспрашивается: каждый повтор был бы новым платным запросом сверх подтверждённых.
+  const { getSettings } = await import("../settings.js");
+  const model = (await getSettings()).anymodel.script;
+  const r = await generateJson({ system: PROMPT_SYSTEM, user, maxTokens, temperature: 0.6, model, noFallback: true, singleAttempt: true }, Out, 0);
+  return { items: r.data.scenes, model: r.model };
+}
+export const promptMaxTokens = (scenes: number) => Math.min(12_000, 900 + scenes * 380);
+/** Текст запроса к модели для одной пачки сцен. По нему же считается ориентир цены. */
+export function promptUser(o: {
+  ch: Pick<Channel, "name" | "language" | "niche" | "audience" | "format" | "visual">; kit: StyleKit; scenes: PromptScene[]; previous?: string; note?: string;
+}): string {
   const cast = o.ch.visual.cast.map((c) => `@${c.name} (${c.kind}): ${oneLine(c.description) || "no description"}`).join("\n");
-  const user = [
+  return [
     `CHANNEL: ${o.ch.name} · narration language ${o.ch.language}${o.ch.niche ? ` · niche: ${o.ch.niche}` : ""}${o.ch.audience ? ` · audience: ${o.ch.audience}` : ""}${o.ch.format ? ` · format: ${o.ch.format}` : ""}`,
     `STYLE (for reference only, do not repeat it): ${o.kit.name} — ${o.kit.anchor}`,
     cast ? `CAST AND LOCATIONS:\n${cast}` : "CAST AND LOCATIONS: none — do not use @names.",
@@ -97,13 +112,6 @@ export async function modelPrompts(o: {
     o.note ? `FIX REQUEST FROM THE EDITOR: ${o.note}` : "",
     `SCENES:\n${JSON.stringify(o.scenes.map((s) => ({ n: s.n, narration: s.text, seconds: s.seconds, suggested_shot: s.shot })))}`,
   ].filter(Boolean).join("\n\n");
-  const maxTokens = Math.min(12_000, 900 + o.scenes.length * 380);
-  if (promptAi) { const r = await promptAi({ system: PROMPT_SYSTEM, user, maxTokens }); return { items: Out.parse(r.data).scenes, model: r.model }; }
-  // Промпты пишет модель сценариста, без подмены резервной: при сбое задание останавливается, готовые части сохранены.
-  const { getSettings } = await import("../settings.js");
-  const model = (await getSettings()).anymodel.script;
-  const r = await generateJson({ system: PROMPT_SYSTEM, user, maxTokens, temperature: 0.6, model, noFallback: true, singleAttempt: true }, Out);
-  return { items: r.data.scenes, model: r.model };
 }
 
 /** Промпт эталона (карточка 230): лист персонажа, доска локации или предмета. */

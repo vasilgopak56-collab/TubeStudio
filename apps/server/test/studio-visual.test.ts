@@ -20,6 +20,9 @@ const projects = await import("../src/services/projects.js");
 const { resolveVisualStyle } = await import("../src/services/visualStyles.js");
 const VP = await import("../src/services/studio/visualPrompts.js");
 const { runTask } = await import("../src/lib/taskContext.js");
+const { priceConsents } = await import("../src/services/priceConsent.js");
+/** Платные промпты идут только после окна цены: здесь «Подтвердить» нажимается автоматически, тексты окон собираются. */
+const approved = <T>(fn: () => Promise<T>, windows: string[] = []) => { const owner = crypto.randomUUID(); return runTask({ launch: { owner, requestId: crypto.randomUUID(), route: "/api/studio/visual/projects/x/prompts" }, onPriceConsent: (c) => { windows.push(c.message); queueMicrotask(() => priceConsents.decide(owner, c.id, c.scopeHash, "approve")); } }, fn); };
 G.GLABS_POLL.ms = 2;
 after(async () => { G.setGlabsFetcher(null); L.setLumeanFetcher(null); VP.setPromptAi(null); await fs.rm(dir, { recursive: true, force: true }); });
 
@@ -298,7 +301,7 @@ test("промпты моделью: @имена, ключевые сцены о
     const scenes = JSON.parse(user.slice(user.indexOf("SCENES:") + 8)) as { n: number }[];
     return { model: "fake-director", data: { scenes: scenes.filter((s) => s.n !== 3).map((s) => ({ n: s.n, concept: s.n === 1 ? "@oldking stares at the snow falling through a broken palace window, frost on the glass" : `Scene ${s.n}: a frozen village street at dawn, a farmer kneels by a dead field`, motion: "Slow push-in while snow drifts past", key: s.n === 5 })) } };
   });
-  const r = await V.writePrompts(p.id, { channelId, free: false, note: "more snow" });
+  const r = await approved(() => V.writePrompts(p.id, { channelId, free: false, note: "more snow" }));
   assert.equal(r.model, "fake-director"); assert.equal(r.free, false);
   assert.match(r.notes.join(" "), /Сцена 3/);
   assert.match(seen[0], /FIX REQUEST FROM THE EDITOR: more snow/);
@@ -321,16 +324,82 @@ test("промпты моделью: готовая часть сохраняе�
   const answer = (user: string, tag: string) => ({ model: "fake-director", data: { scenes: (JSON.parse(user.slice(user.indexOf("SCENES:") + 8)) as { n: number }[]).map((s) => ({ n: s.n, concept: `${tag} scene ${s.n}: a frozen village street at dawn`, motion: "Slow push-in" })) } });
   let calls = 0;
   VP.setPromptAi(async ({ user }) => { if (++calls === 2) throw new Error("пустой ответ"); return answer(user, "first"); });
-  await assert.rejects(V.writePrompts(p.id, { channelId, free: false }), /пустой ответ/);
+  await assert.rejects(approved(() => V.writePrompts(p.id, { channelId, free: false })), /пустой ответ/);
   let st = (await V.visualState(p.id)).board!;
   assert.ok(st.rows.slice(0, 12).every((r) => !r.draft && r.concept.startsWith("first")), "первая часть сохранена");
   assert.ok(st.rows.slice(12).every((r) => r.draft), "остальное осталось черновиком");
   const asked: number[] = [];
   VP.setPromptAi(async ({ user }) => { asked.push(...(JSON.parse(user.slice(user.indexOf("SCENES:") + 8)) as { n: number }[]).map((s) => s.n)); return answer(user, "second"); });
-  await V.writePrompts(p.id, { channelId, free: false, onlyEmpty: true });
+  await approved(() => V.writePrompts(p.id, { channelId, free: false, onlyEmpty: true }));
   assert.ok(asked.length > 0 && asked.every((n) => n > 12), "готовая часть не оплачивается второй раз");
   st = (await V.visualState(p.id)).board!;
   assert.ok(st.rows.every((r) => !r.draft));
   assert.ok(st.rows[0].concept.startsWith("first"));
   assert.ok(st.rows[12].concept.startsWith("second"));
+});
+
+// ---------- окно цены на весь запуск платных промптов ----------
+const { updateSettings } = await import("../src/services/settings.js");
+const PC = await import("../src/services/studio/visualPromptsConsent.js");
+const fakeAnswer = (user: string) => ({ model: "fake-director", data: { scenes: (JSON.parse(user.slice(user.indexOf("SCENES:") + 8)) as { n: number }[]).map((s) => ({ n: s.n, concept: `consent scene ${s.n}: a frozen village street at dawn`, motion: "slow push in", key: false })) } });
+async function longProject(title: string) {
+  const p = await projects.createProject({ title, channelId, artifact: { kind: "script", title: "Сценарий", data: { script: Array(8).fill(SCRIPT).join("\n\n") } } as any });
+  const b = await V.buildScenes(p.id, { channelId });
+  assert.ok(b.rows.length > 12, "нужно больше одной пачки");
+  return { p, rows: b.rows.length };
+}
+
+test("окно цены: без запуска из интерфейса платные промпты не отправляются", async () => {
+  const { p } = await longProject("Окно — без запуска");
+  let calls = 0; VP.setPromptAi(async ({ user }) => { calls++; return fakeAnswer(user); });
+  await assert.rejects(V.writePrompts(p.id, { channelId, free: false }), (e: any) => e.code === "BUDGET_CONSENT_REQUIRED");
+  assert.equal(calls, 0);
+});
+
+test("окно цены: отказ — ни одного запроса, раскадровка не меняется", async () => {
+  const { p } = await longProject("Окно — отказ");
+  const before = JSON.stringify((await V.visualState(p.id)).board!.rows);
+  let calls = 0; VP.setPromptAi(async ({ user }) => { calls++; return fakeAnswer(user); });
+  const owner = crypto.randomUUID();
+  await assert.rejects(runTask({ launch: { owner, requestId: crypto.randomUUID(), route: "/api/studio/visual/projects/x/prompts" }, onPriceConsent: (c) => { queueMicrotask(() => priceConsents.decide(owner, c.id, c.scopeHash, "deny")); } }, () => V.writePrompts(p.id, { channelId, free: false })), (e: any) => e.code === "BUDGET_CONSENT_DENIED");
+  assert.equal(calls, 0);
+  assert.equal(JSON.stringify((await V.visualState(p.id)).board!.rows), before);
+});
+
+test("окно цены: одно окно на весь запуск, запросов ровно столько, сколько в окне", async () => {
+  const { p, rows } = await longProject("Окно — одно на запуск");
+  let calls = 0; VP.setPromptAi(async ({ user }) => { calls++; return fakeAnswer(user); });
+  const windows: string[] = [];
+  await approved(() => V.writePrompts(p.id, { channelId, free: false }), windows);
+  assert.equal(windows.length, 1, "одно окно");
+  const batches = Math.ceil(rows / 12);
+  assert.match(windows[0], new RegExp(`Подтвердите ${batches} запрос`));
+  assert.match(windows[0], new RegExp(`промптов ${rows} сцен`));
+  assert.match(windows[0], /Цена этой модели неизвестна|Ориентир цены за все запросы/);
+  assert.equal(calls, batches);
+});
+
+test("окно цены: смена модели во время работы останавливает следующие пачки, готовое сохранено", async () => {
+  const { p } = await longProject("Окно — смена модели");
+  let calls = 0;
+  VP.setPromptAi(async ({ user }) => { if (++calls === 1) await updateSettings({ anymodel: { script: "cc/another-model" } }); return fakeAnswer(user); });
+  try {
+    await assert.rejects(approved(() => V.writePrompts(p.id, { channelId, free: false })), (e: any) => e.code === "BUDGET_CONSENT_STALE");
+    assert.equal(calls, 1, "после смены модели новый запрос не отправлен");
+    const st = (await V.visualState(p.id)).board!;
+    assert.ok(st.rows.slice(0, 12).every((r) => r.concept.startsWith("consent scene")), "первая пачка сохранена");
+  } finally { await updateSettings({ anymodel: { script: "cc/claude-opus-5" } }); }
+});
+
+test("ориентир: сумма по всем пачкам растёт с числом пачек, неизвестный тариф — цена неизвестна", () => {
+  const price: any = { version: 1, provider: "anymodel", model: "m", kind: "text", currency: "USD", source: "cached-anymodel", known: true, usdPerMillion: 1, coefficientInput: 1, coefficientOutput: 1, scale: 1, capturedAt: new Date().toISOString(), priceVersion: "a".repeat(64) };
+  const kit: any = { id: "k", name: "Kit", anchor: "pencil", motion: "", negative: "", palette: "" };
+  const chan: any = { name: "C", language: "en", visual: { cast: [] } };
+  const scene = (n: number) => ({ n, text: "Snow fell on the village.", seconds: 6, shot: "wide" });
+  const one = PC.promptsQuote(price, { ch: chan, kit, batches: [[scene(1)]] })!;
+  const two = PC.promptsQuote(price, { ch: chan, kit, batches: [[scene(1)], [scene(2)]] })!;
+  assert.ok(one > 0 && two > one);
+  assert.equal(PC.promptsQuote({ ...price, known: false }, { ch: chan, kit, batches: [[scene(1)]] }), null);
+  assert.match(PC.promptsMessage({ model: "m", requests: 3, scenes: 30, usd: null }), /Цена этой модели неизвестна/);
+  assert.match(PC.promptsMessage({ model: "m", requests: 3, scenes: 30, usd: 0.4 }), /примерно \$0\.40 или меньше/);
 });

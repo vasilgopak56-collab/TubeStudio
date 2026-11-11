@@ -229,9 +229,16 @@ export async function writePrompts(projectId: string, raw: z.input<typeof Prompt
       const { assertChannelBudget } = await import("./channels.js");
       await assertChannelBudget(ch.id);
       const BATCH = 12;
-      for (let k = 0; k < targets.length; k += BATCH) {
+      const batches: (typeof targets)[] = [];
+      for (let k = 0; k < targets.length; k += BATCH) batches.push(targets.slice(k, k + BATCH));
+      // Одно окно цены на весь запуск: без подтверждения ни один запрос не уходит.
+      ctx?.progress(`Жду подтверждения цены: ${batches.length} ${batches.length === 1 ? "запрос" : "запросов"}`, 3);
+      const { promptsConsent } = await import("./visualPromptsConsent.js");
+      const consent = await promptsConsent({ projectId: p.id, ch, kit, note: i.note, batches: batches.map((part) => part.map((s) => ({ n: s.n, text: s.text, seconds: s.seconds, shot: s.shot }))) });
+      for (const [index, part] of batches.entries()) {
+        const k = index * BATCH;
         checkCancelled();
-        const part = targets.slice(k, k + BATCH);
+        await consent.beforeBatch();
         ctx?.progress(`Пишу промпты: сцены ${part[0].n}–${part[part.length - 1].n} из ${b.rows.length}`, 5 + Math.round((k / targets.length) * 90));
         const prev = b.rows.find((r) => r.n === part[0].n - 1);
         const r = await modelPrompts({ ch, kit, scenes: part.map((s) => ({ n: s.n, text: s.text, seconds: s.seconds, shot: s.shot })), previous: results.get(part[0].n - 1)?.concept ?? prev?.concept, note: i.note });
