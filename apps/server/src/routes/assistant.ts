@@ -39,6 +39,7 @@ import {reservePublishTexts,runPublishTextsAction} from '../services/assistantPu
 import {reserveFactCheck,runFactCheckAction} from '../services/assistantFactCheck.js';
 import {reserveRadar,runRadarAction} from '../services/assistantRadar.js';
 import {reserveScriptWrite,runScriptWriteAction} from '../services/assistantScriptWrite.js';
+import {reserveMontageRender,reserveShortsBuild,runMontageRenderAction,runShortsBuildAction} from '../services/assistantStudioBuild.js';
 import {linkJobToChannel} from '../services/studio/channels.js';
 import {Hono} from 'hono';
 import {bodyLimit} from 'hono/body-limit';
@@ -61,6 +62,9 @@ assistantRoute.post('/assistant/actions/publish-texts',async c=>{try{const a=awa
 assistantRoute.post('/assistant/actions/fact-check',async c=>{try{const a=await reserveFactCheck(await body(c));const jobId=startJob(ctx=>runFactCheckAction(a,ctx));await linkJobToChannel(jobId,a.channelId,'factcheck',a.projectId).catch(()=>{});return ok(c,{jobId});}catch(e){return fail(c,e);}});
 assistantRoute.post('/assistant/actions/radar',async c=>{try{const a=await reserveRadar(await body(c));const jobId=startJob(ctx=>runRadarAction(a,ctx));await linkJobToChannel(jobId,a.channelId,'radar').catch(()=>{});return ok(c,{jobId});}catch(e){return fail(c,e);}});
 assistantRoute.post('/assistant/actions/script-write',async c=>{try{const a=await reserveScriptWrite(await body(c));const jobId=startJob(ctx=>runScriptWriteAction(a,ctx));await linkJobToChannel(jobId,a.channelId,'script',a.projectId).catch(()=>{});return ok(c,{jobId});}catch(e){return fail(c,e);}});
+/** Бесплатные сборки на этом компьютере: те же, что по кнопкам на страницах «Монтаж» и «Shorts». */
+assistantRoute.post('/assistant/actions/montage-render',async c=>{try{const a=await reserveMontageRender(await body(c));const jobId=startJob(ctx=>runMontageRenderAction(a,ctx));await linkJobToChannel(jobId,a.channelId,'montage-render',a.projectId).catch(()=>{});return ok(c,{jobId});}catch(e){return fail(c,e);}});
+assistantRoute.post('/assistant/actions/shorts-build',async c=>{try{const a=await reserveShortsBuild(await body(c));const jobId=startJob(ctx=>runShortsBuildAction(a,ctx));await linkJobToChannel(jobId,a.channelId,'shorts-build',a.projectId).catch(()=>{});return ok(c,{jobId});}catch(e){return fail(c,e);}});
 assistantRoute.post('/assistant/actions',async c=>{try{return ok(c,await runAssistantAction(await body(c)));}catch(e){return fail(c,e);}});
 assistantRoute.post('/assistant/ask',async c=>{try{const p=await reserveAssistant(AssistantSend.parse(await body(c)));return ok(c,{jobId:startJob(ctx=>runAssistant(p,ctx))});}catch(e){return fail(c,e);}});
 assistantRoute.post('/assistant/manual-skill-preview',async c=>{try{return ok(c,await previewManualSkill(ManualSkillAsk.parse(await body(c))));}catch(e){return fail(c,e);}});
