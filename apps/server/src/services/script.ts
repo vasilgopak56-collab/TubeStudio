@@ -107,7 +107,9 @@ export async function runScript(input: ScriptInput, ctx: JobCtx): Promise<Script
   }
   abort();
   const factsBrief = facts?.facts.length ? facts.facts.map((f) => `- ${f.claim}${f.confidence === "low" || f.attribution !== "source_text" ? " (unverified; do not add precision or treat as independently checked)" : " (extracted from reference text; not independently verified)"}`).join("\n") + (facts.disputed.length ? `\nDisputed:\n${facts.disputed.map((d) => `- ${d}`).join("\n")}` : "") : "";
-  const research = [factsBrief, input.notes?.trim() ? `Author notes:\n${input.notes.trim().slice(0, 6000)}` : ""].filter(Boolean).join("\n\n") || "None — rely only on well-established facts, phrase uncertain points honestly.";
+  const authorNotes = input.notes?.trim() ? `Author notes:\n${input.notes.trim().slice(0, 6000)}` : "";
+  // Лимит режет только досье фактов; заметки автора (до 6000) идут после него всегда целиком.
+  const research = (factsLimit: number) => [factsBrief.slice(0, factsLimit), authorNotes].filter(Boolean).join("\n\n") || "None — rely only on well-established facts, phrase uncertain points honestly.";
 
   // 2. План
   ctx.progress(donorSnapshot ? "Использую утверждённый план без перепланирования" : "Составляем план по актам", 25);
@@ -125,7 +127,7 @@ ${immersiveContext}` : fill(tpl.system, { LANGUAGE: L }) + (styleGuide ? `\n\nCH
   const planUser = `Create the narrative PLAN for a narration script (do not write the script yet).
 Topic (text in [brackets] = extra instructions from the author): ${input.topic}
 ${input.hook ? `Hook from the author (use it or adapt it for the cold open): ${input.hook}\n` : ""}Language: ${L}. Target: ${targetWords} words ≈ ${(targetWords / wpm).toFixed(1)} min at ${wpm} wpm. Exactly ${nActs} acts. Tone: ${tone}. Style preset: ${style?.name ?? "Universal"}.
-Research notes:\n${research.slice(0, 9000)}
+Research notes:\n${research(9000)}
 ${structBrief}
 Return JSON: {"title":string,"core_question":string,"structure_id":"S1".."S20","hook_strikes":{"image":string,"contradiction":string,"question":string},"acts":[{"name":string,"summary":string,"beats":[string],"words":number}],"open_loops":["question opened → act where it is paid off"],"midroll_cta_line":string,"ending_question":string,"claims_to_verify":["specific claim → likely source"]}
 "words" per act must sum to ${targetWords}; every act has 2–10 beats (never more than 10, never fewer than 2). Act 1 contains the cold open (three strikes: image → contradiction → question) and the core question. Every beat is concrete (person, place, number, object, mechanism). Beats are linked by "therefore / but". Plan a re-hook at every act change and every 30–90 seconds. claims_to_verify: 3–10 claims from the plan that must be checked before publishing. ${input.cta ? "midroll_cta_line: one short natural in-world line inviting to subscribe." : 'midroll_cta_line: "".'} All text in ${L}.`;
@@ -159,7 +161,7 @@ FULL PLAN: ${planBrief}
 THIS ACT: "${a.name}" — ${a.summary}. Beats: ${a.beats.join("; ")}.
 LENGTH: about ${a.words} words for this act — roughly ${Math.max(2, Math.round(a.words / 65))} paragraphs of 50–80 words each. Do NOT count words in your answer, do NOT number sentences or paragraphs, no annotations of any kind.
 Language: ${L}. Tone: ${tone}.${i === 0 ? `\n- This is the cold open: start inside a concrete moment. Three strikes in the first 15 seconds: image (${plan.hook_strikes.image || "concrete scene"}) → contradiction (${plan.hook_strikes.contradiction || "what does not fit"}) → question (${plan.hook_strikes.question || plan.core_question}). State the core question within this act.${input.hook ? ` Author's hook to use/adapt: ${input.hook}` : ""}` : ""}${i === nActs - 1 ? `\n- This is the final act: climax + answer to the core question, callback to the opening image, short takeaway, and END with this question for the comments: "${plan.ending_question}"` : "\n- End the act with a re-hook into the next act (no conclusion yet)."}${ctaHint}
-RESEARCH (factual foundation):\n${research.slice(0, 7000)}
+RESEARCH (factual foundation):\n${research(7000)}
 ${prev ? `PREVIOUS TEXT (continue seamlessly, do not repeat it):\n${prev}\n` : ""}${extra}
 Output ONLY the narration of this act inside <script></script>. No act title, no meta.`;
     for (let attempt = 0; ; attempt++) {
@@ -203,7 +205,7 @@ Output ONLY the narration of this act inside <script></script>. No act title, no
       const ctaRule = input.cta && i === ctaAct ? `Keep the single subscribe line ("${plan.midroll_cta_line}") roughly where it is.` : "Do NOT add any subscribe / like / channel call-to-action.";
       const endRule = donorSnapshot ? "Preserve the approved payoff and event order; do not force a closing question or a new structure." : i === nActs - 1 ? "Keep the closing question to the viewer as the very last sentence." : "Do not end with a question to the viewer.";
       const r = await generateText({ system: sysW, user: `Rewrite this act of a narration script to about ${want} spoken words (now ${cur}; visual cue lines are not counted) — roughly ${Math.max(2, Math.round(want / 65))} paragraphs. Do NOT count words or number sentences in the answer. ${want > cur ? "Expand with concrete details, sensory moments and explanation from the research — no filler. Do not drop anything that is already there." : "Cut redundancy and weaker sentences, keep all key facts and the act's ending. Remove only a small part — the result must stay close to the requested length."} Keep language (${L}), tone, style and every rule. ${ctaRule} ${endRule}
-RESEARCH:\n${research.slice(0, 5000)}\nACT TEXT:\n${parts[i]}\n\nOutput ONLY the rewritten act inside <script></script>.`, maxTokens: Math.min(30000, want * 6 + 4000), temperature: 0.6, role: "script", model: input.model });
+RESEARCH:\n${research(5000)}\nACT TEXT:\n${parts[i]}\n\nOutput ONLY the rewritten act inside <script></script>.`, maxTokens: Math.min(30000, want * 6 + 4000), temperature: 0.6, role: "script", model: input.model });
       const t = cleanCounting(sanitize(actRe(r.text), { visualCues: input.visualCues }));
       if (isGarbage(t, want)) continue;
       const tt = donorSnapshot || i === ctaAct ? t : stripCta(t, lang);
