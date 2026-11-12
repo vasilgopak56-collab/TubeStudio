@@ -124,8 +124,23 @@ export const amChat = queued("llm", async function amChat(o: { model: string; sy
   const headers={...auth(),"content-type":"application/json"};
   const body=JSON.stringify({model:o.model,max_tokens:o.maxTokens??8000,temperature:o.temperature??0.7,messages:[{role:"system",content:o.system},{role:"user",content}],...(o.tools?{tools:o.tools}:{})});
   const dispatch=paidDispatch(async()=>[await priceBefore(o.model,"text"),...(o.tools?.length?[await capturePrice("anymodel","web-search","search")]:[])],storyboardConsent(url,headers,body));
-  const r = await fetchRetry(url,{method:"POST",headers,body}, { timeoutMs: o.timeoutMs ?? 240_000, retries: o.singleAttempt ? 0 : 1, beforeAttempt: dispatch.beforeAttempt });
-  const j: any = await r.json().catch(() => ({}));
+  const timeoutMs = o.timeoutMs ?? 240_000, started = Date.now();
+  const r = await fetchRetry(url,{method:"POST",headers,body}, { timeoutMs, retries: o.singleAttempt ? 0 : 1, beforeAttempt: dispatch.beforeAttempt });
+  // Время ожидания действует и на чтение ответа: AnyModel присылает «принято» сразу, а текст — когда модель допишет.
+  // Недочитанный ответ — не «пустой ответ»: запрос мог выполниться и быть оплачен, поэтому он не повторяется и не уходит другой модели.
+  let j: any = {}, unread: "timeout" | "broken" | "parse" | undefined;
+  try { j = await r.json(); } catch (e) {
+    checkCancelled();
+    const name = (e as Error)?.name;
+    if (r.ok) unread = name === "SyntaxError" ? "parse" : name === "TimeoutError" ? "timeout" : "broken";
+  }
+  if (r.ok && unread) {
+    await recordOperation(dispatch.prices[0],textVolume(undefined,o,""),taskContext()?.jobId);
+    if(dispatch.prices[1])await recordOperation(dispatch.prices[1],{count:0,known:false},taskContext()?.jobId);
+    log.warn({ event: "anymodel_answer_unread", model: o.model, kind: unread, waitedMs: Date.now() - started, timeoutMs });
+    const what = unread === "timeout" ? `ответ не дождались за ${Math.round(timeoutMs / 60_000)} мин` : unread === "broken" ? "ответ оборвался при получении" : "ответ пришёл испорченным и не прочитан";
+    throw new ApiError("UPSTREAM", `AnyModel (${o.model}): ${what}. Запрос мог выполниться и быть оплачен, поэтому повтор не запускался и другой модели запрос не отправлялся. Проверьте расход на AnyModel.`, 502, false, { uncertain: true });
+  }
   if (!r.ok || j.error) throw amError(r.ok ? 502 : r.status, j, o.model);
   const msg = j.choices?.[0]?.message;
   const text: string = typeof msg?.content === "string" ? msg.content : Array.isArray(msg?.content) ? msg.content.map((p: any) => p.text ?? "").join("") : "";

@@ -15,7 +15,7 @@ import { assertBudget } from "./usage.js";
 import { amCatalog, amChat, hasAnymodel } from "./anymodel.js";
 
 export type LlmImage = { mime: string; b64: string };
-export type LlmCall = { system: string; user: string; maxTokens?: number; temperature?: number; fast?: boolean; images?: LlmImage[]; role?: "script"; model?: string; singleAttempt?: boolean; /** Только указанная модель AnyModel: при сбое ошибка, резервная модель не запускается. */ noFallback?: boolean };
+export type LlmCall = { system: string; user: string; maxTokens?: number; temperature?: number; fast?: boolean; images?: LlmImage[]; role?: "script"; model?: string; singleAttempt?: boolean; /** Только указанная модель AnyModel: при сбое ошибка, резервная модель не запускается. */ noFallback?: boolean; /** Время ожидания ответа AnyModel, включая чтение текста; другие провайдеры его не используют. */ timeoutMs?: number };
 type Raw = { text: string; model: string };
 
 const callAnthropic = queued("llm", async function callAnthropic(c: LlmCall, model: string): Promise<Raw> {
@@ -55,7 +55,7 @@ const callGemini = queued("llm", async function callGemini(c: LlmCall, model: st
 });
 
 async function callAnymodel(c: LlmCall, model: string): Promise<Raw> {
-  const r = await amChat({ model, system: c.system, user: c.user, images: c.images, maxTokens: c.maxTokens, temperature: c.temperature, singleAttempt: c.singleAttempt });
+  const r = await amChat({ model, system: c.system, user: c.user, images: c.images, maxTokens: c.maxTokens, temperature: c.temperature, singleAttempt: c.singleAttempt, timeoutMs: c.timeoutMs });
   await amCatalog().catch(() => []);
 
   return { text: r.text, model };
