@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowDown, ArrowUp, CheckCircle2, Clapperboard, Download, Film, Folder, Map as MapIcon, SearchCheck, X, XCircle } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, CheckCircle2, Clapperboard, Download, Film, Folder, Map as MapIcon, SearchCheck, Table, X, XCircle } from "lucide-react";
 import { api } from "@/lib/api";
 import { useJob } from "@/lib/jobs";
 import type { ProjectSummary } from "@/lib/types";
@@ -15,7 +15,7 @@ type MontageCheck = {
   ready: boolean; blockers: Issue[]; warnings: Issue[];
   summary: { scenes: number; clips: number; pictures: number; files: number; audioSeconds: number | null };
 };
-type RenderResult = { file: string; at: string; seconds: number; width: number; height: number; bytes: number; parts: number; reused: number; lufs?: number; peak?: number; music?: number; subtitles?: { files: { srt: string; vtt: string } | null; cues: number; problem: string | null } };
+type RenderResult = { file: string; at: string; seconds: number; width: number; height: number; bytes: number; parts: number; reused: number; lufs?: number; peak?: number; music?: number; cue?: number; subtitles?: { files: { srt: string; vtt: string } | null; cues: number; problem: string | null } };
 type BurnResult = { file: string; at: string; seconds: number; bytes: number; source: string };
 type ExportResult = { folder: string; at: string; files: string[] };
 type MontageState = {
@@ -24,9 +24,13 @@ type MontageState = {
 };
 const FACTS_NOTE: Record<MontageState["facts"], string> = { none: "Программа считает факты сценария непроверенными. Ручная проверка ей неизвестна.", stale: "Сценарий меняли после проверки фактов.", issues: "После проверки фактов остались неисправленные места.", passed: "" };
 type MusicTrack = { name: string; file: string; seconds: number; lufs: number; use: boolean };
-type MusicState = { folder: string | null; tracks: MusicTrack[]; skipped?: string[] };
+type CueRow = { row: number; n: string | null; start: number; end: number; layer: "base" | "over"; file: string; from: number; to: number; gainDb: number; ending: "fade" | "cut"; note: string };
+type CueProblem = { row: number | null; message: string };
+type CueState = { mode: "sequence" | "cue"; table: { name: string; at: string; rows: CueRow[]; problems: CueProblem[] } | null; errors: CueProblem[] };
+type MusicState = { folder: string | null; tracks: MusicTrack[]; skipped?: string[]; cue?: CueState };
 
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+const LAYER: Record<CueRow["layer"], string> = { base: "Основа", over: "Поверх" };
 /** Номера сцен коротко: 1–5, 7, 197. */
 function sceneList(ns: number[]) {
   const parts: string[] = [];
@@ -97,8 +101,12 @@ function MusicCard({ projectId, disabled }: { projectId: string; disabled: boole
     mutationFn: (tracks: MusicTrack[]) => api(`/studio/montage/projects/${projectId}/music/tracks`, { method: "PUT", json: { tracks: tracks.map(({ name, use }) => ({ name, use })) } }),
     onSuccess: () => void q.refetch(),
   });
+  const mode = useMutation({ mutationFn: (m: CueState["mode"]) => api(`/studio/montage/projects/${projectId}/music/mode`, { method: "PUT", json: { mode: m } }), onSuccess: () => void q.refetch() });
+  const load = useMutation({ mutationFn: () => api(`/studio/montage/projects/${projectId}/music/cue`, { method: "POST" }), onSuccess: () => void q.refetch() });
   const tracks = q.data?.tracks ?? [];
-  const busy = disabled || folder.isPending || save.isPending;
+  const cue = q.data?.cue ?? null;
+  const byTable = cue?.mode === "cue";
+  const busy = disabled || folder.isPending || save.isPending || mode.isPending || load.isPending;
   const move = (i: number, to: number) => { const next = [...tracks]; const [t] = next.splice(i, 1); next.splice(to, 0, t); save.mutate(next); };
   const toggle = (i: number) => save.mutate(tracks.map((t, k) => (k === i ? { ...t, use: !t.use } : t)));
   const used = tracks.filter((t) => t.use);
@@ -111,16 +119,54 @@ function MusicCard({ projectId, disabled }: { projectId: string; disabled: boole
     {q.error && <ErrorAlert error={q.error} onRetry={() => void q.refetch()} />}
     {folder.error && <ErrorAlert error={folder.error} />}
     {save.error && <ErrorAlert error={save.error} />}
+    {mode.error && <ErrorAlert error={mode.error} />}
     {skipped.length > 0 && <p className="text-sm text-crown">Не подошли (не открываются, беззвучны или слишком короткие): {skipped.join(", ")}</p>}
-    {tracks.length > 0 && <ol className="space-y-1">{tracks.map((t, i) => <li key={t.name} className="flex items-center gap-2 text-sm">
+    {q.data && <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Как звучит музыка">
+      <Button size="sm" role="radio" aria-checked={!byTable} variant={byTable ? "outline" : "primary"} className="min-h-11" disabled={busy} onClick={() => { if (byTable) mode.mutate("sequence"); }}>Подряд</Button>
+      <Button size="sm" role="radio" aria-checked={byTable} variant={byTable ? "primary" : "outline"} className="min-h-11" disabled={busy} onClick={() => { if (!byTable) mode.mutate("cue"); }}>По таблице</Button>
+    </div>}
+    {byTable && cue && <CueTable cue={cue} folder={!!q.data?.folder} busy={busy} loading={load.isPending} onLoad={() => load.mutate()} error={load.error} tracks={tracks.length} />}
+    {!byTable && tracks.length > 0 && <ol className="space-y-1">{tracks.map((t, i) => <li key={t.name} className="flex items-center gap-2 text-sm">
       <label className="flex min-h-11 min-w-0 flex-1 items-center gap-2"><input type="checkbox" checked={t.use} disabled={busy} onChange={() => toggle(i)} /><span className={`truncate ${t.use ? "" : "text-muted-foreground line-through"}`}>{t.name}</span></label>
       <span className="shrink-0 text-muted-foreground">{mmss(t.seconds)}</span>
       <Button variant="ghost" size="sm" className="min-h-11" aria-label={`Выше: ${t.name}`} disabled={busy || i === 0} onClick={() => move(i, i - 1)}><ArrowUp className="h-4 w-4" /></Button>
       <Button variant="ghost" size="sm" className="min-h-11" aria-label={`Ниже: ${t.name}`} disabled={busy || i === tracks.length - 1} onClick={() => move(i, i + 1)}><ArrowDown className="h-4 w-4" /></Button>
     </li>)}</ol>}
-    {q.data && used.length === 0 && <p className="flex items-center gap-2 text-sm text-crown"><AlertTriangle className="h-4 w-4 shrink-0" />Музыка не выбрана: ролик соберётся только с голосом.</p>}
-    {used.length > 0 && <p className="text-sm text-muted-foreground">Выбрано треков: {used.length}, общая длина {mmss(total)}. Если ролик длиннее, список повторится по кругу.</p>}
+    {!byTable && q.data && used.length === 0 && <p className="flex items-center gap-2 text-sm text-crown"><AlertTriangle className="h-4 w-4 shrink-0" />Музыка не выбрана: ролик соберётся только с голосом.</p>}
+    {!byTable && used.length > 0 && <p className="text-sm text-muted-foreground">Выбрано треков: {used.length}, общая длина {mmss(total)}. Если ролик длиннее, список повторится по кругу.</p>}
   </Card>;
+}
+
+/** Музыка по таблице: что загружено из .xlsx и какие строки мешают сборке. Заметки только показываются. */
+function CueTable({ cue, folder, busy, loading, onLoad, error, tracks }: { cue: CueState; folder: boolean; busy: boolean; loading: boolean; onLoad: () => void; error: unknown; tracks: number }) {
+  const t = cue.table;
+  const bad = new Set(cue.errors.map((e) => e.row));
+  return <div className="space-y-3" data-testid="montage-cue">
+    <p className="text-sm text-muted-foreground">Таблица .xlsx из папки с музыкой (лист «Cue-sheet»): какой кусок трека где звучит. «Основа» — главный слой: если следующая строка начинается раньше конца предыдущей, будет плавный переход на всё перекрытие. «Поверх» звучит одновременно с основой. Где строк нет — тишина. Необязательные столбцы: «Громкость, дБ» (пусто — 0) и «Окончание»: «плавно» (затухание 2 с, по умолчанию) или «обрыв». После правки таблицы загрузите её снова.</p>
+    <Button variant="outline" className="min-h-11" disabled={busy || !folder} loading={loading} loadingText="Читаю таблицу…" onClick={onLoad}><Table className="h-4 w-4" />{t ? "Загрузить таблицу заново" : "Загрузить таблицу"}</Button>
+    {!folder && <p className="text-sm text-muted-foreground">Сначала выберите папку с музыкой: таблица берётся из неё.</p>}
+    {!!error && <ErrorAlert error={error} />}
+    {folder && !t && <p className="flex items-center gap-2 text-sm text-crown"><AlertTriangle className="h-4 w-4 shrink-0" />Таблица не загружена: ролик не соберётся, пока её нет или пока не выбран режим «Подряд».</p>}
+    {t && <p className="text-sm text-muted-foreground">«{t.name}» · загружена {new Date(t.at).toLocaleString("ru-RU")} · строк: {t.rows.length} · треков в папке: {tracks}</p>}
+    {cue.errors.length > 0 && <div role="alert" className="space-y-1">
+      <p className="flex items-center gap-2 text-sm font-semibold text-accent"><XCircle className="h-4 w-4 shrink-0" />Мешает сборке</p>
+      <ul className="space-y-1 text-sm">{cue.errors.map((e, i) => <li key={i}>{e.message}</li>)}</ul>
+    </div>}
+    {t && t.rows.length > 0 && cue.errors.length === 0 && <p className="flex items-center gap-2 text-sm text-success"><CheckCircle2 className="h-4 w-4 shrink-0" />Ошибок в строках нет. Длину ролика проверят «Проверить» и сборка.</p>}
+    {t && t.rows.length > 0 && <div className="overflow-x-auto"><table className="w-full text-left text-sm">
+      <thead className="text-muted-foreground"><tr><th className="p-1">Строка</th><th className="p-1">В ролике</th><th className="p-1">Слой</th><th className="p-1">Файл</th><th className="p-1">В треке</th><th className="p-1">дБ</th><th className="p-1">Окончание</th><th className="p-1">Заметка</th></tr></thead>
+      <tbody>{t.rows.map((r) => <tr key={r.row} className={`border-t ${bad.has(r.row) ? "text-accent" : ""}`}>
+        <td className="p-1">{r.row}{r.n ? ` (№ ${r.n})` : ""}</td>
+        <td className="whitespace-nowrap p-1">{mmss(r.start)}–{mmss(r.end)}</td>
+        <td className="p-1">{LAYER[r.layer]}</td>
+        <td className="break-all p-1">{r.file}</td>
+        <td className="whitespace-nowrap p-1">{mmss(r.from)}–{mmss(r.to)}</td>
+        <td className="p-1">{r.gainDb > 0 ? `+${r.gainDb}` : r.gainDb}</td>
+        <td className="p-1">{r.ending === "fade" ? "плавно" : "обрыв"}</td>
+        <td className="p-1 text-muted-foreground" dir="auto">{r.note}</td>
+      </tr>)}</tbody>
+    </table></div>}
+  </div>;
 }
 
 export default function StudioMontage() {
@@ -198,7 +244,7 @@ export default function StudioMontage() {
         <video key={draft.file} controls preload="metadata" className="aspect-video w-full rounded-md bg-black" src={url(draft.file)} data-testid="montage-video">
           {subs?.files && <track default kind="subtitles" label="Субтитры" src={url(subs.files.vtt)} />}
         </video>
-        <p className="text-sm text-muted-foreground">{draft.width}×{draft.height} · {mmss(draft.seconds)} · {(draft.bytes / 1024 ** 3).toFixed(2)} ГБ · собрано {new Date(draft.at).toLocaleString("ru-RU")}{draft.lufs !== undefined ? ` · ${draft.lufs.toFixed(1)} LUFS, пик ${draft.peak?.toFixed(1)} dBTP` : ""}{draft.music !== undefined ? ` · ${draft.music ? `треков: ${draft.music}` : "только голос"}` : ""}</p>
+        <p className="text-sm text-muted-foreground">{draft.width}×{draft.height} · {mmss(draft.seconds)} · {(draft.bytes / 1024 ** 3).toFixed(2)} ГБ · собрано {new Date(draft.at).toLocaleString("ru-RU")}{draft.lufs !== undefined ? ` · ${draft.lufs.toFixed(1)} LUFS, пик ${draft.peak?.toFixed(1)} dBTP` : ""}{draft.cue !== undefined ? ` · музыка по таблице: строк ${draft.cue}, треков ${draft.music}` : draft.music !== undefined ? ` · ${draft.music ? `треков: ${draft.music}` : "только голос"}` : ""}</p>
         {subs?.files && <a className="inline-flex min-h-11 items-center gap-2 text-sm text-primary hover:underline" href={url(subs.files.srt)} download="subtitles.srt"><Download className="h-4 w-4" />Скачать субтитры SRT ({subs.cues})</a>}
         {subs?.problem && <p role="alert" className="flex items-center gap-2 text-sm text-crown"><AlertTriangle className="h-4 w-4 shrink-0" />Субтитры не подготовлены. {subs.problem}</p>}
       </div>}
