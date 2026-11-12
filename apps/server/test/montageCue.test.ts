@@ -9,7 +9,7 @@ import path from "node:path";
 import { ffmpegPath } from "../src/services/audioFx.js";
 import { projectFile } from "../src/services/studio/montageCheck.js";
 import { CUE_DECLICK_SEC, CUE_FADE_SEC, cueBlockers, cueErrors, cueLayout, cueState, cueTime, loadCueTable, parseCueSheet, saveMusicMode, type CueRow } from "../src/services/studio/montageCue.js";
-import { LUFS_TOLERANCE, MAX_PEAK, MUSIC_PAUSE_LEVEL, TARGET_LUFS, buildSound, cueFilter, cueInputs } from "../src/services/studio/montageSound.js";
+import { LUFS_TOLERANCE, MAX_PEAK, MUSIC_PAUSE_LEVEL, TARGET_LUFS, buildSound, cueFilter, pieceArgs } from "../src/services/studio/montageSound.js";
 import { createProject } from "../src/services/projects.js";
 
 type Sheet = { addRow(v: unknown[]): { getCell(n: number): { numFmt: string } } };
@@ -151,19 +151,18 @@ test("схема сведения по таблице", () => {
     row({ row: 3, start: 8, end: 20, from: 5, to: 17, file: "March in the Snow.wav" }),
     row({ row: 4, start: 30, end: 40, from: 60, to: 70 }),
   ], TRACKS, 45, MUSIC_PAUSE_LEVEL);
-  const f = cueFilter(-16, mix, 45);
-  assert.deepEqual(cueInputs(mix), ["-ss", "0.000", "-t", "10.000", "-i", "a.wav", "-ss", "5.000", "-t", "12.000", "-i", "c.wav", "-ss", "60.000", "-t", "10.000", "-i", "a.wav"], "каждый кусок — свой вход, один файл может стоять дважды");
-  assert.match(f, /\[0:a\][^;]*volume=0\.00dB,asplit=2\[v\]\[key\]/);
-  assert.match(f, /\[1:a\]aresample=48000[^;]*,volume=-5\.00dB,afade=t=in:d=0\.020,afade=t=out:st=8\.000:d=2\.000,adelay=0S:all=1\[p0\]/);
-  assert.match(f, /\[2:a\]aresample=48000[^;]*,volume=-7\.00dB,afade=t=in:d=2\.000,afade=t=out:st=10\.000:d=2\.000,adelay=384000S:all=1\[p1\]/);
-  assert.match(f, /\[3:a\][^;]*adelay=1440000S:all=1\[p2\]/);
-  assert.doesNotMatch(f, /asplit=2\[f|atrim=start/, "поток трека внутри FFmpeg не делится: так сведение может зависнуть");
-  assert.match(f, /\[p0\]\[p1\]\[p2\]amix=inputs=3:normalize=0:duration=longest:dropout_transition=0,apad,atrim=0:45\.000,asetpts=PTS-STARTPTS\[music\]/);
+  const args = mix.pieces.map(pieceArgs);
+  assert.deepEqual(args.map((x) => x.slice(0, 6)), [["-ss", "0.000", "-t", "10.000", "-i", "a.wav"], ["-ss", "5.000", "-t", "12.000", "-i", "c.wav"], ["-ss", "60.000", "-t", "10.000", "-i", "a.wav"]], "каждый кусок читается отдельно, один файл может стоять дважды");
+  assert.match(args[0][7], /^aresample=48000[^;]*,volume=-5\.00dB,afade=t=in:d=0\.020,afade=t=out:st=8\.000:d=2\.000$/);
+  assert.match(args[1][7], /volume=-7\.00dB,afade=t=in:d=2\.000,afade=t=out:st=10\.000:d=2\.000$/);
+  assert.deepEqual(args[0].slice(-9), ["-c:a", "pcm_f32le", "-ar", "48000", "-ac", "2", "-f", "f32le", "pipe:1"]);
+  assert.deepEqual(mix.pieces.map((x) => x.at), [0, 8, 30]);
+  const f = cueFilter(-16, mix);
+  assert.match(f, /^\[1:a\]aresample=48000[^;]*\[music\];\[0:a\][^;]*volume=0\.00dB,asplit=2\[v\]\[key\]/, "музыка — одна готовая дорожка");
   assert.match(f, /\[music\]\[key\]sidechaincompress=/);
   assert.match(f, /amix=inputs=2:normalize=0:duration=first:dropout_transition=0\[mix\]$/);
-  assert.doesNotMatch(f, /acrossfade/, "нет общих переходов режима «Подряд»");
-  const one = cueFilter(-16, cueLayout([row({ row: 2 })], TRACKS, 45, MUSIC_PAUSE_LEVEL), 45);
-  assert.match(one, /\[p0\]anull,apad,atrim=0:45\.000/);
+  assert.doesNotMatch(f, /acrossfade|adelay|afade/, "нет общих переходов режима «Подряд», куски уже на местах");
+  assert.match(cueFilter(-16, cueLayout([], TRACKS, 45, MUSIC_PAUSE_LEVEL)), /^\[0:a\].*volume=0\.00dB\[mix\]$/, "без кусков — только голос");
 });
 
 test("состояние проекта: режим, загрузка из папки, ошибки с длиной ролика, сброс при другой папке", async () => {
