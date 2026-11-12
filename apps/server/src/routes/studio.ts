@@ -14,6 +14,7 @@ import { checkGlabs } from "../services/studio/glabs.js";
 import { checkMontage } from "../services/studio/montageCheck.js";
 import { burnMontage, montageBusy, montageState, renderMontage } from "../services/studio/montageRender.js";
 import { chooseMusicFolder, musicState, saveMusicTracks } from "../services/studio/montageSound.js";
+import { cueState, loadCueTable, saveMusicMode } from "../services/studio/montageCue.js";
 import { graphicsState, scanGraphics, setGraphicStatus } from "../services/studio/montageGraphics.js";
 import { acceptMontage, exportMontage, exportState, montageExporting } from "../services/studio/montageExport.js";
 import { publishState, removeThumbnail, saveCard, saveThumbnail, saveVideoLink } from "../services/studio/publishCard.js";
@@ -231,9 +232,12 @@ studioRoute.post("/studio/montage/projects/:projectId/export", handle(async (c) 
 }));
 /** Музыка ролика: своя папка у каждого проекта, треки копируются в проект. */
 const musicIdle = (id: string) => { if (montageBusy(id)) throw new ApiError("VALIDATION", "Идёт сборка этого ролика. Дождитесь окончания.", 409); };
-studioRoute.get("/studio/montage/projects/:projectId/music", handle(async (c) => musicState(pid(c))));
+studioRoute.get("/studio/montage/projects/:projectId/music", handle(async (c) => { const id = pid(c); return { ...(await musicState(id)), cue: await cueState(id) }; }));
 studioRoute.put("/studio/montage/projects/:projectId/music/folder", handle(async (c) => { const id = pid(c); musicIdle(id); return chooseMusicFolder(id, (await body(c)) as never); }));
 studioRoute.put("/studio/montage/projects/:projectId/music/tracks", handle(async (c) => { const id = pid(c); musicIdle(id); return saveMusicTracks(id, (await body(c)) as never); }));
+/** Музыка по таблице: режим и загрузка таблицы .xlsx из папки музыки. */
+studioRoute.put("/studio/montage/projects/:projectId/music/mode", handle(async (c) => { const id = pid(c); musicIdle(id); return saveMusicMode(id, (await body(c)) as never); }));
+studioRoute.post("/studio/montage/projects/:projectId/music/cue", handle(async (c) => { const id = pid(c); musicIdle(id); return loadCueTable(id); }));
 /** Карты и таймлайн: программа предлагает, автор подтверждает. Платных запросов нет. */
 studioRoute.get("/studio/montage/projects/:projectId/graphics", handle(async (c) => graphicsState(pid(c))));
 studioRoute.post("/studio/montage/projects/:projectId/graphics/scan", handle(async (c) => { const id = pid(c); musicIdle(id); return scanGraphics(id); }));

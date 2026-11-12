@@ -163,5 +163,10 @@ export async function prepareMontage(projectId: string): Promise<MontagePrepared
   const sd = [...p.artifacts].reverse().find((a) => a.kind === "script")?.data as { script?: string; studio?: { factCheck?: FactCheckReport | null } } | undefined;
   const { items } = await graphicsState(projectId);
   const board = state.board && { ...state.board, rows: applyGraphics(state.board.rows, items) };
-  return assessMontage({ board, facts: factStatus(sd?.script, sd?.studio?.factCheck) }, diskInspector(projectId));
+  const made = await assessMontage({ board, facts: factStatus(sd?.script, sd?.studio?.factCheck) }, diskInspector(projectId));
+  // Музыка по таблице: каждая ошибка строки — отдельная блокировка.
+  const { cueBlockers } = await import("./montageCue.js");
+  const cue = await cueBlockers(projectId, made.plan?.duration ?? made.summary.audioSeconds);
+  cue.forEach((message, i) => made.blockers.push({ code: `music-cue-${i}`, message, scenes: [] }));
+  return { ...made, ready: made.blockers.length === 0 };
 }

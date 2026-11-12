@@ -8,6 +8,7 @@ import { ApiError } from "../../lib/errors.js";
 import { cancellation, checkCancelled, taskSignal } from "../../lib/taskContext.js";
 import { ffmpegPath } from "../audioFx.js";
 import { ffprobeFor, probe, projectFile } from "./montageCheck.js";
+import type { CueMix } from "./montageCue.js";
 
 export const TARGET_LUFS = -14;
 /** С запасом к −1 dBTP: кодирование в AAC немного поднимает пики. */
@@ -82,20 +83,39 @@ export function soundFilter(voiceLufs: number, tracks: { lufs: number }[], durat
   for (let i = 1; i < tracks.length; i++) { parts.push(`[${last}][t${i}]acrossfade=d=${CROSSFADE_SEC}:c1=tri:c2=tri[x${i}]`); last = `x${i}`; }
   const fadeOutAt = Math.max(duration - FADE_OUT_SEC, 0).toFixed(3);
   parts.push(`[${last}]atrim=0:${duration.toFixed(3)},asetpts=PTS-STARTPTS,afade=t=in:d=${FADE_IN_SEC},afade=t=out:st=${fadeOutAt}:d=${FADE_OUT_SEC}[music]`);
-  parts.push(`${voice},asplit=2[v][key]`);
-  parts.push(`[music][key]sidechaincompress=${DUCK}[ducked]`);
-  parts.push("[v][ducked]amix=inputs=2:normalize=0:duration=first:dropout_transition=0[mix]");
-  return parts.join(";");
+  return [...parts, ...duckUnderVoice(voice)].join(";");
 }
+/** Музыка с меткой [music] приглушается под голосом и сводится с ним на метку [mix]. */
+const duckUnderVoice = (voice: string) => [
+  `${voice},asplit=2[v][key]`,
+  `[music][key]sidechaincompress=${DUCK}[ducked]`,
+  "[v][ducked]amix=inputs=2:normalize=0:duration=first:dropout_transition=0[mix]",
+];
+
+/** Схема сведения по таблице. Вход 0 — голос, дальше по входу на каждый кусок: FFmpeg сам вырезает его при чтении (cueInputs).
+ *  Кусок ставится на своё место; где кусков нет — тишина. Общих нарастания и затухания нет: их задаёт таблица. */
+export function cueFilter(voiceLufs: number, cue: CueMix, duration: number): string {
+  const voice = `[0:a]${FORMAT},volume=${dB(VOICE_LEVEL - voiceLufs)}`;
+  if (!cue.pieces.length) return `${voice}[mix]`;
+  const parts = cue.pieces.map((p, i) => `[${i + 1}:a]${FORMAT},volume=${dB(p.level)},afade=t=in:d=${sec(p.fadeIn)},afade=t=out:st=${sec(Math.max(p.length - p.fadeOut, 0))}:d=${sec(p.fadeOut)},adelay=${Math.round(p.at * 48000)}S:all=1[p${i}]`);
+  const all = cue.pieces.map((_, i) => `[p${i}]`).join("");
+  const sum = cue.pieces.length > 1 ? `amix=inputs=${cue.pieces.length}:normalize=0:duration=longest:dropout_transition=0` : "anull";
+  parts.push(`${all}${sum},apad,atrim=0:${sec(duration)},asetpts=PTS-STARTPTS[music]`);
+  return [...parts, ...duckUnderVoice(voice)].join(";");
+}
+const sec = (x: number) => x.toFixed(3);
+/** Входы кусков: начало и длина задаются при чтении файла. Так один трек можно ставить много раз без деления потока внутри FFmpeg. */
+export const cueInputs = (cue: CueMix) => cue.pieces.flatMap((p) => ["-ss", sec(p.from), "-t", sec(p.length), "-i", p.file]);
 
 export type SoundResult = { lufs: number; peak: number };
 /** Два прохода: сначала замер всей смеси, затем точная нормализация. Готовый файл измеряется ещё раз, уже после кодирования. */
-export async function buildSound(o: { ffmpeg: string; voice: string; tracks: SoundTrack[]; duration: number; output: string; signal?: AbortSignal }): Promise<SoundResult> {
+/** cue — музыка по таблице: тогда tracks не используются. */
+export async function buildSound(o: { ffmpeg: string; voice: string; tracks: SoundTrack[]; cue?: CueMix | null; duration: number; output: string; signal?: AbortSignal }): Promise<SoundResult> {
   const voice = await measure(o.ffmpeg, o.voice, o.signal);
   if (voice.lufs === null) throw new ApiError("VALIDATION", "Не удалось измерить громкость озвучки: возможно, в файле тишина.");
-  const list = playlist(o.tracks, o.duration);
-  const inputs = ["-i", o.voice, ...list.flatMap((t) => ["-i", t.path])];
-  const graph = soundFilter(voice.lufs, list, o.duration);
+  const list = o.cue ? [] : playlist(o.tracks, o.duration);
+  const inputs = ["-i", o.voice, ...(o.cue ? cueInputs(o.cue) : list.flatMap((t) => ["-i", t.path]))];
+  const graph = o.cue ? cueFilter(voice.lufs, o.cue, o.duration) : soundFilter(voice.lufs, list, o.duration);
   const first = parseLoudnorm(await runFfmpeg(o.ffmpeg, [...inputs, "-filter_complex", `${graph};[mix]loudnorm=${LOUDNORM}:print_format=json[out]`, "-map", "[out]", "-f", "null", "-"], o.signal, "info"));
   if (!first || finite(first.input_i) === null) throw new ApiError("UPSTREAM", "Не удалось измерить громкость смеси.", 502);
   const exact = `loudnorm=${LOUDNORM}:measured_I=${first.input_i}:measured_TP=${first.input_tp}:measured_LRA=${first.input_lra}:measured_thresh=${first.input_thresh}:offset=${first.target_offset}:linear=true`;

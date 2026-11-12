@@ -10,6 +10,7 @@ import { checkCancelled, taskContext, taskSignal } from "../../lib/taskContext.j
 import { ffmpegPath } from "../audioFx.js";
 import { ffprobeFor, prepareMontage, probe, projectFile } from "./montageCheck.js";
 import type { ClipSegment, MontagePlan, StillSegment } from "./montagePlan.js";
+import { usedCue, type CueMix } from "./montageCue.js";
 import { buildSound, runFfmpeg, usedMusic, type SoundTrack } from "./montageSound.js";
 import { SUB_FILES, requireAss, writeSubtitles, type SubtitlesResult } from "./montageSubtitles.js";
 
@@ -53,10 +54,10 @@ export function partArgs(segment: RenderSegment, frames: number, input: string, 
 export const frameArgs = (clip: string, time: number, output: string) => ["-i", clip, "-an", "-t", String(Math.max(time, 1 / FPS)), "-update", "1", output];
 
 export type RenderOptions = {
-  plan: MontagePlan; voice: string; music?: SoundTrack[]; resolve: (local: string) => string; dir: string; ffmpeg: string;
+  plan: MontagePlan; voice: string; music?: SoundTrack[]; cue?: CueMix | null; resolve: (local: string) => string; dir: string; ffmpeg: string;
   onProgress?: (done: number, total: number) => void; onSound?: () => void; signal?: AbortSignal;
 };
-export type RenderOutput = { name: string; seconds: number; width: number; height: number; bytes: number; parts: number; reused: number; lufs: number; peak: number; music: number };
+export type RenderOutput = { name: string; seconds: number; width: number; height: number; bytes: number; parts: number; reused: number; lufs: number; peak: number; music: number; cue?: number };
 
 export async function renderVideo(o: RenderOptions): Promise<RenderOutput> {
   const parts = partsOf(o.plan);
@@ -100,7 +101,7 @@ export async function renderVideo(o: RenderOptions): Promise<RenderOutput> {
   const name = `draft-${Date.now()}.mp4`, output = path.join(o.dir, `${name}.tmp.mp4`), list = path.join(dir, "list.tmp.txt"), mixed = path.join(o.dir, `${name}.sound.m4a`);
   o.onSound?.();
   const music = o.music ?? [];
-  const sound = await buildSound({ ffmpeg: o.ffmpeg, voice: o.voice, tracks: music, duration: o.plan.duration, output: mixed, signal: o.signal });
+  const sound = await buildSound({ ffmpeg: o.ffmpeg, voice: o.voice, tracks: music, cue: o.cue, duration: o.plan.duration, output: mixed, signal: o.signal });
   await fs.writeFile(list, named.map((p) => `file '${p.hash}.mp4'`).join("\n") + "\n", "utf8");
   await runFfmpeg(o.ffmpeg, ["-f", "concat", "-safe", "0", "-i", list, "-i", mixed, "-map", "0:v:0", "-map", "1:a:0", "-c", "copy", "-movflags", "+faststart", output], o.signal);
   await fs.rm(list, { force: true }).catch(() => {});
@@ -113,7 +114,7 @@ export async function renderVideo(o: RenderOptions): Promise<RenderOutput> {
     throw new ApiError("UPSTREAM", `Готовый файл не совпал с планом: ${made ? `${made.width}×${made.height}, ${made.seconds} с` : "файл не открывается"}, ожидалось ${W}×${H}, ${expected.toFixed(2)} с.`, 502);
   }
   await fs.rename(output, path.join(o.dir, name));
-  return { name, seconds: made.seconds, width: W, height: H, bytes: (await fs.stat(path.join(o.dir, name))).size, parts: named.length, reused, lufs: sound.lufs, peak: sound.peak, music: music.length };
+  return { name, seconds: made.seconds, width: W, height: H, bytes: (await fs.stat(path.join(o.dir, name))).size, parts: named.length, reused, lufs: sound.lufs, peak: sound.peak, ...(o.cue ? { music: o.cue.files, cue: o.cue.rows } : { music: music.length }) };
 }
 
 /** Перекодирует всё видео с субтитрами в кадре. Звук копируется без изменений. Имя файла ASS простое: FFmpeg запускается из его папки. */
@@ -152,10 +153,11 @@ export function renderMontage(projectId: string, ctx: JobCtx): Promise<MontageRe
     if (!p.ready || !p.plan || !p.audioFile) throw new ApiError("VALIDATION", `Сборку начинать нельзя. ${p.blockers.map((b) => b.message).join(" ")}`);
     const bin = ffmpegPath();
     if (!bin) throw new ApiError("VALIDATION", "Для сборки нужен FFmpeg. Установите его или укажите FFMPEG_PATH в .env и перезапустите TubeStudio.");
+    const cue = await usedCue(projectId, p.plan.duration);
     const dir = projectFile(projectId, FOLDER);
     await fs.mkdir(dir, { recursive: true });
     const made = await renderVideo({
-      plan: p.plan, voice: projectFile(projectId, p.audioFile), music: await usedMusic(projectId), onSound: () => ctx.progress("Сведение звука", 96), resolve: (f) => projectFile(projectId, f), dir, ffmpeg: bin, signal: ctx.signal,
+      plan: p.plan, voice: projectFile(projectId, p.audioFile), ...(cue ? { cue } : { music: await usedMusic(projectId) }), onSound: () => ctx.progress("Сведение звука", 96), resolve: (f) => projectFile(projectId, f), dir, ffmpeg: bin, signal: ctx.signal,
       onProgress: (done, total) => ctx.progress(`Кодирование: ${Math.floor(done / FPS / 60)}:${String(Math.floor(done / FPS) % 60).padStart(2, "0")} из ${Math.floor(total / FPS / 60)}:${String(Math.floor(total / FPS) % 60).padStart(2, "0")}`, Math.min(95, 2 + Math.floor(93 * done / total))),
     });
     ctx.progress("Субтитры", 98);
