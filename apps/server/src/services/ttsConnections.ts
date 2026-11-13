@@ -10,6 +10,7 @@ import https from 'node:https';
 import {z} from 'zod';
 import {dataPath} from '../lib/storage.js';
 import {ApiError} from '../lib/errors.js';
+import {PAID_MODEL_TIMEOUT_MS} from '../lib/http.js';
 import {assistantSafeDir} from './assistant.js';
 import {connectionUrl,publicV4} from './modelConnections.js';
 import {checkCancelled,taskSignal,taskContext,cancellation} from '../lib/taskContext.js';
@@ -57,7 +58,7 @@ async function post(p:Profile,body:string,beforeSend:()=>Promise<void>){
    const MAX=20*1024*1024;if(Number(res.headers['content-length']??0)>MAX){fail('TTS MP3 превышает 20 МиБ. Повтор не выполняется.');return;}
    const chunks:Buffer[]=[];let bytes=0;res.on('data',(chunk:Buffer)=>{bytes+=chunk.length;if(bytes>MAX)fail('TTS MP3 превышает 20 МиБ. Повтор не выполняется.');else if(!settled)chunks.push(chunk);});res.on('error',()=>finish(new ApiError('UPSTREAM','TTS-ответ оборвался; запрос мог быть оплачен. Автоповтора нет.',502)));res.on('end',()=>finish(undefined,{audio:Buffer.concat(chunks),mime}));
   });
-  const abort=()=>{finish(cancellation());req.destroy();};timer=setTimeout(()=>{finish(new ApiError('UPSTREAM','Таймаут TTS; запрос мог быть оплачен. Автоповтора нет.',502));req.destroy();},180000);
+  const abort=()=>{finish(cancellation());req.destroy();};timer=setTimeout(()=>{finish(new ApiError('UPSTREAM','Таймаут TTS; запрос мог быть оплачен. Автоповтора нет.',502));req.destroy();},PAID_MODEL_TIMEOUT_MS);
   req.on('error',()=>finish(new ApiError('UPSTREAM','Соединение TTS не завершилось. Запрос мог быть оплачен; повтор не выполняется.',502)));signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted){abort();return;}req.end(body);
  });
 }

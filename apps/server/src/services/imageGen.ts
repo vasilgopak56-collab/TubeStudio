@@ -7,7 +7,7 @@ import fs from "node:fs/promises";
 import crypto from "node:crypto";
 import { config } from "../config.js";
 import { ApiError } from "../lib/errors.js";
-import { fetchRetry } from "../lib/http.js";
+import { fetchRetry, PAID_MODEL_TIMEOUT_MS } from "../lib/http.js";
 import { dataPath } from "../lib/storage.js";
 import { getSettings } from "./settings.js";
 import {capturePrice} from "./usagePricing.js";
@@ -25,8 +25,8 @@ const openai = queued("image", async function openai(prompt: string, model: stri
   if (refs.length) { // правка / референс → /images/edits (multipart)
     const fd = new FormData(); fd.append("model", model); fd.append("prompt", prompt); fd.append("size", size); fd.append("n", "1");
     refs.forEach((im, i) => fd.append("image[]", new Blob([Buffer.from(im.b64, "base64")], { type: im.mime }), `ref${i}.${im.mime.includes("png") ? "png" : "jpg"}`));
-    r = await fetchRetry("https://api.openai.com/v1/images/edits", { method: "POST", headers: { authorization: `Bearer ${config.keys.openai}` }, body: fd }, { timeoutMs: 180_000, retries: 1, beforeAttempt: dispatch.beforeAttempt });
-  } else r = await fetchRetry("https://api.openai.com/v1/images/generations", { method: "POST", headers: { authorization: `Bearer ${config.keys.openai}`, "content-type": "application/json" }, body: JSON.stringify({ model, prompt, size, n: 1 }) }, { timeoutMs: 180_000, retries: 1, beforeAttempt: dispatch.beforeAttempt });
+    r = await fetchRetry("https://api.openai.com/v1/images/edits", { method: "POST", headers: { authorization: `Bearer ${config.keys.openai}` }, body: fd }, { timeoutMs: PAID_MODEL_TIMEOUT_MS, retries: 1, beforeAttempt: dispatch.beforeAttempt });
+  } else r = await fetchRetry("https://api.openai.com/v1/images/generations", { method: "POST", headers: { authorization: `Bearer ${config.keys.openai}`, "content-type": "application/json" }, body: JSON.stringify({ model, prompt, size, n: 1 }) }, { timeoutMs: PAID_MODEL_TIMEOUT_MS, retries: 1, beforeAttempt: dispatch.beforeAttempt });
   const j: any = await r.json().catch(() => ({}));
   if (!r.ok) {
     const msg = j?.error?.message ?? `HTTP ${r.status}`;
@@ -44,7 +44,7 @@ const openai = queued("image", async function openai(prompt: string, model: stri
 const gemini = queued("image", async function gemini(prompt: string, model: string, aspect: string, refs: RefImage[] = []): Promise<GenImage> {
   const dispatch=paidDispatch(()=>capturePrice("gemini",model,"image"));
   const r = await fetchRetry(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, { method: "POST", headers: { "x-goog-api-key": config.keys.gemini, "content-type": "application/json" },
-    body: JSON.stringify({ contents: [{ role: "user", parts: [...refs.map((im) => ({ inlineData: { mimeType: im.mime, data: im.b64 } })), { text: prompt }] }], generationConfig: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: aspect } } }) }, { timeoutMs: 180_000, retries: 1, beforeAttempt: dispatch.beforeAttempt });
+    body: JSON.stringify({ contents: [{ role: "user", parts: [...refs.map((im) => ({ inlineData: { mimeType: im.mime, data: im.b64 } })), { text: prompt }] }], generationConfig: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: aspect } } }) }, { timeoutMs: PAID_MODEL_TIMEOUT_MS, retries: 1, beforeAttempt: dispatch.beforeAttempt });
   const j: any = await r.json().catch(() => ({}));
   if (!r.ok) {
     const msg: string = j?.error?.message ?? `HTTP ${r.status}`;

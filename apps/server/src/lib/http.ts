@@ -28,6 +28,10 @@ function neverReachedServer(e: unknown): boolean {
   return !!code && NOT_SENT.has(code);
 }
 
+/** Сколько ждать ответ платной модели (текст, поиск, распознавание, озвучка, картинки): 15 минут, решение владельца 13.11.2026 —
+ * длинный ролик (30 минут и больше) даёт длинные ответы. Повтора после этого срока нет (см. fetchRetry). */
+export const PAID_MODEL_TIMEOUT_MS = 15 * 60_000;
+
 /** Caller/job signal is combined with timeout, never replaced. Cancellation is not retried. */
 /**
  * Paid requests (those with beforeAttempt) are NOT repeated after a timeout or a

@@ -7,7 +7,7 @@ import {capturePrice,operationCost,type OperationVolume} from "./usagePricing.js
 import {recordOperation} from "./usage.js";
 import { config } from "../config.js";
 import { ApiError } from "../lib/errors.js";
-import { fetchRetry, sleep } from "../lib/http.js";
+import { fetchRetry, sleep, PAID_MODEL_TIMEOUT_MS } from "../lib/http.js";
 import { log } from "../lib/logging.js";
 
 export type AmBilling = { unit: string; base_tokens?: number; scales?: Record<string, Record<string, number>>; coefficient: { input: number; output: number } };
@@ -124,7 +124,7 @@ export const amChat = queued("llm", async function amChat(o: { model: string; sy
   const headers={...auth(),"content-type":"application/json"};
   const body=JSON.stringify({model:o.model,max_tokens:o.maxTokens??8000,temperature:o.temperature??0.7,messages:[{role:"system",content:o.system},{role:"user",content}],...(o.tools?{tools:o.tools}:{})});
   const dispatch=paidDispatch(async()=>[await priceBefore(o.model,"text"),...(o.tools?.length?[await capturePrice("anymodel","web-search","search")]:[])],storyboardConsent(url,headers,body));
-  const timeoutMs = o.timeoutMs ?? 240_000, started = Date.now();
+  const timeoutMs = o.timeoutMs ?? PAID_MODEL_TIMEOUT_MS, started = Date.now();
   const r = await fetchRetry(url,{method:"POST",headers,body}, { timeoutMs, retries: o.singleAttempt ? 0 : 1, beforeAttempt: dispatch.beforeAttempt });
   // Время ожидания действует и на чтение ответа: AnyModel присылает «принято» сразу, а текст — когда модель допишет.
   // Недочитанный ответ — не «пустой ответ»: запрос мог выполниться и быть оплачен, поэтому он не повторяется и не уходит другой модели.
@@ -161,7 +161,7 @@ export const amImage = queued("image", async function amImage(o: { model: string
     model: o.model, prompt: o.prompt, n: 1, size: o.size, quality: o.quality, response_format: "b64_json", background: true,
     ...(o.refs?.length ? { images: o.refs.map((i) => `data:${i.mime};base64,${i.b64}`) } : {}),
   };
-  const r = await fetchRetry(`${base()}/images/generations`, { method: "POST", headers: { ...auth(), "content-type": "application/json" }, body: JSON.stringify(body) }, { timeoutMs: 60_000, retries: 1, beforeAttempt: dispatch.beforeAttempt });
+  const r = await fetchRetry(`${base()}/images/generations`, { method: "POST", headers: { ...auth(), "content-type": "application/json" }, body: JSON.stringify(body) }, { timeoutMs: PAID_MODEL_TIMEOUT_MS, retries: 1, beforeAttempt: dispatch.beforeAttempt });
   let j: any = await r.json().catch(() => ({}));
   if (!r.ok && r.status !== 202) throw amError(r.status, j, o.model);
   const deadline = Date.now() + 330_000;
@@ -188,7 +188,7 @@ export const amImage = queued("image", async function amImage(o: { model: string
 export type SpeechSafety = { beforeDispatch?: () => Promise<void>; singleAttempt?: boolean; maxAudioBytes?: number; onAudio?: (audio: Buffer, mime: string, balanceTokens: number|null) => Promise<void> };
 export const amSpeech = queued("tts", async function amSpeech(model: string, input: string, safety: SpeechSafety = {}) {
   const dispatch=paidDispatch(()=>priceBefore(model,"tts"));
-  const r = await fetchRetry(`${base()}/audio/speech`, { method: "POST", ...(safety.singleAttempt ? {redirect:"error" as const}:{}), headers: { ...auth(), "content-type": "application/json" }, body: JSON.stringify({ model, input }) }, { timeoutMs: 180_000, retries: safety.singleAttempt ? 0 : 1, beforeAttempt: async()=>{await dispatch.beforeAttempt();await safety.beforeDispatch?.();} });
+  const r = await fetchRetry(`${base()}/audio/speech`, { method: "POST", ...(safety.singleAttempt ? {redirect:"error" as const}:{}), headers: { ...auth(), "content-type": "application/json" }, body: JSON.stringify({ model, input }) }, { timeoutMs: PAID_MODEL_TIMEOUT_MS, retries: safety.singleAttempt ? 0 : 1, beforeAttempt: async()=>{await dispatch.beforeAttempt();await safety.beforeDispatch?.();} });
   if (!r.ok) throw amError(r.status, await r.json().catch(() => ({})), model);
   let audio:Buffer;
   if(safety.maxAudioBytes){
@@ -224,7 +224,7 @@ export const amAudioChat = queued("llm", async function amAudioChat(o: { model: 
   // Hash only; the provider key and audio bytes never enter the challenge or logs.
   const binding = createHash("sha256").update(JSON.stringify({url,headers,body})).digest("hex");
   const dispatch=paidDispatch(()=>priceBefore(o.model,"audio"),{contextHash:binding,message:`Подтвердите один запрос распознавания фрагмента №${o.clips.map(c=>c.n).join(", ")}. Точная сумма заранее неизвестна; согласие не ограничивает списание и не действует для других запросов или повторов.`});
-  const r = await fetchRetry(url, {method:"POST", headers, signal:o.signal, body}, { timeoutMs: 180_000, retries: 0, beforeAttempt: dispatch.beforeAttempt });
+  const r = await fetchRetry(url, {method:"POST", headers, signal:o.signal, body}, { timeoutMs: PAID_MODEL_TIMEOUT_MS, retries: 0, beforeAttempt: dispatch.beforeAttempt });
   const j: any = await r.json().catch(() => ({}));
   if (!r.ok || j.error) throw amError(r.status, j, o.model);
   await recordOperation(dispatch.prices[0],{input:j.usage?.prompt_tokens??0,output:j.usage?.completion_tokens??0,known:Number.isFinite(j.usage?.prompt_tokens)&&Number.isFinite(j.usage?.completion_tokens)},taskContext()?.jobId);

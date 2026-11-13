@@ -7,7 +7,7 @@ import { queued } from "../lib/queue.js";
 import { z } from "zod";
 import { config } from "../config.js";
 import { ApiError } from "../lib/errors.js";
-import { fetchRetry } from "../lib/http.js";
+import { fetchRetry, PAID_MODEL_TIMEOUT_MS } from "../lib/http.js";
 import { getSettings } from "./settings.js";
 import {recordOperation} from "./usage.js";
 import {capturePrice} from "./usagePricing.js";
@@ -23,7 +23,7 @@ const callAnthropic = queued("llm", async function callAnthropic(c: LlmCall, mod
   const headers={"x-api-key":config.keys.anthropic,"anthropic-version":"2023-06-01","content-type":"application/json"};
   const body=JSON.stringify({model,max_tokens:c.maxTokens??8000,temperature:c.temperature??0.7,system:[{type:"text",text:c.system,cache_control:{type:"ephemeral"}}],messages:[{role:"user",content:c.images?.length?[...c.images.map(i=>({type:"image",source:{type:"base64",media_type:i.mime,data:i.b64}})),{type:"text",text:c.user}]:c.user}]});
   const dispatch=paidDispatch(()=>capturePrice("anthropic",model,"text"),storyboardConsent(url,headers,body));
-  const r=await fetchRetry(url,{method:"POST",headers,body},{timeoutMs:180_000,retries:c.singleAttempt?0:2,beforeAttempt:dispatch.beforeAttempt});
+  const r=await fetchRetry(url,{method:"POST",headers,body},{timeoutMs:PAID_MODEL_TIMEOUT_MS,retries:c.singleAttempt?0:2,beforeAttempt:dispatch.beforeAttempt});
   const j: any = await r.json().catch(() => ({}));
   if (!r.ok) {
     const msg: string = j?.error?.message ?? `HTTP ${r.status}`;
@@ -40,7 +40,7 @@ const callGemini = queued("llm", async function callGemini(c: LlmCall, model: st
   const headers={"x-goog-api-key":config.keys.gemini,"content-type":"application/json"};
   const body=JSON.stringify({systemInstruction:{parts:[{text:c.system}]},contents:[{role:"user",parts:[...(c.images??[]).map(i=>({inline_data:{mime_type:i.mime,data:i.b64}})),{text:c.user}]}],generationConfig:{temperature:c.temperature??0.7,maxOutputTokens:c.maxTokens??8000,...(json?{responseMimeType:"application/json"}:{})}});
   const dispatch=paidDispatch(()=>capturePrice("gemini",model,"text"),storyboardConsent(url,headers,body));
-  const r=await fetchRetry(url,{method:"POST",headers,body},{timeoutMs:180_000,retries:c.singleAttempt?0:1,beforeAttempt:dispatch.beforeAttempt});
+  const r=await fetchRetry(url,{method:"POST",headers,body},{timeoutMs:PAID_MODEL_TIMEOUT_MS,retries:c.singleAttempt?0:1,beforeAttempt:dispatch.beforeAttempt});
   const j: any = await r.json().catch(() => ({}));
   if (!r.ok) {
     const msg: string = j?.error?.message ?? `HTTP ${r.status}`;
@@ -173,7 +173,7 @@ export async function geminiGrounded(system: string, user: string, maxTokens = 6
   if (hasAnymodel() && st.anymodel.enabled && st.anymodel.search) {
     try {
       await assertBudget();
-      const r = await amChat({ model: st.anymodel.search, system, user, maxTokens, temperature: 0.3, tools: [{ google_search: {} }], timeoutMs: 150_000 });
+      const r = await amChat({ model: st.anymodel.search, system, user, maxTokens, temperature: 0.3, tools: [{ google_search: {} }] });
       await amCatalog().catch(() => []);
 
       return { text: r.text, model: st.anymodel.search, sources: r.sources };
@@ -201,7 +201,7 @@ const directGrounded = queued("llm", async function directGrounded(system: strin
     method: "POST",
     headers: { "x-goog-api-key": config.keys.gemini, "content-type": "application/json" },
     body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: user }] }], tools: [{ google_search: {} }], generationConfig: { temperature: 0.3, maxOutputTokens: maxTokens } }),
-  }, { timeoutMs: 120_000, retries: 0, beforeAttempt: dispatch.beforeAttempt });
+  }, { timeoutMs: PAID_MODEL_TIMEOUT_MS, retries: 0, beforeAttempt: dispatch.beforeAttempt });
   const j: any = await r.json().catch(() => ({}));
   if (!r.ok) {
     if (r.status === 429) { groundingOffUntil = Date.now() + 60 * 60_000; throw new ApiError("LLM_RATE_LIMIT", "Веб-поиск Gemini недоступен на текущем тарифе (нужен billing)", 429); }

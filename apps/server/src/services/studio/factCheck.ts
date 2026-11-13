@@ -149,8 +149,8 @@ export const llmFactAi: FactAi = {
   async extract({ numbered: text, lang, topic, hints, model }) {
     const { generateJson } = await import("../llm.js");
     const r = await generateJson({
-      // Длинный ответ с рассуждением: модель пишет его дольше 4 минут, ждём до 10 (решение владельца 12.11.2026).
-      model, maxTokens: 12000, temperature: 0.1, timeoutMs: 600_000,
+      // Длинный ответ с рассуждением: ждём общий срок платной модели, 15 минут (решение владельца 13.11.2026).
+      model, maxTokens: 12000, temperature: 0.1,
       system: "You are a professional fact-checker preparing a YouTube narration script for publication. YouTube limits monetisation of videos with false or misleading claims, so every checkable claim must be found. At this step you only FIND claims — do not judge them.",
       user: `Find every checkable factual claim in the SCRIPT (${await langName(lang)}):
 - numbers, statistics, percentages, amounts, durations;

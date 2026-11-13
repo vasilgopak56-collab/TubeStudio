@@ -66,3 +66,10 @@ test('отмена задачи во время чтения ответа — о
 test('обычный ответ не изменился',async()=>{
  const r=await amChat({model:'same',system:'',user:''});assert.equal(r.text,'answer');assert.equal(r.usage.output,7);
 });
+test('платная модель ждёт ответ 15 минут; в коде нет других сроков для платных запросов (решение владельца 13.11.2026)',async()=>{
+ const {PAID_MODEL_TIMEOUT_MS}=await import('../src/lib/http.js');assert.equal(PAID_MODEL_TIMEOUT_MS,15*60_000);
+ for(const f of ['anymodel.ts','llm.ts','imageGen.ts','modelConnections.ts','ttsConnections.ts','studio/factCheck.ts']){
+  const src=await fs.readFile(new URL('../src/services/'+f,import.meta.url),'utf8');
+  assert.doesNotMatch(src,/timeoutMs: *(120|150|180|240|600)_?000|},180000\)/,f);
+ }
+});

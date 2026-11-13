@@ -8,6 +8,7 @@ import {isIP} from 'node:net';
 import {z} from 'zod';
 import {dataPath} from '../lib/storage.js';
 import {ApiError} from '../lib/errors.js';
+import {PAID_MODEL_TIMEOUT_MS} from '../lib/http.js';
 import {checkCancelled,taskSignal,taskContext} from '../lib/taskContext.js';
 import {queued} from '../lib/queue.js';
 import {paidDispatch} from './paidDispatch.js';
@@ -72,7 +73,7 @@ async function post(c:Connection,body:string,beforeSend:()=>Promise<void>){
   res.on('end',()=>{if(settled)return;settled=true;clearTimeout(timer);signal?.removeEventListener('abort',abort);let json:any;try{json=JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch{reject(new ApiError('UPSTREAM','API вернул не JSON; проверьте протокол. Автоповтора нет.',502));return;}resolve({status:res.statusCode??502,json});});
  });
  const abort=()=>{try{checkCancelled(signal);}catch(e){fail(e as Error);req.destroy();}};
- timer=setTimeout(()=>{fail(new ApiError('UPSTREAM','Таймаут API; запрос мог быть оплачен. Автоповтора нет.',502));req.destroy();},180000);
+ timer=setTimeout(()=>{fail(new ApiError('UPSTREAM','Таймаут API; запрос мог быть оплачен. Автоповтора нет.',502));req.destroy();},PAID_MODEL_TIMEOUT_MS);
  req.on('error',()=>fail(new ApiError('UPSTREAM','Ошибка соединения с API; запрос мог быть оплачен. Проверьте профиль, автоматического повтора нет.',502)));signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted){abort();return;}req.end(body);
  });
 }

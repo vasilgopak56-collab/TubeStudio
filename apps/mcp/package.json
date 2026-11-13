@@ -1,7 +1,7 @@
 {
   "name": "@tubestudio/mcp",
   "private": true,
-  "version": "3.14.1",
+  "version": "3.14.2",
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
