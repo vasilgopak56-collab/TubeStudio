@@ -246,7 +246,8 @@ function cleanFix(fix: string | null, quote: string): { fix: string | null; note
   return { fix: f };
 }
 
-const BATCH = 12, MAX_ITEMS = 120;
+// До 400 предложений с фактами за один запуск: сценарий проверяется целиком, не частями (решение владельца 13.11.2026).
+const BATCH = 12, MAX_ITEMS = 400;
 /** Верхняя граница запросов проверки фактов по числу предложений текста. Модели — те, что сработают первыми; резервные не запускаются. */
 export async function factCheckPlan(text: string, model: string): Promise<import("../paidRun.js").PlannedCall[]> {
   const { firstModel, groundedModels } = await import("../llm.js");

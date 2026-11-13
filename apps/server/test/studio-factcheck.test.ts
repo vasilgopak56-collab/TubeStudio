@@ -224,3 +224,23 @@ test("маршрут: проверка фактов сценария проек�
   assert.ok(windows.every((w) => /^Подтвердите проверку фактов: до \d+ запросов/.test(w)));
   config.keys.anthropic = "";
 });
+
+test("длинный сценарий проверяется целиком: до 400 предложений с фактами за один запуск, сверх — честная пометка", async () => {
+  const run = async (n: number) => {
+    const text = Array.from({ length: n }, (_, k) => `In ${1000 + k} the city number ${k + 1} had ${k + 7} gates.`).join("\n\n");
+    const sizes: number[] = [];
+    F.setFactAi(fake({
+      extract: async () => ({ items: Array.from({ length: n }, (_, k) => ({ id: `${k + 1}.1`, claims: [{ text: `claim ${k + 1}`, kind: "date" }] })), model: "fake-extract" }),
+      verifyWeb: async ({ batch }) => { sizes.push(batch.length); return { items: [], model: "fake-web", sources: [] }; },
+    }));
+    const r = await F.checkFacts({ text, channel: CH, topic: "Cities" }, ctx().c);
+    return { sizes, notes: r.report.notes };
+  };
+  const a = await run(150);
+  assert.equal(a.sizes.reduce((s, x) => s + x, 0), 150, "все 150 предложений проверены, а не первые 120");
+  assert.equal(a.sizes.length, 13);
+  assert.ok(!a.notes.some((x) => /частями/.test(x)));
+  const b = await run(410);
+  assert.equal(b.sizes.reduce((s, x) => s + x, 0), 400);
+  assert.ok(b.notes.some((x) => /Проверены первые 400 предложений с фактами, ещё 10 не проверены/.test(x)));
+});
