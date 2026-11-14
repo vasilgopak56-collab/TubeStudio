@@ -1,0 +1,10 @@
+sha=b3c7d3d959b1c6712ceb7d6b402c15112d8ff0c4 run=58 node=v22.23.4 npm=10.9.9
+ffmpeg version 9.0.2-essentials_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers
+unit exit=0
+# tests 1980
+# pass 1976
+# fail 0
+bundled node v22.23.4 sha256=dccc52de28d8df2ee22d2062424f8c563070d95d8ad70c54c4bf01d590dec14f
+zip TubeStudio-3.14.4-windows.zip 68 MB
+acceptance exit=0
+unit=success acceptance=success
