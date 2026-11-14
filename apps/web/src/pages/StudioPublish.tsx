@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, Copy, ImagePlus, Save, Sparkles, Trash2, Upload, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Copy, Download, ImagePlus, Save, Sparkles, Trash2, Upload, XCircle } from "lucide-react";
 import { api } from "@/lib/api";
 import { useJob } from "@/lib/jobs";
 import type { ProjectSummary } from "@/lib/types";
@@ -47,6 +47,42 @@ function fileToBase64(file: File) {
     r.onload = () => resolve(String(r.result).split(",")[1] ?? "");
     r.readAsDataURL(file);
   });
+}
+// «Скачать всё»: сохранённая карточка и предложение модели одним текстовым файлом.
+function seoText(s: PublishState) {
+  const answer = (v: boolean | null) => (v === null ? "не отвечено" : v ? "да" : "нет");
+  const start = new Map(s.chapters.map((c) => [c.scene, c.start]));
+  const out = [
+    `Ролик: ${s.project.title}`, `Файл собран: ${new Date().toLocaleString("ru-RU")}`, "",
+    "=== КАРТОЧКА (сохранённый вариант) ===", "",
+    "Название:", s.card.title ?? "(не заполнено)", "",
+    "Описание с главами:", s.finalDescription || "(не заполнено)", "",
+    "Теги:", s.card.tags.join(", ") || "(нет)", "",
+    `Язык: ${s.card.language ?? "не указан"}`,
+    `Категория: ${s.categories.find((c) => c.id === s.card.categoryId)?.name ?? "не выбрана"}`,
+    `Снят для детей: ${answer(s.card.madeForKids)}`,
+    `Отметка контента, созданного или изменённого ИИ: ${answer(s.card.syntheticMedia)}`,
+    `Ссылка на ролик: ${s.card.video ? `https://youtu.be/${s.card.video.id}` : "нет"}`,
+  ];
+  const p = s.proposal;
+  out.push("", "=== ПРЕДЛОЖЕНИЕ МОДЕЛИ ===", "");
+  if (!p) out.push("Тексты ещё не готовили.");
+  else out.push(
+    `Модель: ${p.model} · ${new Date(p.at).toLocaleString("ru-RU")}`, `Ключевая фраза: ${p.keyword}`, "",
+    "Варианты названий:", ...p.titles.map((t, i) => `${i + 1}. ${t}`), "",
+    "Описание:", p.description, "",
+    "Теги:", p.tags.join(", "), "",
+    "Закреплённые комментарии:", ...p.pinnedComments.map((c) => `${COMMENT[c.type] ?? c.type}: ${c.text}`), "",
+    "Названия глав:", ...p.chapters.map((c) => `${start.has(c.scene) ? clock(start.get(c.scene)!) : "—"} ${c.title} (сцена ${c.scene})`),
+  );
+  return out.join("\r\n") + "\r\n";
+}
+function downloadSeo(s: PublishState) {
+  const name = (s.project.title.replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 80) || "ролик") + " — SEO.txt";
+  const href = URL.createObjectURL(new Blob(["﻿" + seoText(s)], { type: "text/plain;charset=utf-8" }));
+  const a = document.createElement("a");
+  a.href = href; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(href), 1000);
 }
 const LEVEL = { ok: { icon: CheckCircle2, cls: "text-success" }, warn: { icon: AlertTriangle, cls: "text-crown" }, block: { icon: XCircle, cls: "text-accent" } };
 
@@ -236,6 +272,7 @@ export default function StudioPublish() {
         <SectionTitle>Для ручной загрузки в YouTube Studio</SectionTitle>
         {unsaved && <p role="alert" className="flex items-center gap-2 text-sm text-crown"><AlertTriangle className="h-4 w-4 shrink-0" />Есть несохранённые правки. Ниже показан последний сохранённый вариант: сначала нажмите «Сохранить».</p>}
         {!s.card.title && !s.finalDescription && <p className="text-sm text-muted-foreground">Заполните и сохраните название и описание, и они появятся здесь.</p>}
+        <Button variant="outline" className="min-h-11" onClick={() => downloadSeo(s)}><Download className="h-4 w-4" />Скачать всё</Button>
         {([["title", "Название", s.card.title ?? "", 1], ["description", "Описание с главами", s.finalDescription, 10], ["tags", "Теги", s.card.tags.join(", "), 2]] as const).map(([key, label, text, rows]) => <div key={key} className="space-y-1">
           <div className="flex items-center justify-between gap-3"><Label>{label}</Label>
             <Button variant="outline" size="sm" className="min-h-11" disabled={!text} onClick={() => copy(key, text)}><Copy className="h-4 w-4" />{copied === key ? "Скопировано" : "Копировать"}</Button></div>
