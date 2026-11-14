@@ -148,9 +148,11 @@ function artifactText(a: Artifact): { ext: string; body: string } {
   return { ext: "json", body: JSON.stringify(d ?? {}, null, 2) };
 }
 
+// Видео, звук и картинки в ZIP не кладём: у готового ролика это гигабайты, а архив собирается целиком в памяти и на это время останавливает программу.
+const ZIP_SKIP_MEDIA = /\.(mp4|mov|webm|mkv|avi|m4v|mp3|m4a|wav|aac|ogg|opus|flac|png|jpe?g|webp|gif|bmp|tiff?)$/i;
 export async function exportZip(id: string) {
   const p = await getProject(id);
-  const files: Record<string, Uint8Array | [Uint8Array, { level: 0 }]> = { "project.json": strToU8(JSON.stringify(p, null, 2)) };
+  const files: Record<string, Uint8Array> = { "project.json": strToU8(JSON.stringify(p, null, 2)) };
   p.artifacts.forEach((a, i) => {
     const { ext, body } = artifactText(a);
     const name = `${String(i + 1).padStart(2, "0")}_${a.kind}${a.version && a.version > 1 ? `_v${a.version}` : ""}.${ext}`;
@@ -161,7 +163,7 @@ export async function exportZip(id: string) {
     for (const e of await fs.readdir(d, { withFileTypes: true }).catch(() => [])) {
       const full = path.join(d, e.name), r = rel ? `${rel}/${e.name}` : e.name;
       if (e.isDirectory()) { if (!/^draft_\d+$/.test(e.name)) await walk(full, r); }
-      else { const b = new Uint8Array(await fs.readFile(full)); files[`files/${r}`] = /\.(mp4|mp3|m4a|png|jpe?g|webp)$/i.test(e.name) ? [b, { level: 0 }] : b; }
+      else if (!ZIP_SKIP_MEDIA.test(e.name)) files[`files/${r}`] = new Uint8Array(await fs.readFile(full));
     }
   };
   await walk(dir);
