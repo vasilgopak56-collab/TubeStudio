@@ -391,7 +391,11 @@ export function promptJson(d:AudioDoc){
   if(!d.result?.rows.length)throw new ApiError("VALIDATION","JSON промптов доступен после генерации сцен. Для исходных данных используйте полный JSON.");
   return {...(d.result.visualStyle?{visual_style:d.result.visualStyle}:{}),schema_version:"1.0",audio:{filename:d.name,duration_seconds:d.duration},scenes:d.result.rows.map(r=>({scene:r.n,filename:r.filename,speech:{start:tc(r.start),end:tc(r.end),duration_seconds:r.seconds},timeline:{start:tc(r.timelineStart),end:tc(r.timelineEnd)},text:r.text,concept:r.concept,image_prompt:r.image,animation_prompt:r.video}))};
 }
+/** Простой транскрипт: одна строка на фрагмент, «[м:сс] текст» от начала файла; фрагменты без текста пропускаются. */
+export function transcriptTime(s:number){const t=Math.max(0,Math.floor(s));const h=Math.floor(t/3600),m=Math.floor(t/60)%60,sec=String(t%60).padStart(2,"0");return h?`${h}:${String(m).padStart(2,"0")}:${sec}`:`${m}:${sec}`;}
+export function transcriptTxt(fragments:FragmentT[]){return fragments.filter(f=>f.text.trim()).map(f=>`[${transcriptTime(f.start)}] ${f.text.trim().replace(/\s*\n\s*/g," ")}`).join("\n")+"\n";}
 export function exportAudio(d:AudioDoc,format:string){
+  if(format==="transcript")return transcriptTxt(d.fragments);
   if(format==="json")return JSON.stringify(promptJson(d),null,2);
   const rows=d.result?.rows??timeline(d.fragments,d.duration).map(f=>({...f,concept:"",image:"",video:"",clip:0,clips:0,seconds:round(f.end-f.start)}));
   if(format==="srt")return rows.map(r=>`${r.n}\n${tc(r.start,",")} --> ${tc(r.end,",")}\n${r.text.replace(/\n\s*\n/g,"\n")}`).join("\n\n")+"\n";
