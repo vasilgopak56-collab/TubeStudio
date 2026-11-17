@@ -1,4 +1,5 @@
 import { APP_VERSION } from "../lib/version.js";
+import { extPublishCard, extPublishCards } from "../services/extPublish.js";
 import { bodyLimit } from "hono/body-limit";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -75,7 +76,10 @@ exploreRoute.get("/scorecards", h(() => listScorecards()));
 exploreRoute.get("/scorecards/:id", h(async (c) => { const r = await loadScorecard(c.req.param("id")); if (!r) throw new ApiError("NOT_FOUND", "Оценка не найдена", 404); return r; }));
 
 // 7. Расширение Chrome
-exploreRoute.get("/ext/ping", h(async () => ({ app: "TubeStudio", version: APP_VERSION, extensionVersion: "1.1.0", explicitMetrics: true })));
+exploreRoute.get("/ext/ping", h(async () => ({ app: "TubeStudio", version: APP_VERSION, extensionVersion: "1.2.0", explicitMetrics: true })));
+// Карточки «Публикации» для заполнения YouTube Studio: только чтение
+exploreRoute.get("/ext/publish-cards", h(() => extPublishCards()));
+exploreRoute.get("/ext/publish-cards/:projectId", h(async (c) => extPublishCard(z.string().regex(/^[\w-]{1,80}$/, "Неверный номер проекта").parse(c.req.param("projectId")))));
 exploreRoute.get("/ext/token", h(async () => ({ token: extToken() })));
 /** ZIP с расширением (папка extension/ в корне проекта) */
 exploreRoute.get("/ext/download", async (c) => {
@@ -85,7 +89,7 @@ exploreRoute.get("/ext/download", async (c) => {
     let dir = ""; for (const d of cands) { try { await fs.access(path.join(d, "manifest.json")); dir = d; break; } catch { /* */ } }
     if (!dir) throw new ApiError("NOT_FOUND", "Папка extension не найдена в проекте", 404);
     const files: Record<string, Uint8Array> = {};
-    const allowed=["manifest.json","shared.js","background.js","content.js","content.css","popup.html","popup.js","README.md","icons/16.png","icons/48.png","icons/128.png"];
+    const allowed=["manifest.json","shared.js","background.js","content.js","content.css","studio.js","studio.css","popup.html","popup.js","README.md","icons/16.png","icons/48.png","icons/128.png"];
     const iconDir=await fs.lstat(path.join(dir,"icons"));if(!iconDir.isDirectory()||iconDir.isSymbolicLink())throw new ApiError("VALIDATION","Некорректная папка значков");
     for(const name of allowed){const full=path.join(dir,name),stat=await fs.lstat(full);if(!stat.isFile()||stat.isSymbolicLink()||stat.size>1024*1024)throw new ApiError("VALIDATION","Некорректный файл расширения");files[`tubestudio-extension/${name}`]=new Uint8Array(await fs.readFile(full));}
     const zip = zipSync(files, { level: 6 });

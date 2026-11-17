@@ -1,0 +1,10 @@
+.ts-studio{position:fixed;left:16px;bottom:16px;z-index:2300;width:320px;max-height:70vh;overflow:auto;padding:10px 12px;border:1px solid rgba(232,113,26,.6);border-radius:12px;background:#fff;color:#0f0f0f;box-shadow:0 4px 16px rgba(0,0,0,.2);font:13px/1.45 Roboto,Arial,sans-serif}
+.ts-studio .ts-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.ts-studio .ts-head b{color:#e8711a;font-weight:800}
+.ts-studio select{width:100%;padding:4px;font:13px Roboto,Arial,sans-serif}
+.ts-studio .ts-btns{display:flex;gap:6px;margin:8px 0}
+.ts-studio button{cursor:pointer;border:1px solid rgba(128,128,128,.4);background:transparent;color:inherit;border-radius:16px;padding:4px 10px;font:500 12px Roboto,Arial,sans-serif}
+.ts-studio button:hover{border-color:#e8711a;color:#e8711a}
+.ts-studio .ts-ok{color:#166534}
+.ts-studio .ts-bad{color:#b91c1c}
+.ts-studio .ts-info{margin-top:6px;font-size:12px}

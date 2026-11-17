@@ -9,7 +9,7 @@ const failure=(code,message)=>({ok:false,error:{code,message}});
 chrome.runtime.onMessage.addListener((msg,sender,reply)=>{
  (async()=>{
   const popup=sender.id===chrome.runtime.id&&sender.url===chrome.runtime.getURL('popup.html');
-  const content=sender.id===chrome.runtime.id&&sender.tab&&typeof sender.url==='string'&&new URL(sender.url).origin==='https://www.youtube.com';
+  const content=sender.id===chrome.runtime.id&&sender.tab&&typeof sender.url==='string'&&['https://www.youtube.com','https://studio.youtube.com'].includes(new URL(sender.url).origin);
   if(!popup&&!content)return failure('DENIED','Недоверенный источник сообщения');
   const c=await config();
   if(msg?.type==='cfg')return {ok:true,data:{badges:c.badges,panel:c.panel}}; // Never disclose origin/token to the page.

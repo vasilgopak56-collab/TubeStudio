@@ -48,7 +48,7 @@ export const requireAuth: MiddlewareHandler = async (c, next) => {
   if (!authRequired() || c.req.path.startsWith("/api/auth/") || OPEN_PATHS.has(c.req.path)) return next();
   const ext = c.req.header("x-ts-token");
   if (ext && ext === extToken()) {
-    const allowed = c.req.method === "GET" && ["/api/ext/ping", "/api/ext/videos"].includes(c.req.path) || c.req.method === "POST" && c.req.path === "/api/saved-topics";
+    const allowed = c.req.method === "GET" && (["/api/ext/ping", "/api/ext/videos", "/api/ext/publish-cards"].includes(c.req.path) || /^\/api\/ext\/publish-cards\/[\w-]{1,80}$/.test(c.req.path)) || c.req.method === "POST" && c.req.path === "/api/saved-topics";
     if (allowed) return next();
     return c.json({ ok: false, error: { code: "UNAUTHORIZED", message: "Токен расширения не разрешает это действие" } }, 403);
   }

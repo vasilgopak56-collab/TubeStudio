@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "TubeStudio — Outlier и VPH на YouTube",
+  "name": "TubeStudio — Outlier, VPH и заполнение YouTube Studio",
   "short_name": "TubeStudio",
-  "version": "1.1.0",
-  "description": "VPH/Outlier по кнопке, прозрачная база и сохранение темы в локальный TubeStudio. Без автоматических запросов метрик.",
+  "version": "1.2.0",
+  "description": "VPH/Outlier по кнопке, сохранение темы в локальный TubeStudio и заполнение названия, описания и тегов в YouTube Studio из карточки публикации.",
   "icons": {
     "16": "icons/16.png",
     "48": "icons/48.png",
@@ -42,6 +42,18 @@
       ],
       "css": [
         "content.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://studio.youtube.com/*"
+      ],
+      "js": [
+        "studio.js"
+      ],
+      "css": [
+        "studio.css"
       ],
       "run_at": "document_idle"
     }

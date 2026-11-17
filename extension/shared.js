@@ -15,6 +15,7 @@
   const method=msg.method??'GET';
   if(method==='GET'&&msg.path==='/ext/ping')return {path:msg.path,method};
   if(method==='GET'&&typeof msg.path==='string'&&msg.path.startsWith('/ext/videos?')){const u=new URL(msg.path,'https://local.invalid');if(u.pathname!=='/ext/videos'||u.hash||[...u.searchParams.keys()].some(k=>k!=='ids')||u.searchParams.getAll('ids').length!==1)throw Error('Некорректный запрос');const ids=u.searchParams.get('ids').split(',');if(!ids.length||ids.length>50||ids.some(v=>!id.test(v)))throw Error('От 1 до 50 ID');return {method,path:'/ext/videos?ids='+[...new Set(ids)].join(',')};}
+  if(method==='GET'&&(msg.path==='/ext/publish-cards'||/^\/ext\/publish-cards\/[\w-]{1,80}$/.test(msg.path)))return {path:msg.path,method};
   if(method==='POST'&&msg.path==='/saved-topics'){const b=msg.body;if(!b||typeof b.title!=='string'||b.title.length<3||b.title.length>300||b.source!=='research'||typeof b.notes!=='string'||b.notes.length>5000)throw Error('Некорректная тема');return {path:msg.path,method,body:{title:b.title,source:'research',notes:b.notes}};}
   throw Error('Действие недоступно');
  }
