@@ -53,6 +53,11 @@ export default function StudioScript() {
     onSuccess: (r) => { setLint(r.lint); setResult((x) => x && { ...x, script: text, lint: r.lint }); void qc.invalidateQueries({ queryKey: ["project", result?.projectId] }); },
   });
   const check = useMutation({ mutationFn: () => api<LintReport>("/studio/script/lint", { method: "POST", json: { text: own, channelId: channel?.id } }), onSuccess: setOwnReport });
+  // Свой готовый текст становится сценарием открытого ролика: бесплатно, без ИИ.
+  const importOwn = useMutation({
+    mutationFn: () => api<{ projectId: string; artifactId: string; lint: LintReport }>("/studio/script/import", { method: "POST", json: { channelId: channel?.id, projectId, script: own } }),
+    onSuccess: (r) => { setOwnReport(r.lint); for (const k of [["project", r.projectId], ["projects"]]) void qc.invalidateQueries({ queryKey: k }); },
+  });
   // Проверка фактов сценария проекта: исправленный текст сохраняется в проект и подставляется в редактор.
   const fc = useJob<FactCheckJobResult>("/studio/script/factcheck");
   useEffect(() => {
@@ -144,11 +149,15 @@ export default function StudioScript() {
       <p className="text-sm text-muted-foreground">Проверка кодом, без ИИ: вступление, оговорки, повторы, ложные финалы, длина фраз и время озвучки — с номером абзаца.</p>
       <textarea aria-label="Свой текст для проверки" className="field min-h-[160px] w-full resize-y" value={own} onChange={(e) => setOwn(e.target.value)} placeholder="Вставьте сценарий. Абзацы разделяйте пустой строкой." dir="auto" />
       {check.error && <ErrorAlert error={check.error} />}
+      {importOwn.error && <ErrorAlert error={importOwn.error} />}
       <div className="flex flex-wrap items-center gap-3">
         <Button className="min-h-11" variant="outline" disabled={!own.trim()} loading={check.isPending} loadingText="Проверяю…" onClick={() => check.mutate()}>Проверить</Button>
+        {projectId && project.data && <Button className="min-h-11" variant="outline" disabled={own.trim().length < 20 || running || checking} loading={importOwn.isPending} loadingText="Сохраняю…" onClick={() => importOwn.mutate()}>Сохранить в ролик</Button>}
         <Button className="min-h-11" variant="outline" disabled={own.trim().split(/\s+/).length < 5 || ownFc.status === "running"} loading={ownFc.status === "running"} loadingText="Проверяю факты…" onClick={() => void ownFc.start({ channelId: channel.id, text: own }, undefined, { serverConsent: true })}>Проверить факты — платно</Button>
       </div>
       <p className="text-xs text-muted-foreground">Проверка фактов ищет каждое утверждение в Google через AnyModel и возвращает исправленный текст; тратит баланс AnyModel.</p>
+      {projectId && project.data && <p className="text-xs text-muted-foreground">«Сохранить в ролик» — бесплатно: текст станет сценарием ролика «{project.data.title}» для озвучки; прежний сценарий остаётся в проекте.</p>}
+      {importOwn.isSuccess && <p className="text-sm text-primary">Сохранено в ролик. Текст открыт выше как сценарий ролика.</p>}
     </Card>
     {ownReport && <LintReportView report={ownReport} title="Проверка вашего текста" />}
     <JobBox job={ownFc} onCancel={() => void ownFc.cancel()} />

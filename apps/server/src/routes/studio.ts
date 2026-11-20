@@ -7,7 +7,7 @@ import { ApiError, fail, ok } from "../lib/errors.js";
 import { startJob } from "../lib/jobs.js";
 import { activateChannel, archiveChannel, channelSpend, createChannel, getChannel, linkJobToChannel, listChannels, updateChannel } from "../services/studio/channels.js";
 import { IdeaPeriod, IdeaSort, listIdeas, radarRunning, runRadar, setIdeaStatus, takeIdea } from "../services/studio/radar.js";
-import { FactCheckJobInput, StudioScriptInput, lintForChannel, runFactCheck, runStudioScript } from "../services/studio/scriptFlow.js";
+import { FactCheckJobInput, StudioScriptInput, importStudioScript, lintForChannel, runFactCheck, runStudioScript } from "../services/studio/scriptFlow.js";
 import { lintScript } from "../services/studio/scriptLint.js";
 import { TemplateQuery, VoiceOrderInput, VoiceQuery, estimateVoice, getTemplate, listTemplates, listVoices, lumeanAccount, lumeanOrders, runVoice } from "../services/studio/lumean.js";
 import { checkGlabs } from "../services/studio/glabs.js";
@@ -100,6 +100,8 @@ studioRoute.post("/studio/script/save", handle(async (c) => {
   await updateArtifactData(p.id, a.id, (d: Record<string, any> | undefined) => ({ ...(d ?? {}), script: i.script, studio: { ...(d?.studio ?? {}), lint, editedAt: new Date().toISOString() } }));
   return { lint };
 }));
+/** Свой готовый текст как сценарий ролика (бесплатно, без ИИ). */
+studioRoute.post("/studio/script/import", handle(async (c) => importStudioScript(await body(c))));
 /** Проверка фактов (платно): сценарий проекта — исправленный текст сохраняется в проект; вставленный текст — возвращается. */
 studioRoute.post("/studio/script/factcheck", handle(async (c) => {
   const i = FactCheckJobInput.parse(await body(c));

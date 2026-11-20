@@ -339,3 +339,27 @@ export function lintForChannel(text: string, ch: Pick<Channel, "language" | "len
   if (!text.trim()) throw new ApiError("VALIDATION", "Вставьте текст сценария", 400);
   return lintScript(text, { language: ch.language, targetMinutes: minutes ?? ch.lengthMin });
 }
+
+export const ScriptImportInput = z.object({
+  channelId: z.string().uuid(),
+  projectId: z.string().trim().min(1).max(80),
+  script: z.string().max(200_000).refine((s) => s.trim().length >= 20, "Сценарий слишком короткий"),
+}).strict();
+
+/** Свой готовый текст как сценарий ролика: без ИИ и платных запросов. Прежние сценарии остаются, новый — последний. */
+export async function importStudioScript(input: unknown) {
+  const i = ScriptImportInput.parse(input);
+  const ch = await getChannel(i.channelId);
+  const { addArtifact, getProject, updateProject } = await import("../projects.js");
+  const p = await getProject(i.projectId);
+  if (p.channelId && p.channelId !== ch.id) throw new ApiError("VALIDATION", "Ролик относится к другому каналу. Выберите его канал вверху страницы.", 400);
+  const script = i.script.trim();
+  const lint = lintForChannel(script, ch);
+  const words = script.split(/\s+/).length;
+  const at = new Date().toISOString();
+  const studio = { channelId: ch.id, minutes: ch.lengthMin, words, lint, lintDraft: lint, critic: null, criticAfter: null, donor: null, revised: false,
+    notes: ["Сценарий вставлен вручную, без ИИ. Второе мнение и проверка фактов не запускались."], models: { author: "вручную", critic: null }, factCheck: null, imported: true, at };
+  if (!p.channelId) await updateProject(p.id, { channelId: ch.id });
+  const a = await addArtifact(p.id, { kind: "script", title: `Свой сценарий: ${p.title}`.slice(0, 200), data: { script, studio } });
+  return { projectId: p.id, artifactId: a.id, lint };
+}
